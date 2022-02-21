@@ -1,0 +1,27 @@
+{
+  "name": "uimarket_backend",
+  "version": "1.0.0",
+  "description": "",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "start": "ts-node src/index.ts",
+    "build": "tsc",
+    "dev": "nodemon --config nodemon.json ./src/index.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/express": "^4.17.13",
+    "@types/node": "^17.0.18",
+    "@types/nodemon": "^1.19.1",
+    "nodemon": "^2.0.15",
+    "ts-node": "^10.5.0",
+    "typescript": "^4.5.5"
+  },
+  "dependencies": {
+    "express": "^4.17.3",
+    "http-status-codes": "^2.2.0"
+  }
+}
