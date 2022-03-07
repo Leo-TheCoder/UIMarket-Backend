@@ -18,7 +18,7 @@ const errorHandlerMiddleware: ErrorRequestHandler = (
   };
 
   if (err.statusCode === StatusCodes.UNAUTHORIZED) {
-    return res.status(StatusCodes.UNAUTHORIZED).send();
+    return res.status(StatusCodes.UNAUTHORIZED).json({msg: customError.msg});
   }
 
   return res.status(customError.statusCode).json({ msg: customError.msg });

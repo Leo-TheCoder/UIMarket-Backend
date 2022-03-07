@@ -1,16 +1,30 @@
+//Setup enviroment
 import 'dotenv/config';
 import 'express-async-errors';
 import express, { Request, Response, Application } from "express";
 import connectDB from "./db/connect";
 
+//Create server app instance
 const app: Application = express();
 const PORT = process.env.PORT || 5000;
+
+//Router
+import authRouter from "./routes/auth";
+
+//Middleware
+import errorHandlerMiddleware from "./middlewares/handle-errors";
+import notFoundMiddleware from "./middlewares/not-found";
+
+app.use(express.json());
 
 app.get("/", (req: Request, res: Response): void => {
   res.send("Hello this is UIMarket project");
 });
 
-app.use("/api/v1/auth", )
+app.use("/api/v1/auth", authRouter);
+
+app.use(notFoundMiddleware);
+app.use(errorHandlerMiddleware);
 
 
 const start = async () => {
