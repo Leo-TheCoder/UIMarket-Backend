@@ -1,7 +1,8 @@
 import User from "../models/User";
 import jwt from "jsonwebtoken";
 import { UnauthenticatedError } from "../errors";
-import { Request, Response, NextFunction } from "express";
+import { Response, NextFunction } from "express";
+import { IUserRequest} from "../types/express";
 
 interface PayloadUser extends jwt.JwtPayload {
   userId: string;
@@ -9,7 +10,7 @@ interface PayloadUser extends jwt.JwtPayload {
   isActive: boolean;
 }
 
-const auth = async (req: Request, res: Response, next: NextFunction) => {
+const auth = (req: IUserRequest, res: Response, next: NextFunction) => {
   //check header
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith("Bearer")) {

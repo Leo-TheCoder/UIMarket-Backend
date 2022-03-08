@@ -10,10 +10,12 @@ const PORT = process.env.PORT || 5000;
 
 //Router
 import authRouter from "./routes/auth";
+import questionRouter from "./routes/question";
 
 //Middleware
 import errorHandlerMiddleware from "./middlewares/handle-errors";
 import notFoundMiddleware from "./middlewares/not-found";
+import authenticationMiddleware from "./middlewares/authentication";
 
 app.use(express.json());
 
@@ -22,6 +24,7 @@ app.get("/", (req: Request, res: Response): void => {
 });
 
 app.use("/api/v1/auth", authRouter);
+app.use("/api/v1/questions", authenticationMiddleware, questionRouter );
 
 app.use(notFoundMiddleware);
 app.use(errorHandlerMiddleware);
