@@ -7,7 +7,10 @@ import { Request, Response } from "express";
 const register = async (req: Request, res: Response) => {
   const user = await User.create({ ...req.body });
   const token = user.createJWT();
-  res.status(StatusCodes.CREATED).json({ user: { name: user._customer_Name }, token });
+
+  res
+    .status(StatusCodes.CREATED)
+    .json({ user: { name: user._customer_Name, isActive: true }, token });
 };
 
 const login = async (req: Request, res: Response) => {
@@ -18,19 +21,29 @@ const login = async (req: Request, res: Response) => {
   }
 
   const user = await User.findOne({ _customer_Email });
-  
-  if(!user) {
-    throw new UnauthenticatedError('Invalid Credentials');
+
+  if (!user) {
+    throw new UnauthenticatedError("Invalid Credentials");
   }
 
   //checking password
   const isPasswordCorrect = await user.comparePassword(_customer_Password);
-  if(!isPasswordCorrect) {
-    throw new UnauthenticatedError('Invalid Credentials');
+  if (!isPasswordCorrect) {
+    throw new UnauthenticatedError("Invalid Credentials");
   }
 
+  //create JWT for authentication
   const token = user.createJWT();
-  res.status(StatusCodes.OK).json({user: {name: user._customer_Name}, token});
+
+  //checking status
+  let isActive = true;
+  if (user._customer_Status !== 1) {
+    isActive = false;
+  }
+
+  res
+    .status(StatusCodes.OK)
+    .json({ user: { name: user._customer_Name, isActive }, token });
 };
 
-export {register, login};
+export { register, login };

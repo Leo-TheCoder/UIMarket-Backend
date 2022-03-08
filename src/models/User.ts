@@ -29,7 +29,7 @@ const UserSchema = new mongoose.Schema({
     Google: {
       type: String,
       default: null,
-    }
+    },
   },
   _customer_Wallet: {
     _coin: {
@@ -39,7 +39,7 @@ const UserSchema = new mongoose.Schema({
     _point: {
       type: Number,
       default: process.env.POINT_DEFAULT || 0,
-    }
+    },
   },
   _created_Time: {
     type: Date,
@@ -52,7 +52,7 @@ const UserSchema = new mongoose.Schema({
   _customer_Status: {
     type: Number,
     default: 1,
-  }
+  },
 });
 
 UserSchema.pre("save", async function () {
@@ -63,7 +63,11 @@ UserSchema.pre("save", async function () {
 
 UserSchema.methods.createJWT = function () {
   return jwt.sign(
-    { userId: this._id, name: this._customer_Name },
+    {
+      userId: this._id,
+      name: this._customer_Name,
+      isActive: this._customer_Status === 1,
+    },
     process.env.JWT_SECRET!,
     {
       expiresIn: process.env.JWT_LIFETIME,
@@ -74,7 +78,10 @@ UserSchema.methods.createJWT = function () {
 UserSchema.methods.comparePassword = async function (
   candidatePassword: string
 ) {
-  const isMatch = await bcrypt.compare(candidatePassword, this._customer_Password);
+  const isMatch = await bcrypt.compare(
+    candidatePassword,
+    this._customer_Password
+  );
   return isMatch;
 };
 
