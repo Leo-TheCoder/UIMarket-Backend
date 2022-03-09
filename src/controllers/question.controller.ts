@@ -5,6 +5,7 @@ import { IUserRequest } from "../types/express";
 import Question from "../models/Question.model";
 import QuestionTag from "../models/QuestionTag.model";
 
+//get _id of tags in list (create tags if they don't exist)
 const createTagList = async (tagList: [String]) => {
   const promises = [];
   for (const tag of tagList) {
@@ -26,9 +27,8 @@ const createQuestion = async (req: IUserRequest, res: Response) => {
   const tagList: [String] = req.body.tagList;
   const list = await createTagList(tagList);
 
-  res.json(list);
-  //const question = await Question.create({ ...req.body, _user_id: userId });
-  //res.status(StatusCodes.CREATED).json({ question });
+  const question = await Question.create({ ...req.body, _user_id: userId, tagList: list});
+  res.status(StatusCodes.CREATED).json(question);
 };
 
 export { createQuestion };

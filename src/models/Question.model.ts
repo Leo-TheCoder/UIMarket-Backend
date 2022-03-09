@@ -35,6 +35,18 @@ const QuestionSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    _total_Upvote: {
+      type: Number,
+      default: 0,
+    },
+    _total_Downvote: {
+      type: Number,
+      default: 0,
+    },
+    tagList: [{
+      type: mongoose.Types.ObjectId,
+      ref: "questiontag",
+    },],
   },
   {
     timestamps: true,
