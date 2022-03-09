@@ -24,10 +24,10 @@ const createTagList = async (tagList: [String]) => {
 const createQuestion = async (req: IUserRequest, res: Response) => {
   const { userId } = req.user!;
 
-  const tagList: [String] = req.body.tagList;
+  const tagList: [String] = req.body.questionTag;
   const list = await createTagList(tagList);
 
-  const question = await Question.create({ ...req.body, _user_id: userId, tagList: list});
+  const question = await Question.create({ ...req.body, userId: userId, questionTag: list});
   res.status(StatusCodes.CREATED).json(question);
 };
 

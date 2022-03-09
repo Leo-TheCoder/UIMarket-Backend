@@ -2,48 +2,48 @@ import mongoose from "mongoose";
 
 const QuestionSchema = new mongoose.Schema(
   {
-    _user_id: {
+    userId: {
       type: mongoose.Types.ObjectId,
       ref: "Customer",
       required: [true, "Please provide user id"],
     },
-    _question_Title: {
+    questionTitle: {
       type: String,
       required: [true, "Please provide question title"],
     },
-    _question_Content: {
+    questionContent: {
       type: String,
       required: [true, "Please provide question content"],
     },
-    _question_Status: {
+    questionStatus: {
       type: Number,
       default: 1,
     },
-    _question_Bounty: {
+    questionBounty: {
       type: Number,
       default: -1,
     },
-    _total_Answer: {
+    totalAnswer: {
       type: Number,
       default: 0,
     },
-    _total_Comment: {
+    totalComment: {
       type: Number,
       default: 0,
     },
-    _total_View: {
+    totalView: {
       type: Number,
       default: 0,
     },
-    _total_Upvote: {
+    totalUpvote: {
       type: Number,
       default: 0,
     },
-    _total_Downvote: {
+    totalDownvote: {
       type: Number,
       default: 0,
     },
-    tagList: [{
+    questionTag: [{
       type: mongoose.Types.ObjectId,
       ref: "questiontag",
     },],

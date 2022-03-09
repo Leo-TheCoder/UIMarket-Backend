@@ -10,24 +10,24 @@ const register = async (req: Request, res: Response) => {
 
   res
     .status(StatusCodes.CREATED)
-    .json({ user: { name: user._customer_Name, isActive: true }, token });
+    .json({ user: { name: user.customerName, isActive: true }, token });
 };
 
 const login = async (req: Request, res: Response) => {
-  const { _customer_Email, _customer_Password } = req.body;
+  const { customerEmail, customerPassword } = req.body;
 
-  if (!_customer_Email || !_customer_Password) {
+  if (!customerEmail || !customerPassword) {
     throw new BadRequestError("Please provide email and password");
   }
 
-  const user = await User.findOne({ _customer_Email });
+  const user = await User.findOne({ customerEmail });
 
   if (!user) {
     throw new UnauthenticatedError("Invalid Credentials");
   }
 
   //checking password
-  const isPasswordCorrect = await user.comparePassword(_customer_Password);
+  const isPasswordCorrect = await user.comparePassword(customerPassword);
   if (!isPasswordCorrect) {
     throw new UnauthenticatedError("Invalid Credentials");
   }
@@ -36,14 +36,11 @@ const login = async (req: Request, res: Response) => {
   const token = user.createJWT();
 
   //checking status
-  let isActive = true;
-  if (user._customer_Status !== 1) {
-    isActive = false;
-  }
+  const isActive = user.customerStatus === 1;
 
   res
     .status(StatusCodes.OK)
-    .json({ user: { name: user._customer_Name, isActive }, token });
+    .json({ user: { name: user.customerName, isActive }, token });
 };
 
 export { register, login };
