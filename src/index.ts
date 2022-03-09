@@ -2,6 +2,7 @@
 import 'dotenv/config';
 import 'express-async-errors';
 import express, { Request, Response, Application } from "express";
+import cors from 'cors'
 import connectDB from "./db/connect";
 
 //Create server app instance
@@ -17,6 +18,7 @@ import errorHandlerMiddleware from "./middlewares/handle-errors";
 import notFoundMiddleware from "./middlewares/not-found";
 import authenticationMiddleware from "./middlewares/authentication";
 
+app.use(cors());
 app.use(express.json());
 
 app.get("/", (req: Request, res: Response): void => {
@@ -24,7 +26,7 @@ app.get("/", (req: Request, res: Response): void => {
 });
 
 app.use("/api/v1/auth", authRouter);
-app.use("/api/v1/questions", authenticationMiddleware, questionRouter );
+app.use("/api/v1/questions", questionRouter );
 
 app.use(notFoundMiddleware);
 app.use(errorHandlerMiddleware);

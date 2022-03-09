@@ -1,8 +1,13 @@
 import express from "express";
-import { createQuestion } from "../controllers/question.controller";
+import {
+  createQuestion,
+  getQuestions,
+} from "../controllers/question.controller";
+import authenticationMiddleware from "../middlewares/authentication";
 
 const router = express.Router();
 
-router.post("/", createQuestion);
+router.get("/", getQuestions);
+router.post("/", authenticationMiddleware, createQuestion);
 
 export default router;
