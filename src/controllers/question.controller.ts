@@ -2,8 +2,8 @@ import { StatusCodes } from "http-status-codes";
 import { BadRequestError, UnauthenticatedError } from "../errors";
 import { Response } from "express";
 import { IUserRequest } from "../types/express";
-import Question from "../models/Question";
-import QuestionTag from "../models/QuestionTag";
+import Question from "../models/Question.model";
+import QuestionTag from "../models/QuestionTag.model";
 
 const createTagList = async (tagList: [String]) => {
   const promises = [];

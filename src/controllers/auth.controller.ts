@@ -1,4 +1,4 @@
-import User from "../models/User";
+import User from "../models/User.model";
 import { StatusCodes } from "http-status-codes";
 import { BadRequestError, UnauthenticatedError } from "../errors";
 

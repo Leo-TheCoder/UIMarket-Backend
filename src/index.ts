@@ -9,8 +9,8 @@ const app: Application = express();
 const PORT = process.env.PORT || 5000;
 
 //Router
-import authRouter from "./routes/auth";
-import questionRouter from "./routes/question";
+import authRouter from "./routes/auth.route";
+import questionRouter from "./routes/question.route";
 
 //Middleware
 import errorHandlerMiddleware from "./middlewares/handle-errors";
