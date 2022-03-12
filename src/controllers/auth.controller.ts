@@ -3,6 +3,7 @@ import { StatusCodes } from "http-status-codes";
 import { BadRequestError, UnauthenticatedError } from "../errors";
 
 import { Request, Response } from "express";
+import { IUserRequest } from "../types/express";
 
 const register = async (req: Request, res: Response) => {
   const user = await User.create({ ...req.body });
@@ -43,4 +44,16 @@ const login = async (req: Request, res: Response) => {
     .json({ user: { name: user.customerName, isActive }, token });
 };
 
-export { register, login };
+const loginWithToken = async (req: IUserRequest, res: Response) => {
+  const {userId} = req.user!;
+
+  const user = await User.find({_id: userId}, {customerPassword: 0, authenToken: 0});
+
+  if(!user) {
+    return new UnauthenticatedError("User not found!");
+  }
+
+  res.status(StatusCodes.OK).json({user: user[0]});
+}
+
+export { register, login, loginWithToken };

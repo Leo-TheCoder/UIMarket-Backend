@@ -4,7 +4,6 @@ import { Request, Response } from "express";
 import { IUserRequest } from "../types/express";
 import Question from "../models/Question.model";
 import QuestionTag from "../models/QuestionTag.model";
-import { json } from "stream/consumers";
 
 //get _id of tags in list (create tags if they don't exist)
 const createTagList = async (tagList: [String]) => {
