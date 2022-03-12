@@ -53,7 +53,9 @@ const getQuestions = async (req: Request, res: Response) => {
   const questions = await Question.find()
     .sort({ updatedAt: -1 })
     .skip((page - 1) * limit) //Notice here
-    .limit(limit);
+    .limit(limit)
+    .populate("questionTag", "tagName -_id")
+    .populate("userId", "customerName -_id");
   res.status(StatusCodes.OK).json({
     totalPages,
     page,

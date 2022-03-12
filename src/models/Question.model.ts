@@ -45,7 +45,7 @@ const QuestionSchema = new mongoose.Schema(
     },
     questionTag: [{
       type: mongoose.Types.ObjectId,
-      ref: "questiontag",
+      ref: "QuestionTag",
     },],
   },
   {
