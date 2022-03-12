@@ -9,9 +9,13 @@ const register = async (req: Request, res: Response) => {
   const user = await User.create({ ...req.body });
   const token = user.createJWT();
 
+  const userObj = Object.assign({}, user._doc);
+  delete userObj.customerPassword;
+  delete userObj.authenToken;
+
   res
     .status(StatusCodes.CREATED)
-    .json({ user: { name: user.customerName, isActive: true }, token });
+    .json({ user: userObj, token });
 };
 
 const login = async (req: Request, res: Response) => {
@@ -35,13 +39,14 @@ const login = async (req: Request, res: Response) => {
 
   //create JWT for authentication
   const token = user.createJWT();
-
-  //checking status
-  const isActive = user.customerStatus === 1;
+  
+  const userObj = Object.assign({}, user._doc);
+  delete userObj.customerPassword;
+  delete userObj.authenToken;
 
   res
     .status(StatusCodes.OK)
-    .json({ user: { name: user.customerName, isActive }, token });
+    .json({ user: userObj, token });
 };
 
 const loginWithToken = async (req: IUserRequest, res: Response) => {
