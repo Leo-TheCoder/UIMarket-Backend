@@ -4,7 +4,6 @@ import { Request, Response } from "express";
 import { IUserRequest } from "../types/express";
 import Question from "../models/Question.model";
 import QuestionTag from "../models/QuestionTag.model";
-import mongoose from "mongoose";
 
 //get _id of tags in list (create tags if they don't exist)
 const createTagList = async (tagList: [String]) => {
@@ -22,9 +21,11 @@ const createTagList = async (tagList: [String]) => {
   return tagObjects.map((obj) => obj._id);
 };
 
+//create question endpoint
 const createQuestion = async (req: IUserRequest, res: Response) => {
   const { userId } = req.user!;
 
+  //get array of tags' list
   const tagList: [String] = req.body.questionTag;
   const list = await createTagList(tagList);
 
@@ -39,30 +40,61 @@ const createQuestion = async (req: IUserRequest, res: Response) => {
 interface IQuery {
   page?: string;
   limit?: string;
+  selectWith?: string;
 }
 
 const getQuestions = async (req: Request, res: Response) => {
   const query = req.query as IQuery;
   const page = parseInt(query.page!) || 1;
   const limit = parseInt(query.limit!) || 10;
-  const total = await Question.countDocuments();
-  const totalPages =
-    total % limit === 0
-      ? Math.floor(total / limit)
-      : Math.floor(total / limit) + 1;
+  
+  const selectWith = query.selectWith?.toLowerCase().trim() || "popular";
+  
+  //Get bounty question
+  if(selectWith === "bounty") {
+    const total = await Question.countDocuments({questionBounty: {$gt: 0}});
+    const totalPages =
+      total % limit === 0
+        ? Math.floor(total / limit)
+        : Math.floor(total / limit) + 1;
 
-  const questions = await Question.find()
-    .sort({ updatedAt: -1 })
-    .skip((page - 1) * limit) //Notice here
-    .limit(limit)
-    .populate("questionTag", "tagName -_id")
-    .populate("userId", "customerName -_id");
-  res.status(StatusCodes.OK).json({
-    totalPages,
-    page,
-    limit,
-    questions,
-  });
+    const questions = await Question.find({questionBounty: {$gt: 0}})
+      .sort({ questionBounty: -1 , totalView: -1})
+      .skip((page - 1) * limit) //Notice here
+      .limit(limit)
+      .populate("questionTag", "tagName -_id")
+      .populate("userId", "customerName -_id");
+    return res.status(StatusCodes.OK).json({
+      totalPages,
+      page,
+      limit,
+      questions,
+    });
+    
+  } 
+
+  //Get popular question
+  else {
+    const total = await Question.countDocuments({questionBounty: {$lte: 0}});
+    const totalPages =
+      total % limit === 0
+        ? Math.floor(total / limit)
+        : Math.floor(total / limit) + 1;
+
+    const questions = await Question.find({questionBounty: {$lte: 0}})
+      .sort({ totalComment: -1 , totalUpvote: -1})
+      .skip((page - 1) * limit) //Notice here
+      .limit(limit)
+      .populate("questionTag", "tagName -_id")
+      .populate("userId", "customerName -_id");
+    return res.status(StatusCodes.OK).json({
+      totalPages,
+      page,
+      limit,
+      questions,
+    });
+  }
+
 };
 
 const getQuestionByID = async (req: Request, res: Response) => {
