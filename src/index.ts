@@ -1,8 +1,8 @@
 //Setup enviroment
-import 'dotenv/config';
-import 'express-async-errors';
+import "dotenv/config";
+import "express-async-errors";
 import express, { Request, Response, Application } from "express";
-import cors from 'cors'
+import cors from "cors";
 import connectDB from "./db/connect";
 
 //Create server app instance
@@ -27,22 +27,21 @@ app.get("/", (req: Request, res: Response): void => {
 });
 
 app.use("/api/v1/auth", authRouter);
-app.use("/api/v1/questions", questionRouter );
+app.use("/api/v1/questions", questionRouter);
 app.use("/api/v1/questionTags", questionTagRouter);
 
 app.use(notFoundMiddleware);
 app.use(errorHandlerMiddleware);
 
-
 const start = async () => {
   try {
     await connectDB(process.env.MONGO_URI!);
     app.listen(PORT, (): void => {
-      console.log(`Sever is listening on port ${PORT}...`);
+      console.log(`Server is listening on port ${PORT}...`);
     });
   } catch (error) {
     console.log(error);
   }
-}
+};
 
 start();

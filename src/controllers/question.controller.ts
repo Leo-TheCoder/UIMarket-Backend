@@ -4,6 +4,7 @@ import { Request, Response } from "express";
 import { IUserRequest } from "../types/express";
 import Question from "../models/Question.model";
 import QuestionTag from "../models/QuestionTag.model";
+import mongoose from "mongoose";
 
 //get _id of tags in list (create tags if they don't exist)
 const createTagList = async (tagList: [String]) => {
@@ -64,4 +65,14 @@ const getQuestions = async (req: Request, res: Response) => {
   });
 };
 
-export { createQuestion, getQuestions };
+const getQuestionByID = async (req: Request, res: Response) => {
+  const question = await Question
+    // .findById(req.params.id)
+    .findByIdAndUpdate(req.params.id, { $inc: { totalView: 1 } })
+    .populate("questionTag", "tagName -_id")
+    .populate("userId", "customerName -_id");
+
+  res.status(StatusCodes.OK).json({ question });
+};
+
+export { createQuestion, getQuestions, getQuestionByID };
