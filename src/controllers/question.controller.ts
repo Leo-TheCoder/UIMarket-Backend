@@ -48,7 +48,7 @@ const getQuestions = async (req: Request, res: Response) => {
   const page = parseInt(query.page!) || 1;
   const limit = parseInt(query.limit!) || 10;
   
-  const selectWith = query.selectWith?.toLowerCase().trim() || "popular";
+  const selectWith = query.selectWith?.toLowerCase().trim() || "all";
   
   //Get bounty question
   if(selectWith === "bounty") {
