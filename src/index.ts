@@ -13,6 +13,7 @@ const PORT = process.env.PORT || 5000;
 import authRouter from "./routes/auth.route";
 import questionRouter from "./routes/question.route";
 import questionTagRouter from "./routes/questionTag.route";
+import votingRouter from "./routes/voting.route";
 
 //Middleware
 import errorHandlerMiddleware from "./middlewares/handle-errors";
@@ -29,6 +30,8 @@ app.get("/", (req: Request, res: Response): void => {
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/questions", questionRouter);
 app.use("/api/v1/questionTags", questionTagRouter);
+app.use("/api/v1/voting", authenticationMiddleware, votingRouter );
+
 
 app.use(notFoundMiddleware);
 app.use(errorHandlerMiddleware);
