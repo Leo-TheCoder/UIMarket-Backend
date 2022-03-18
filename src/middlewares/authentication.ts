@@ -1,34 +1,59 @@
-import User from "../models/User.model";
-import jwt from "jsonwebtoken";
-import { UnauthenticatedError } from "../errors";
-import { Response, NextFunction } from "express";
-import { IUserRequest} from "../types/express";
+import User from '../models/User.model';
+import jwt from 'jsonwebtoken';
+import { UnauthenticatedError } from '../errors';
+import { Response, NextFunction } from 'express';
+import { IUserRequest } from '../types/express';
 
 interface PayloadUser extends jwt.JwtPayload {
-  userId: string;
-  name: string;
-  isActive: boolean;
+	userId: string;
+	name: string;
+	isActive: boolean;
 }
 
-const auth = (req: IUserRequest, res: Response, next: NextFunction) => {
-  //check header
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith("Bearer")) {
-    throw new UnauthenticatedError("Authentication invalid");
-  }
-  const token = authHeader.split(" ")[1];
+const compulsoryAuth = (req: IUserRequest, res: Response, next: NextFunction) => {
+	//check header
+	const authHeader = req.headers.authorization;
+	if (!authHeader || !authHeader.startsWith('Bearer')) {
+		throw new UnauthenticatedError('Authentication invalid');
+	}
+	const token = authHeader.split(' ')[1];
 
-  try {
-    const payload = jwt.verify(token, process.env.JWT_SECRET!) as PayloadUser;
-    req.user = {
-      userId: payload.userId,
-      name: payload.name,
-      isActive: payload.isActive,
-    };
-    next();
-  } catch (error) {
-    throw new UnauthenticatedError("Authencation invalid");
-  }
+	try {
+		const payload = jwt.verify(token, process.env.JWT_SECRET!) as PayloadUser;
+		req.user = {
+			userId: payload.userId,
+			name: payload.name,
+			isActive: payload.isActive,
+		};
+		next();
+	} catch (error) {
+		throw new UnauthenticatedError('Authencation invalid');
+	}
 };
 
-export default auth;
+const optionalAuth = (req: IUserRequest, res: Response, next: NextFunction) => {
+	//check header
+	const authHeader = req.headers.authorization;
+	if (!authHeader || !authHeader.startsWith('Bearer')) {
+		// throw new UnauthenticatedError('Authentication invalid');
+		req.user = undefined;
+		return next();
+	}
+	const token = authHeader.split(' ')[1];
+
+	try {
+		const payload = jwt.verify(token, process.env.JWT_SECRET!) as PayloadUser;
+		req.user = {
+			userId: payload.userId,
+			name: payload.name,
+			isActive: payload.isActive,
+		};
+		next();
+	} catch (error) {
+		// throw new UnauthenticatedError("Authencation invalid");
+		req.user = undefined;
+		next();
+	}
+};
+
+export { compulsoryAuth, optionalAuth };

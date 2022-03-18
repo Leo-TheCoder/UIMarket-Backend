@@ -4,6 +4,8 @@ import { Request, Response } from "express";
 import { IUserRequest } from "../types/express";
 import Question from "../models/Question.model";
 import QuestionTag from "../models/QuestionTag.model";
+import { ObjectId } from "mongodb";
+import VotingModel from "../models/Voting.model";
 
 //get _id of tags in list (create tags if they don't exist)
 const createTagList = async (tagList: [String]) => {
@@ -118,14 +120,36 @@ const getQuestions = async (req: Request, res: Response) => {
   }
 };
 
-const getQuestionByID = async (req: Request, res: Response) => {
+const getQuestionByID = async (req: IUserRequest, res: Response) => {
+  var vote;
+
+  if(req.user){
+  const o_questionID = new ObjectId (req.params.id);
+  const o_userID = new ObjectId (req.user.userId);
+
+  vote = await VotingModel.find({
+    objectId: o_questionID,
+    userId: o_userID,
+  })
+  .select({
+    _id: 0,
+    action: 1,
+  })
+
+  if(vote.length===0){vote ===null}
+}
+else{
+  vote === null;
+}
+
+
   const question = await Question
     // .findById(req.params.id)
     .findByIdAndUpdate(req.params.id, { $inc: { totalView: 1 } })
     .populate("questionTag", "tagName")
     .populate({ path: "userId", select: ["customerName", "customerEmail"] });
 
-  res.status(StatusCodes.OK).json({ question });
+  res.status(StatusCodes.OK).json({ question, vote });
 };
 
 export { createQuestion, getQuestions, getQuestionByID };
