@@ -4,11 +4,9 @@ import { Request, Response } from 'express';
 import { IUserRequest } from '../types/express';
 import Question from '../models/Question.model';
 import QuestionTag from '../models/QuestionTag.model';
-import { ObjectId } from 'mongodb';
 import VotingModel from '../models/Voting.model';
 import { downvote } from './downvoting.controller';
 import { upvote } from './upvoting.controller';
-const constant = require('../../constant.ts')
 
 
 
@@ -122,8 +120,8 @@ const getQuestionByID = async (req: IUserRequest, res: Response) => {
 	};
 
 	if (req.user) {
-		const o_questionID = new ObjectId(req.params.id);
-		const o_userID = new ObjectId(req.user.userId);
+		const o_questionID = req.params.id;
+		const o_userID = req.user.userId;
 
 		const vote = await VotingModel.find({
 			objectId: o_questionID,
@@ -153,7 +151,7 @@ const getQuestionByID = async (req: IUserRequest, res: Response) => {
     _doc.voteStatus = voteStatus;
 
     res.status(StatusCodes.OK).json({ 
-      _doc, 
+      question: _doc, 
       // voteStatus, 
     });
   }

@@ -12,7 +12,7 @@ const upvote = async (req: IUserRequest, res: Response) => {
   switch (type) {
     case "question":
         const result = await upvoteQuestion(userId, questionId, objectId);
-        return res.status(StatusCodes.OK).json(result);
+        return res.status(result.status).json(result.msg);
     case "answer":
     case "comment":
     default:
@@ -32,7 +32,16 @@ const upvoteQuestion = async (
     userId,
     questionId,
     objectId,
-  });
+  })
+  const question = await QuestionModel.findById(objectId, ["userId"]);
+  //if users are voting their posts
+  if(question.userId == userId) {
+    return {
+      msg: "CANNOT VOTE FOR THIER OWN POSTS",
+      status: StatusCodes.BAD_REQUEST,
+    }
+  }
+
   //if user didn't vote for that object before...
   if (!votingDoc) {
     //create new voting object
@@ -41,29 +50,44 @@ const upvoteQuestion = async (
       { action: 1 },
       { new: true, upsert: true }
     );
-
+    const totalUpvote = await VotingModel.countDocuments({objectId, action: 1});
     //update question upvote number
     await QuestionModel.findOneAndUpdate(
       {
         _id: questionId,
       },
-      { $inc: { totalUpvote: +1 } }
+      { totalUpvote }
     );
 
-    return "UPVOTED";
+    return {
+      msg: "UPVOTED",
+      status: StatusCodes.OK,
+    }
   } 
 
   //if user has voted for object...
   else {
-    //removing voting object => unvote
-    await votingDoc.remove();
+    if(votingDoc.action === 0) {
+      votingDoc.action = 1;
+      await votingDoc.save();
+    }
+    else {
+      //removing voting object => unvote
+      await votingDoc.remove();
+    }
+
+    const totalUpvote = await VotingModel.countDocuments({objectId, action: 1});
+    const totalDownvote = await VotingModel.countDocuments({objectId, action: 0});
 
     //update voting number
     await QuestionModel.findOneAndUpdate(
       { _id: questionId },
-      { $inc: { totalUpvote: -1 } }
+      { totalUpvote, totalDownvote }
     );
 
-    return "UNVOTED"
+    return {
+      msg: "UNVOTED",
+      status: StatusCodes.OK,
+    }
   }
 };
