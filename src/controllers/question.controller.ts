@@ -4,7 +4,6 @@ import { Request, Response } from "express";
 import { IUserRequest } from "../types/express";
 import Question from "../models/Question.model";
 import QuestionTag from "../models/QuestionTag.model";
-import { ObjectId } from "mongodb";
 import VotingModel from "../models/Voting.model";
 import { downvote } from "./downvoting.controller";
 import { upvote } from "./upvoting.controller";
@@ -123,22 +122,24 @@ const getQuestions = async (req: Request, res: Response) => {
 };
 
 const getQuestionByID = async (req: IUserRequest, res: Response) => {
+  //Voting Status of user for this question
   let voteStatus = {
     upvote: false,
     downvote: false,
   };
 
+  //Checking logged in user whether voted for this question
   if (req.user) {
-    const o_questionID = new ObjectId(req.params.id);
-    const o_userID = new ObjectId(req.user.userId);
-
-    const vote = await VotingModel.find({
-      objectId: o_questionID,
-      userId: o_userID,
-    }).select({
-      _id: 0,
-      action: 1,
-    });
+    const vote = await VotingModel
+      //
+      .find({
+        objectId: req.params.id,
+        userId: req.user.userId,
+      })
+      .select({
+        _id: 0,
+        action: 1,
+      });
 
     if (vote.length != 0) {
       if (vote[0] === 0) {
@@ -149,23 +150,29 @@ const getQuestionByID = async (req: IUserRequest, res: Response) => {
     }
   }
 
+  //Find the question and increase its view by 1
   let question = await Question
     // .findById(req.params.id)
     .findByIdAndUpdate(req.params.id, { $inc: { totalView: 1 } })
     .populate("questionTag", "tagName")
     .populate({ path: "userId", select: ["customerName", "customerEmail"] });
 
+  //Checking whether there was a question or not
   if (question) {
     const { _doc } = question;
     _doc.voteStatus = voteStatus;
 
     res.status(StatusCodes.OK).json({
       _doc,
-      // voteStatus,
     });
   } else {
     res.status(StatusCodes.BAD_REQUEST).send("Invalid Question ID");
   }
 };
 
-export { createQuestion, getQuestions, getQuestionByID };
+export {
+  //
+  createQuestion,
+  getQuestions,
+  getQuestionByID,
+};

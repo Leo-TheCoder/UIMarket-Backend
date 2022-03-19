@@ -3,7 +3,6 @@ import { BadRequestError, UnauthenticatedError } from "../errors";
 import { Request, Response } from "express";
 import { IUserRequest } from "../types/express";
 import Question from "../models/Question.model";
-import { ObjectId } from "mongodb";
 import Answer from "../models/Answer.model";
 import * as Constants from "../constants";
 
@@ -61,7 +60,16 @@ const getAnswer = async (req: IUserRequest, res: Response) => {
       ]),
     );
 
-  res.status(StatusCodes.OK).json({ answers });
+  res.status(StatusCodes.OK).json({
+    totalPages,
+    page,
+    limit,
+    answers,
+  });
 };
 
-export { createAnswer, getAnswer };
+export {
+  //
+  createAnswer,
+  getAnswer,
+};
