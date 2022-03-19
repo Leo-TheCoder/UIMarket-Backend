@@ -45,8 +45,7 @@ const getAnswer = async (req: IUserRequest, res: Response) => {
       questionId: req.params.questionId,
       answerStatus: 1,
     })
-    .skip((page - 1) * limit)
-    .limit(limit)
+    // .populate({ path: "userId", select: ["customerName", "customerEmail"] })
     .then((answers) =>
       Answer.aggregate([
         {
@@ -57,6 +56,24 @@ const getAnswer = async (req: IUserRequest, res: Response) => {
           },
         },
         { $sort: { bestAnswer: -1, balanceVote: -1 } },
+        { $limit: limit },
+        { $skip: (page - 1) * limit },
+        {
+          $lookup: {
+            from: "customers",
+            localField: "userId",
+            foreignField: "_id",
+            pipeline: [
+              {
+                $project: {
+                  customerName: 1,
+                  customerEmail: 1,
+                },
+              },
+            ],
+            as: "customerInfo",
+          },
+        },
       ]),
     );
 
