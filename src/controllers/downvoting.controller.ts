@@ -67,13 +67,16 @@ const downvoteQuestion = async (
 
   //if user has voted for object...
   else {
+    let msg = "";
     if(votingDoc.action === 1) {
       votingDoc.action = 0;
       await votingDoc.save();
+      msg = "DOWNVOTED";
     }
     else {
       //removing voting object => unvote
       await votingDoc.remove();
+      msg = "UNVOTED";
     }
 
     const totalUpvote = await VotingModel.countDocuments({objectId, action: 1});
@@ -86,7 +89,7 @@ const downvoteQuestion = async (
     );
 
     return {
-      msg: "UNVOTED",
+      msg,
       status: StatusCodes.OK,
     }
   }
