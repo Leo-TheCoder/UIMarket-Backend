@@ -9,6 +9,7 @@ import { downvote } from "./downvoting.controller";
 import { upvote } from "./upvoting.controller";
 import * as Constants from "../constants";
 
+
 //get _id of tags in list (create tags if they don't exist)
 const createTagList = async (tagList: [String]) => {
   const promises = [];

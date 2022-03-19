@@ -12,7 +12,7 @@ const downvote = async (req: IUserRequest, res: Response) => {
   switch (type) {
     case "question":
       const result = await downvoteQuestion(userId, questionId, objectId);
-      return res.status(StatusCodes.OK).json(result);
+      return res.status(result.status).json(result.msg);
     case "answer":
     case "comment":
     default:
@@ -27,12 +27,21 @@ const downvoteQuestion = async (
   questionId: string,
   objectId: string
 ) => {
-  //get document of voting
+  //get document of voting 
   const votingDoc = await VotingModel.findOne({
     userId,
     questionId,
     objectId,
-  });
+  })
+  const question = await QuestionModel.findById(objectId, ["userId"]);
+  //if users are voting their posts
+  if(question.userId == userId) {
+    return {
+      msg: "CANNOT VOTE FOR THIER OWN POSTS",
+      status: StatusCodes.BAD_REQUEST,
+    }
+  }
+
   //if user didn't vote for that object before...
   if (!votingDoc) {
     //create new voting object
@@ -41,29 +50,47 @@ const downvoteQuestion = async (
       { action: 0 },
       { new: true, upsert: true }
     );
-
+    const totalDownvote = await VotingModel.countDocuments({objectId, action: 0});
     //update question upvote number
     await QuestionModel.findOneAndUpdate(
       {
         _id: questionId,
       },
-      { $inc: { totalDownvote: +1 } }
+      { totalDownvote }
     );
 
-    return "DOWNVOTED";
+    return {
+      msg: "DOWNVOTED",
+      status: StatusCodes.OK,
+    }
   } 
-  
+
   //if user has voted for object...
   else {
-    //removing voting object => unvote
-    await votingDoc.remove();
+    let msg = "";
+    if(votingDoc.action === 1) {
+      votingDoc.action = 0;
+      await votingDoc.save();
+      msg = "DOWNVOTED";
+    }
+    else {
+      //removing voting object => unvote
+      await votingDoc.remove();
+      msg = "UNVOTED";
+    }
+
+    const totalUpvote = await VotingModel.countDocuments({objectId, action: 1});
+    const totalDownvote = await VotingModel.countDocuments({objectId, action: 0});
 
     //update voting number
     await QuestionModel.findOneAndUpdate(
       { _id: questionId },
-      { $inc: { totalDownvote: -1 } }
+      { totalUpvote, totalDownvote }
     );
 
-    return "UNVOTED";
+    return {
+      msg,
+      status: StatusCodes.OK,
+    }
   }
 };
