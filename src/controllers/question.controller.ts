@@ -8,7 +8,7 @@ import VotingModel from "../models/Voting.model";
 import { downvote } from "./downvoting.controller";
 import { upvote } from "./upvoting.controller";
 import * as Constants from "../constants";
-
+import { getStatusVote } from "../utils/ultils";
 
 //get _id of tags in list (create tags if they don't exist)
 const createTagList = async (tagList: [String]) => {
@@ -131,29 +131,12 @@ const getQuestionByID = async (req: IUserRequest, res: Response) => {
 
   //Checking logged in user whether voted for this question
   if (req.user) {
-    const vote = await VotingModel
-      //
-      .find({
-        objectId: req.params.id,
-        userId: req.user.userId,
-      })
-      .select({
-        _id: 0,
-        action: 1,
-      });
-
-    if (vote.length != 0) {
-      if (vote[0] === 0) {
-        voteStatus.downvote = true;
-      } else {
-        voteStatus.upvote = true;
-      }
-    }
+    voteStatus = await getStatusVote(req.user.userId, req.params.id);
   }
 
   //Find the question and increase its view by 1
   let question = await Question
-    // .findById(req.params.id)
+    //
     .findByIdAndUpdate(req.params.id, { $inc: { totalView: 1 } })
     .populate("questionTag", "tagName")
     .populate({ path: "userId", select: ["customerName", "customerEmail"] });

@@ -6,6 +6,7 @@ import Question from "../models/Question.model";
 import Answer from "../models/Answer.model";
 import * as Constants from "../constants";
 import { ObjectId } from "mongodb";
+import { getStatusVote } from "../utils/ultils";
 
 interface IQuery {
   page?: string;
@@ -74,6 +75,21 @@ const getAnswer = async (req: IUserRequest, res: Response) => {
       },
     },
   ]);
+
+  if (answers.length != 0) {
+    for (let i = 0; i < answers.length; i++) {
+      let voteStatus = {
+        upvote: false,
+        downvote: false,
+      };
+
+      if (req.user) {
+        voteStatus = await getStatusVote(req.user.userId, answers[i]._id);
+      }
+
+      answers[i].voteStatus = voteStatus;
+    }
+  }
 
   res.status(StatusCodes.OK).json({
     totalPages,
