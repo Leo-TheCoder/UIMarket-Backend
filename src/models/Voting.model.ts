@@ -10,7 +10,7 @@ const VotingSchema = new mongoose.Schema(
     questionId: {
       type: mongoose.Types.ObjectId,
       ref: "Question",
-      require: [true, "Please provide question id"],
+      required: [true, "Please provide question id"],
     },
     objectId: {
       type: mongoose.Types.ObjectId,
@@ -23,7 +23,7 @@ const VotingSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 VotingSchema.index({ userId: 1, questionId: 1, objectId: 1 }, { unique: true });
