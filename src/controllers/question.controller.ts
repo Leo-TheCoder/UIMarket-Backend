@@ -35,9 +35,9 @@ const createQuestion = async (req: IUserRequest, res: Response) => {
   const list = await createTagList(tagList);
 
   const question = await Question.create({
+	  ...req.body,
     userId: userId,
     questionTag: list,
-    ...req.body,
   });
   res.status(StatusCodes.CREATED).json(question);
 };
