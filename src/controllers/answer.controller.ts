@@ -5,6 +5,7 @@ import { IUserRequest } from "../types/express";
 import Question from "../models/Question.model";
 import Answer from "../models/Answer.model";
 import * as Constants from "../constants";
+import { ObjectId } from "mongodb";
 
 interface IQuery {
   page?: string;
@@ -39,43 +40,40 @@ const getAnswer = async (req: IUserRequest, res: Response) => {
       ? Math.floor(total / limit)
       : Math.floor(total / limit) + 1;
 
-  const answers = await Answer
-    //
-    .find({
-      questionId: req.params.questionId,
-      answerStatus: 1,
-    })
-    // .populate({ path: "userId", select: ["customerName", "customerEmail"] })
-    .then((answers) =>
-      Answer.aggregate([
-        {
-          $addFields: {
-            balanceVote: {
-              $subtract: ["$totalUpvote", "$totalDownvote"],
+  const answers = await Answer.aggregate([
+    {
+      $match: {
+        answerStatus: 1,
+        questionId: new ObjectId(req.params.questionId),
+      },
+    },
+    {
+      $addFields: {
+        balanceVote: {
+          $subtract: ["$totalUpvote", "$totalDownvote"],
+        },
+      },
+    },
+    { $skip: (page - 1) * limit },
+    { $limit: limit },
+    { $sort: { bestAnswer: -1, balanceVote: -1 } },
+    {
+      $lookup: {
+        from: "customers",
+        localField: "userId",
+        foreignField: "_id",
+        pipeline: [
+          {
+            $project: {
+              customerName: 1,
+              customerEmail: 1,
             },
           },
-        },
-        { $sort: { bestAnswer: -1, balanceVote: -1 } },
-        { $limit: limit },
-        { $skip: (page - 1) * limit },
-        {
-          $lookup: {
-            from: "customers",
-            localField: "userId",
-            foreignField: "_id",
-            pipeline: [
-              {
-                $project: {
-                  customerName: 1,
-                  customerEmail: 1,
-                },
-              },
-            ],
-            as: "customerInfo",
-          },
-        },
-      ]),
-    );
+        ],
+        as: "customerInfo",
+      },
+    },
+  ]);
 
   res.status(StatusCodes.OK).json({
     totalPages,
