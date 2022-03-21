@@ -9,15 +9,22 @@ const downvote = async (req: IUserRequest, res: Response) => {
   const { type, questionId, objectId } = req.body;
   const userId = req.user?.userId!;
 
-  switch (type) {
-    case "question":
-      const result = await downvoteQuestion(userId, questionId, objectId);
-      return res.status(result.status).json(result.msg);
-    case "answer":
-    case "comment":
-    default:
-      return res.status(StatusCodes.BAD_REQUEST).send();
+  //Non trigger solution
+  // switch (type) {
+  //   case "question":
+  //     const result = await downvoteQuestion(userId, questionId, objectId);
+  //     return res.status(result.status).json(result.msg);
+  //   case "answer":
+  //   case "comment":
+  //   default:
+  //     return res.status(StatusCodes.BAD_REQUEST).send();
+  // }
+
+  if(!type) {
+    throw new BadRequestError("Please provide type of object");
   }
+  const result = await downvoteObject(userId, questionId, objectId, type);
+  return res.status(result.status).json(result.msg);
 };
 
 export { downvote };
@@ -91,6 +98,77 @@ const downvoteQuestion = async (
     return {
       msg,
       status: StatusCodes.OK,
+    }
+  }
+};
+
+const downvoteObject = async (
+  userId: string,
+  questionId: string,
+  objectId: string,
+  type: string
+) => {
+  const votingDoc = await VotingModel.findOne({
+    userId,
+    questionId,
+    objectId,
+    type,
+  });
+
+  if (!votingDoc) {
+    await VotingModel.create(
+      {
+        userId,
+        questionId,
+        objectId,
+        type,
+        action: 0
+      },
+      (err, vote) => {
+        if (err) 
+          return {
+            status: StatusCodes.INTERNAL_SERVER_ERROR,
+            msg: err,
+          }
+      }
+    );
+
+    return {
+      status: StatusCodes.OK,
+      msg: "DOWNVOTED",
+    }
+  } else {
+    //if downvoted
+    if(votingDoc.action === 0) {
+      await votingDoc.remove();
+      return {
+        status: StatusCodes.OK,
+        msg: "UNVOTED",
+      }  
+    } 
+    //if upvoted
+    else {
+      await votingDoc.remove();
+      await VotingModel.create(
+        {
+          userId,
+          questionId,
+          objectId,
+          type,
+          action: 1
+        },
+        (err, vote) => {
+          if (err) 
+            return {
+              status: StatusCodes.INTERNAL_SERVER_ERROR,
+              msg: err,
+            }
+        }
+      );
+      return {
+        status: StatusCodes.OK,
+        msg: "DOWNVOTED",
+      }
     }
   }
 };

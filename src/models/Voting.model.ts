@@ -16,6 +16,10 @@ const VotingSchema = new mongoose.Schema(
       type: mongoose.Types.ObjectId,
       required: [true, "Please provide object id"],
     },
+    type: {
+      type: String,
+      required: [true, "Please provide type of object"],
+    },
     action: {
       type: Number,
       required: [true, "Please provide action number"],
