@@ -21,9 +21,13 @@ const upvote = async (req: IUserRequest, res: Response) => {
   // }
 
   //Trigger solution
-  if(!type) {
+  const validType: Array<string> = ["Question", "Comment", "Answer"];
+  if (!type) {
     throw new BadRequestError("Please provide type of object");
+  } else if (!validType.includes(type)) {
+    throw new BadRequestError("Valid types are: Question, Answer and Comment");
   }
+
   const result = await upvoteObject(userId, questionId, objectId, type);
   return res.status(result.status).json(result.msg);
 };
@@ -33,7 +37,7 @@ export { upvote };
 const upvoteQuestion = async (
   userId: string,
   questionId: string,
-  objectId: string
+  objectId: string,
 ) => {
   //get document of voting
   const votingDoc = await VotingModel.findOne({
@@ -56,7 +60,7 @@ const upvoteQuestion = async (
     const newVotingDoc = await VotingModel.findOneAndUpdate(
       { userId, questionId, objectId },
       { action: 1 },
-      { new: true, upsert: true }
+      { new: true, upsert: true },
     );
     const totalUpvote = await VotingModel.countDocuments({
       objectId,
@@ -67,7 +71,7 @@ const upvoteQuestion = async (
       {
         _id: questionId,
       },
-      { totalUpvote }
+      { totalUpvote },
     );
 
     return {
@@ -101,7 +105,7 @@ const upvoteQuestion = async (
     //update voting number
     await QuestionModel.findOneAndUpdate(
       { _id: questionId },
-      { totalUpvote, totalDownvote }
+      { totalUpvote, totalDownvote },
     );
 
     return {
@@ -115,7 +119,7 @@ const upvoteObject = async (
   userId: string,
   questionId: string,
   objectId: string,
-  type: string
+  type: string,
 ) => {
   const votingDoc = await VotingModel.findOne({
     userId,
@@ -131,30 +135,30 @@ const upvoteObject = async (
         questionId,
         objectId,
         type,
-        action: 1
+        action: 1,
       },
       (err, vote) => {
-        if (err) 
+        if (err)
           return {
             status: StatusCodes.INTERNAL_SERVER_ERROR,
             msg: err,
-          }
-      }
+          };
+      },
     );
 
     return {
       status: StatusCodes.OK,
       msg: "UPVOTED",
-    }
+    };
   } else {
     //if upvoted
-    if(votingDoc.action === 1) {
+    if (votingDoc.action === 1) {
       await votingDoc.remove();
       return {
         status: StatusCodes.OK,
         msg: "UNVOTED",
-      }  
-    } 
+      };
+    }
     //if downvoted
     else {
       await votingDoc.remove();
@@ -164,20 +168,20 @@ const upvoteObject = async (
           questionId,
           objectId,
           type,
-          action: 1
+          action: 1,
         },
         (err, vote) => {
-          if (err) 
+          if (err)
             return {
               status: StatusCodes.INTERNAL_SERVER_ERROR,
               msg: err,
-            }
-        }
+            };
+        },
       );
       return {
         status: StatusCodes.OK,
         msg: "UPVOTED",
-      }
+      };
     }
   }
 };
