@@ -17,6 +17,8 @@ import votingRouter from "./routes/voting.route";
 import answerRouter from "./routes/answer.route";
 import commentRouter from "./routes/comment.route";
 import profileRouter from "./routes/profile.route";
+import pictureRouter from "./routes/picture.route";
+
 
 //Middleware
 import errorHandlerMiddleware from "./middlewares/handle-errors";
@@ -41,6 +43,12 @@ app.use(
 app.use("/api/v1/answers", answerRouter);
 app.use("/api/v1/comments", commentRouter);
 app.use("/api/v1/profile", profileRouter);
+app.use(
+  "/api/v1/pictures",
+  authenticationMiddleware.compulsoryAuth,
+  pictureRouter,
+);
+
 
 app.use(notFoundMiddleware);
 app.use(errorHandlerMiddleware);
