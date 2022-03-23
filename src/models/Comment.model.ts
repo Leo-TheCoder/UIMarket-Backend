@@ -6,10 +6,9 @@ const CommentSchema = new mongoose.Schema({
     ref: "Customer",
     required: [true, "Please provide user id"],
   },
-  answerId: {
+  rootId: {
     type: mongoose.Types.ObjectId,
-    ref: "Answer",
-    required: [true, "Please provide answer id"],
+    required: [true, "Please provide root id"],
   },
   commentContent: {
     type: String,

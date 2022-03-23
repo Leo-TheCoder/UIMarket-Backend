@@ -7,23 +7,18 @@ import { BadRequestError } from "../errors";
 import { getStatusVote } from "../utils/ultils";
 
 const createComment = async (req: IUserRequest, res: Response) => {
-  const answer = await AnswerModel.findById(req.params.answerId);
-  if (answer) {
     const { userId } = req.user!;
     const comment = await CommentModel.create({
       ...req.body,
       userId,
-      answerId: req.params.answerId,
+      rootId: req.params.rootId,
     });
     res.status(StatusCodes.CREATED).json(comment);
-  } else {
-    throw new BadRequestError("Invalid answer ID");
-  }
 };
 
 const getComments = async (req: IUserRequest, res: Response) => {
-  const { answerId } = req.params;
-  const comments = await CommentModel.find({ answerId })
+  const { rootId } = req.params;
+  const comments = await CommentModel.find({ rootId })
     .sort({ createdAt: +1 })
     .populate("userId", "customerName");
 

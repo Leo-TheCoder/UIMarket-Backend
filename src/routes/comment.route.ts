@@ -5,11 +5,11 @@ import * as authenticationMiddleware from "../middlewares/authentication";
 const router = express.Router();
 
 //GET Method
-router.get("/:answerId", authenticationMiddleware.optionalAuth, getComments);
+router.get("/:rootId", authenticationMiddleware.optionalAuth, getComments);
 
 //POST Method
 router.post(
-  "/:answerId",
+  "/:rootId",
   authenticationMiddleware.compulsoryAuth,
   createComment,
 );
