@@ -17,7 +17,7 @@ const uploadAvatar = async (req: IUserRequest, res: Response) => {
   const { userId } = req.user!;
   const file = req.file!;
 
-  const upload = await uploadFile(file);
+  const upload = await uploadFile(file, "avatar");
   await unlinkFile(file.path);
 
   const user = await UserModel.findByIdAndUpdate(
