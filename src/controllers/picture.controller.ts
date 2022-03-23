@@ -6,7 +6,7 @@ import { ObjectId } from "mongodb";
 import { BadRequestError, UnauthenticatedError } from "../errors";
 import { IUserRequest } from "../types/express";
 import * as Constants from "../constants";
-import { uploadFile, getFileStream, deleteFile } from "../utils/s3";
+import { uploadFile, getFileStream } from "../utils/s3";
 import UserModel from "../models/User.model";
 import fs from "fs";
 import ultil from "util";
@@ -16,19 +16,6 @@ const unlinkFile = ultil.promisify(fs.unlink);
 const uploadAvatar = async (req: IUserRequest, res: Response) => {
   const { userId } = req.user!;
   const file = req.file!;
-
-  //Check user whether already had an avatar
-  const { customerAvatar } = await UserModel.findById(userId);
-  const readStream = getFileStream(customerAvatar);
-
-  //Delete old avatar
-  if (customerAvatar && readStream) {
-    const deleted = await deleteFile(customerAvatar);
-
-    if (deleted) {
-      console.log("deleted outdated avatar");
-    }
-  }
 
   const upload = await uploadFile(file);
   await unlinkFile(file.path);
@@ -42,17 +29,9 @@ const uploadAvatar = async (req: IUserRequest, res: Response) => {
   );
 
   if (user && upload) {
-    // const returnUser = user._doc;
-    // returnUser.avatarURL = upload.Location;
-
-    res.status(StatusCodes.CREATED).json({
-      // returnUser,
-      // user,
-      // upload,
-      URL: upload.Location,
-    });
+    res.status(StatusCodes.CREATED).json(user);
   } else {
-    res.status(StatusCodes.INTERNAL_SERVER_ERROR).send("Uploaded failed");
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).send("Upload failed");
   }
 };
 
