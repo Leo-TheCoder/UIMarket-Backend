@@ -18,7 +18,7 @@ const getStatusVote = async (userId: String, objectId: String) => {
     });
 
   if (vote.length != 0) {
-    if (vote[0] === 0) {
+    if (vote[0].action === 0) {
       voteStatus.downvote = true;
     } else {
       voteStatus.upvote = true;

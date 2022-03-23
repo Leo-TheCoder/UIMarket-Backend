@@ -88,7 +88,7 @@ const getQuestions = async (req: Request, res: Response) => {
         : Math.floor(total / limit) + 1;
 
     const questions = await Question.find({ questionBounty: { $lte: 0 } })
-      .sort({ totalComment: -1, totalUpvote: -1 })
+      .sort({ totalAnswer: -1, totalUpvote: -1 })
       .skip((page - 1) * limit)
       .limit(limit)
       .populate("questionTag", "tagName")
