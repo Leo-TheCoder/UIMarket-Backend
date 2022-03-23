@@ -35,7 +35,10 @@ const getAnswer = async (req: IUserRequest, res: Response) => {
   const page = parseInt(query.page!) || Constants.defaultPageNumber;
   const limit = parseInt(query.limit!) || Constants.defaultLimit;
 
-  const total = await Answer.countDocuments();
+  const total = await Answer.countDocuments({
+    questionId: req.params.questionId,
+  });
+
   const totalPages =
     total % limit === 0
       ? Math.floor(total / limit)
