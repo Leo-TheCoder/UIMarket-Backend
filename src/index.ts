@@ -15,7 +15,6 @@ import questionRouter from "./routes/question.route";
 import questionTagRouter from "./routes/questionTag.route";
 import votingRouter from "./routes/voting.route";
 import answerRouter from "./routes/answer.route";
-import pictureRouter from "./routes/picture.route";
 
 //Middleware
 import errorHandlerMiddleware from "./middlewares/handle-errors";
@@ -38,11 +37,6 @@ app.use(
   votingRouter,
 );
 app.use("/api/v1/answers", answerRouter);
-app.use(
-  "/api/v1/pictures",
-  authenticationMiddleware.compulsoryAuth,
-  pictureRouter,
-);
 
 app.use(notFoundMiddleware);
 app.use(errorHandlerMiddleware);
