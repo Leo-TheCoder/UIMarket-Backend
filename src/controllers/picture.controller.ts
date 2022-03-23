@@ -29,10 +29,11 @@ const uploadAvatar = async (req: IUserRequest, res: Response) => {
   );
 
   if (user && upload) {
-    res.status(StatusCodes.CREATED).json(user);
-  } else {
-    res.status(StatusCodes.INTERNAL_SERVER_ERROR).send("Upload failed");
+    res.status(StatusCodes.CREATED).json(upload.Location);
   }
+  // else {
+  //   res.status(StatusCodes.INTERNAL_SERVER_ERROR).send("Upload failed");
+  // }
 };
 
 const downloadAvatar = async (req: IUserRequest, res: Response) => {
