@@ -19,11 +19,17 @@ const createAnswer = async (req: IUserRequest, res: Response) => {
 
   if (question) {
     const { userId } = req.user!;
-    const answer = await Answer.create({
+    let answer = await Answer.create({
       ...req.body,
       userId: userId,
       questionId: req.params.questionId,
     });
+
+    answer = await Answer.populate(answer, {
+      path: "userId",
+      select: ["customerName", "customerEmail"],
+    });
+
     res.status(StatusCodes.CREATED).json(answer);
   } else {
     res.status(StatusCodes.BAD_REQUEST).send("Invalid question ID");
