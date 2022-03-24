@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { defaultMinLength } from "../constants";
 
 const QuestionSchema = new mongoose.Schema(
   {
@@ -10,10 +11,12 @@ const QuestionSchema = new mongoose.Schema(
     questionTitle: {
       type: String,
       required: [true, "Please provide question title"],
+      length: { $gte: defaultMinLength },
     },
     questionContent: {
       type: String,
       required: [true, "Please provide question content"],
+      length: defaultMinLength,
     },
     questionStatus: {
       type: Number,
@@ -25,10 +28,6 @@ const QuestionSchema = new mongoose.Schema(
       default: -1,
     },
     totalAnswer: {
-      type: Number,
-      default: 0,
-    },
-    totalComment: {
       type: Number,
       default: 0,
     },

@@ -4,6 +4,8 @@ import { Request, Response } from "express";
 import { IUserRequest } from "../types/express";
 import QuestionModel from "../models/Question.model";
 import VotingModel from "../models/Voting.model";
+import AnswerModel from "../models/Answer.model";
+import CommentModel from "../models/Comment.model";
 
 const upvote = async (req: IUserRequest, res: Response) => {
   const { type, questionId, objectId } = req.body;
@@ -26,6 +28,43 @@ const upvote = async (req: IUserRequest, res: Response) => {
     throw new BadRequestError("Please provide type of object");
   } else if (!validType.includes(type)) {
     throw new BadRequestError("Valid types are: Question, Answer and Comment");
+  }
+
+  //Checking questionId is available or not
+  const question = await QuestionModel.findById(questionId);
+  if (!question) {
+    throw new BadRequestError("Invalid Question ID");
+  }
+
+  //Checking objectId
+  switch (type) {
+    case "Question":
+      if (questionId != objectId) {
+        throw new BadRequestError("Invalid Question ID");
+      }
+      break;
+
+    case "Answer":
+      const answer = await AnswerModel.find({
+        _id: objectId,
+        questionId: questionId,
+        answerStatus: 1,
+      });
+      if (answer.length === 0) {
+        throw new BadRequestError("Invalid Answer");
+      }
+      break;
+
+    case "Comment":
+      const comment = await CommentModel.find({
+        _id: objectId,
+        questionId: questionId,
+        commentStatus: 1,
+      });
+      if (comment.length === 0) {
+        throw new BadRequestError("Invalid Comment");
+      }
+      break;
   }
 
   const result = await upvoteObject(userId, questionId, objectId, type);

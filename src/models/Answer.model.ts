@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { defaultMinLength } from "../constants";
 
 const AnswerSchema = new mongoose.Schema(
   {
@@ -15,6 +16,7 @@ const AnswerSchema = new mongoose.Schema(
     answerContent: {
       type: String,
       required: [true, "Please provide answer content"],
+      minlength: defaultMinLength,
     },
     bestAnswer: {
       type: Number,

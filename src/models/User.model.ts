@@ -7,6 +7,7 @@ const UserSchema = new mongoose.Schema(
     customerName: {
       type: String,
       required: [true, "Please provide name"],
+      minlength: 5,
     },
     customerAvatar: String,
     customerEmail: {
@@ -43,7 +44,7 @@ const UserSchema = new mongoose.Schema(
         default: 0,
       },
     },
-    customer_Status: {
+    customerStatus: {
       type: Number,
       default: 1,
       enum: [0, 1],
