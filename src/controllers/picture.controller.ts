@@ -6,47 +6,63 @@ import { ObjectId } from "mongodb";
 import { BadRequestError, UnauthenticatedError } from "../errors";
 import { IUserRequest } from "../types/express";
 import * as Constants from "../constants";
-import { uploadFile, getFileStream } from "../utils/s3";
+import {
+  // uploadFile,
+  // getFileStream,
+  generateUploadURL,
+} from "../utils/s3";
 import UserModel from "../models/User.model";
 import fs from "fs";
 import ultil from "util";
 
 const unlinkFile = ultil.promisify(fs.unlink);
 
-const uploadAvatar = async (req: IUserRequest, res: Response) => {
-  const { userId } = req.user!;
-  const file = req.file!;
+//BE Solution
 
-  const upload = await uploadFile(file, "avatar");
-  await unlinkFile(file.path);
+// const uploadAvatar = async (req: IUserRequest, res: Response) => {
+//   const { userId } = req.user!;
+//   const file = req.file!;
 
-  const user = await UserModel.findByIdAndUpdate(
-    userId,
-    {
-      customerAvatar: upload.Key,
-    },
-    { new: true },
-  );
+//   const upload = await uploadFile(file, "avatar");
+//   await unlinkFile(file.path);
 
-  if (user && upload) {
-    res.status(StatusCodes.CREATED).json(upload.Location);
-  }
-  // else {
-  //   res.status(StatusCodes.INTERNAL_SERVER_ERROR).send("Upload failed");
-  // }
+//   const user = await UserModel.findByIdAndUpdate(
+//     userId,
+//     {
+//       customerAvatar: upload.Key,
+//     },
+//     { new: true },
+//   );
+
+//   if (user && upload) {
+//     res.status(StatusCodes.CREATED).json(upload.Location);
+//   }
+//   // else {
+//   //   res.status(StatusCodes.INTERNAL_SERVER_ERROR).send("Upload failed");
+//   // }
+// };
+
+// const downloadAvatar = async (req: IUserRequest, res: Response) => {
+//   const { userId } = req.user!;
+//   const { customerAvatar } = await UserModel.findById(userId);
+//   const readStream = getFileStream(customerAvatar);
+//   if (readStream) {
+//     readStream.pipe(res);
+//   } else {
+//     res
+//       .status(StatusCodes.INSUFFICIENT_STORAGE)
+//       .send("This image is not in storage");
+//   }
+// };
+
+//FE Solution
+const uploadURL = async (req: Request, res: Response) => {
+  const url = await generateUploadURL();
+  res.status(StatusCodes.OK).send({ url });
 };
 
-const downloadAvatar = async (req: IUserRequest, res: Response) => {
-  const { userId } = req.user!;
-  const { customerAvatar } = await UserModel.findById(userId);
-  const readStream = getFileStream(customerAvatar);
-  if (readStream) {
-    readStream.pipe(res);
-  } else {
-    res
-      .status(StatusCodes.INSUFFICIENT_STORAGE)
-      .send("This image is not in storage");
-  }
+export {
+  //uploadAvatar,
+  // downloadAvatar,
+  uploadURL,
 };
-
-export { uploadAvatar, downloadAvatar };
