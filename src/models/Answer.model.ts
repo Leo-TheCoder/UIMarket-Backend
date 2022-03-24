@@ -19,6 +19,7 @@ const AnswerSchema = new mongoose.Schema(
     bestAnswer: {
       type: Number,
       default: 0,
+      enum: [0, 1],
     },
     totalUpvote: {
       type: Number,

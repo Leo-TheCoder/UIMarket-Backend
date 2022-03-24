@@ -18,6 +18,7 @@ const QuestionSchema = new mongoose.Schema(
     questionStatus: {
       type: Number,
       default: 1,
+      enum: [0, 1],
     },
     questionBounty: {
       type: Number,
@@ -43,14 +44,16 @@ const QuestionSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
-    questionTag: [{
-      type: mongoose.Types.ObjectId,
-      ref: "QuestionTag",
-    },],
+    questionTag: [
+      {
+        type: mongoose.Types.ObjectId,
+        ref: "QuestionTag",
+      },
+    ],
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 export default mongoose.model("Question", QuestionSchema);

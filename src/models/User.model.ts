@@ -46,6 +46,7 @@ const UserSchema = new mongoose.Schema(
     customer_Status: {
       type: Number,
       default: 1,
+      enum: [0, 1],
     },
   },
   {

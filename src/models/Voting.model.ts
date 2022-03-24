@@ -19,10 +19,12 @@ const VotingSchema = new mongoose.Schema(
     type: {
       type: String,
       required: [true, "Please provide type of object"],
+      enum: ["Question", "Answer", "Comment"],
     },
     action: {
       type: Number,
       required: [true, "Please provide action number"],
+      enum: [0, 1],
     },
   },
   {
