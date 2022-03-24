@@ -7,10 +7,10 @@ import {
 } from "../controllers/picture.controller";
 
 const router = express.Router();
-const upload = multer({ dest: "uploads/" });
+// const upload = multer({ dest: "uploads/" });
 
 // router.get("/avatar/", downloadAvatar);
-router.get("/avatar/s3Url", uploadURL);
+router.get("/:folder/upload", uploadURL);
 // router.post("/avatar", upload.single("avatar"), uploadAvatar);
 
 export default router;

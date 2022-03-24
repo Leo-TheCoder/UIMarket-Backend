@@ -57,8 +57,13 @@ const unlinkFile = ultil.promisify(fs.unlink);
 
 //FE Solution
 const uploadURL = async (req: Request, res: Response) => {
-  const url = await generateUploadURL();
-  res.status(StatusCodes.OK).send({ url });
+  const url = await generateUploadURL(req.params.folder).catch((err) =>
+    res.send(err.msg),
+  );
+
+  if (url) {
+    res.status(StatusCodes.OK).send({ url });
+  }
 };
 
 export {

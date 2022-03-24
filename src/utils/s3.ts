@@ -1,6 +1,6 @@
 require("dotenv").config();
 // import S3 from "aws-sdk/clients/s3";
-import fs from "fs";
+// import fs from "fs";
 import aws from "aws-sdk";
 import crypto from "crypto";
 import { promisify } from "util";
@@ -44,25 +44,24 @@ const secretAccessKey = process.env.AWS_SECRECT_KEY!;
 // }
 
 //FE Solution
-const _s3 = new aws.S3({
+const s3 = new aws.S3({
   region,
   accessKeyId,
   secretAccessKey,
   signatureVersion: "v4",
 });
 
-async function generateUploadURL() {
+async function generateUploadURL(folder: String) {
   const rawBytes = await randomBytes(16);
   const imageName = rawBytes.toString("hex");
 
   const params = {
     Bucket: bucketName,
-    Key: imageName,
+    Key: `${folder}/${imageName}`,
     Expires: 60,
-    // ContentType: "image/jpeg",
   };
 
-  const uploadURL = await _s3.getSignedUrlPromise("putObject", params);
+  const uploadURL = await s3.getSignedUrlPromise("putObject", params);
   return uploadURL;
 }
 
