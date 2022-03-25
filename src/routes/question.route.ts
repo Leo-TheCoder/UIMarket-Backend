@@ -4,6 +4,7 @@ import {
   getQuestionByID,
   getQuestions,
   chooseBestAnswer,
+  deleteQuestion,
 } from "../controllers/question.controller";
 
 import { compulsoryAuth, optionalAuth } from "../middlewares/authentication";
@@ -19,5 +20,8 @@ router.post("/", compulsoryAuth, createQuestion);
 
 //PUT Methods
 router.put("/:questionId/:answerId", compulsoryAuth, chooseBestAnswer);
+
+//DELETE Methods
+router.delete("/:questionId", compulsoryAuth, deleteQuestion);
 
 export default router;

@@ -11,7 +11,6 @@ import * as Constants from "../constants";
 import AnswerModel from "../models/Answer.model";
 import { getStatusVote } from "../utils/statusVote";
 
-
 //get _id of tags in list (create tags if they don't exist)
 const createTagList = async (tagList: [String]) => {
   const promises = [];
@@ -159,10 +158,11 @@ const getQuestionByID = async (req: IUserRequest, res: Response) => {
 const chooseBestAnswer = async (req: IUserRequest, res: Response) => {
   //Checking whether this user is owner of this post
   const { userId } = req.user!;
-  console.log(userId);
   const question = await Question.findById(req.params.questionId);
 
-  if (userId != question.userId) {
+  if (!question) {
+    throw new BadRequestError("Invalid Question ID");
+  } else if (userId != question.userId) {
     throw new BadRequestError("Only owner of this post can do this action");
   }
 
@@ -186,10 +186,45 @@ const chooseBestAnswer = async (req: IUserRequest, res: Response) => {
   }
 };
 
+const deleteQuestion = async (req: IUserRequest, res: Response) => {
+  //Checking whether this user is owner of this post
+  const { userId } = req.user!;
+  const question = await Question.findById(req.params.questionId);
+
+  if (!question) {
+    throw new BadRequestError("Invalid Question ID");
+  } else if (userId != question.userId) {
+    throw new BadRequestError("Only owner of this post can do this action");
+  } else if (question.questionStatus == 0) {
+    throw new BadRequestError("This question has already deleted");
+  }
+
+  //Set question status to 0 and decrease total question in tag by 1
+  question.questionStatus = 0;
+  question.questionTag.map(async (tag: string) => {
+    let tags = await QuestionTag.updateOne(
+      { _id: tag },
+      { $inc: { totalQuestion: -1 } },
+    );
+
+    if (!tags) {
+      throw new BadRequestError("Invalid Question Tag ID");
+    }
+  });
+  const result = await question.save();
+
+  //Return result
+  if (result) {
+    res.status(StatusCodes.OK).json(result);
+  } else {
+    res.status(StatusCodes.NO_CONTENT).send("Delete failed");
+  }
+};
+
 export {
-  //
   createQuestion,
   getQuestions,
   getQuestionByID,
   chooseBestAnswer,
+  deleteQuestion,
 };

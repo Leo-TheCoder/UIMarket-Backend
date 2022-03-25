@@ -113,7 +113,9 @@ const deleteAnswer = async (req: IUserRequest, res: Response) => {
   const answer = await Answer.findById(req.params.answerId);
   const { userId } = req.user!;
 
-  if (answer.userId != userId) {
+  if (!answer) {
+    throw new BadRequestError("Invalid answer ID");
+  } else if (answer.userId != userId) {
     throw new BadRequestError("Only owner of this answer can do this action");
   }
 
