@@ -8,7 +8,7 @@ import VotingModel from "../models/Voting.model";
 import { downvote } from "./downvoting.controller";
 import { upvote } from "./upvoting.controller";
 import * as Constants from "../constants";
-import { getStatusVote } from "../utils/ultils";
+import { getStatusVote } from "../utils/statusVote";
 
 //get _id of tags in list (create tags if they don't exist)
 const createTagList = async (tagList: [String]) => {
@@ -35,7 +35,7 @@ const createQuestion = async (req: IUserRequest, res: Response) => {
   const list = await createTagList(tagList);
 
   const question = await Question.create({
-	  ...req.body,
+    ...req.body,
     userId: userId,
     questionTag: list,
   });
