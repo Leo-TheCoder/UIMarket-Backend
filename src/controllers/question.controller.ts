@@ -9,6 +9,7 @@ import { downvote } from "./downvoting.controller";
 import { upvote } from "./upvoting.controller";
 import * as Constants from "../constants";
 import { getStatusVote } from "../utils/ultils";
+import AnswerModel from "../models/Answer.model";
 
 //get _id of tags in list (create tags if they don't exist)
 const createTagList = async (tagList: [String]) => {
@@ -35,7 +36,7 @@ const createQuestion = async (req: IUserRequest, res: Response) => {
   const list = await createTagList(tagList);
 
   const question = await Question.create({
-	  ...req.body,
+    ...req.body,
     userId: userId,
     questionTag: list,
   });
@@ -154,9 +155,40 @@ const getQuestionByID = async (req: IUserRequest, res: Response) => {
   }
 };
 
+const chooseBestAnswer = async (req: IUserRequest, res: Response) => {
+  //Checking whether this user is owner of this post
+  const { userId } = req.user!;
+  console.log(userId);
+  const question = await Question.findById(req.params.questionId);
+
+  if (userId != question.userId) {
+    throw new BadRequestError("Only owner of this post can do this action");
+  }
+
+  //Checking whether this question have best answer or not
+  const answer = await AnswerModel.find({
+    questionId: req.params.questionId,
+    bestAnswer: 1,
+  });
+  if (answer.length > 0) {
+    throw new BadRequestError("This question already have best answer");
+  }
+
+  const bestAnswer = await AnswerModel.findByIdAndUpdate(
+    req.params.answerId,
+    { bestAnswer: 1 },
+    { new: true, lean: true },
+  );
+
+  if (bestAnswer) {
+    res.status(StatusCodes.OK).json(bestAnswer);
+  }
+};
+
 export {
   //
   createQuestion,
   getQuestions,
   getQuestionByID,
+  chooseBestAnswer,
 };
