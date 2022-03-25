@@ -7,7 +7,9 @@ const UserSchema = new mongoose.Schema(
     customerName: {
       type: String,
       required: [true, "Please provide name"],
+      minlength: 5,
     },
+    customerAvatar: String,
     customerEmail: {
       type: String,
       required: [true, "Please provide email"],
@@ -42,14 +44,15 @@ const UserSchema = new mongoose.Schema(
         default: 0,
       },
     },
-    customer_Status: {
+    customerStatus: {
       type: Number,
       default: 1,
+      enum: [0, 1],
     },
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 UserSchema.pre("save", async function () {
@@ -68,16 +71,16 @@ UserSchema.methods.createJWT = function () {
     process.env.JWT_SECRET!,
     {
       expiresIn: process.env.JWT_LIFETIME,
-    }
+    },
   );
 };
 
 UserSchema.methods.comparePassword = async function (
-  candidatePassword: string
+  candidatePassword: string,
 ) {
   const isMatch = await bcrypt.compare(
     candidatePassword,
-    this.customerPassword
+    this.customerPassword,
   );
   return isMatch;
 };
