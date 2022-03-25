@@ -6,7 +6,7 @@ import Question from "../models/Question.model";
 import Answer from "../models/Answer.model";
 import * as Constants from "../constants";
 import { ObjectId } from "mongodb";
-import { getStatusVote } from "../utils/ultils";
+import { getStatusVote } from "../utils/statusVote";
 
 interface IQuery {
   page?: string;
@@ -108,8 +108,66 @@ const getAnswer = async (req: IUserRequest, res: Response) => {
   });
 };
 
+const deleteAnswer = async (req: IUserRequest, res: Response) => {
+  //Checking whether user is answer's owner
+  const answer = await Answer.findById(req.params.answerId);
+  const { userId } = req.user!;
+
+  if (answer.userId != userId) {
+    throw new BadRequestError("Only owner of this answer can do this action");
+  }
+
+  //Checking answer status
+  if (answer.answerStatus == 1) {
+    //Update answer status
+    answer.answerStatus = 0;
+    const result = await answer.save();
+
+    //Update total answer
+    const question = await Question.findByIdAndUpdate(
+      answer.questionId,
+      {
+        $inc: { totalAnswer: -1 },
+      },
+      { new: true },
+    );
+
+    //Return response
+    if (result && question) {
+      res.status(StatusCodes.OK).json(result);
+    } else {
+      res.status(StatusCodes.NO_CONTENT).send("Delete failed");
+    }
+  } else {
+    throw new BadRequestError("This answer has already deleted");
+  }
+};
+
+const updateAnswer = async (req: IUserRequest, res: Response) => {
+  //Checking whether user is answer's owner
+  const answer = await Answer.findById(req.params.answerId);
+  const { userId } = req.user!;
+
+  if (!answer) {
+    throw new BadRequestError("Invalid answer Id");
+  } else if (answer.userId != userId) {
+    throw new BadRequestError("Only owner of this answer can do this action");
+  }
+
+  answer.answerContent = req.body.answerContent;
+  const result = await answer.save();
+
+  if (result) {
+    res.status(StatusCodes.OK).json(result);
+  } else {
+    res.status(StatusCodes.NO_CONTENT).send("Update failed");
+  }
+};
+
 export {
   //
   createAnswer,
   getAnswer,
+  deleteAnswer,
+  updateAnswer,
 };

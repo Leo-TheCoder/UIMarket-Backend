@@ -8,8 +8,9 @@ import VotingModel from "../models/Voting.model";
 import { downvote } from "./downvoting.controller";
 import { upvote } from "./upvoting.controller";
 import * as Constants from "../constants";
-import { getStatusVote } from "../utils/ultils";
 import AnswerModel from "../models/Answer.model";
+import { getStatusVote } from "../utils/statusVote";
+
 
 //get _id of tags in list (create tags if they don't exist)
 const createTagList = async (tagList: [String]) => {
