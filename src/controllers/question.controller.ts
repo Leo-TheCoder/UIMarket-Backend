@@ -8,7 +8,8 @@ import VotingModel from "../models/Voting.model";
 import { downvote } from "./downvoting.controller";
 import { upvote } from "./upvoting.controller";
 import * as Constants from "../constants";
-import { getStatusVote } from "../utils/ultils";
+import AnswerModel from "../models/Answer.model";
+import { getStatusVote } from "../utils/statusVote";
 
 //get _id of tags in list (create tags if they don't exist)
 const createTagList = async (tagList: [String]) => {
@@ -32,10 +33,16 @@ const createQuestion = async (req: IUserRequest, res: Response) => {
 
   //get array of tags' list
   const tagList: [String] = req.body.questionTag;
-  const list = await createTagList(tagList);
+
+  let list = [];
+  if (!tagList || tagList.length < 1) {
+    list = [];
+  } else {
+    list = await createTagList(tagList);
+  }
 
   const question = await Question.create({
-	  ...req.body,
+    ...req.body,
     userId: userId,
     questionTag: list,
   });
@@ -46,80 +53,139 @@ interface IQuery {
   page?: string;
   limit?: string;
   selectWith?: string;
+  tag?: string;
 }
+
+// const getQuestions = async (req: Request, res: Response) => {
+//   const query = req.query as IQuery;
+//   const page = parseInt(query.page!) || Constants.defaultPageNumber;
+//   const limit = parseInt(query.limit!) || Constants.defaultLimit;
+
+//
+
+//   const selectWith = query.selectWith?.toLowerCase().trim() || "all";
+
+//   //Get bounty question
+//   if (selectWith === "bounty") {
+//     const total = await Question.countDocuments({
+//       questionBounty: { $gt: 0 },
+//       questionStatus: 1,
+//     });
+//     const totalPages =
+//       total % limit === 0
+//         ? Math.floor(total / limit)
+//         : Math.floor(total / limit) + 1;
+
+//     const questions = await Question.find({
+//       questionBounty: { $gt: 0 },
+//       questionStatus: 1,
+//     })
+//       .sort({ questionBounty: -1, totalView: -1 })
+//       .skip((page - 1) * limit)
+//       .limit(limit)
+//       .populate("questionTag", "tagName")
+//       .populate("userId", "customerName");
+//     return res.status(StatusCodes.OK).json({
+//       totalPages,
+//       page,
+//       limit,
+//       questions,
+//     });
+//   } else if (selectWith === "popular") {
+//     //Get popular question
+//     const total = await Question.countDocuments({
+//       questionBounty: { $lte: 0 },
+//       questionStatus: 1,
+//     });
+//     const totalPages =
+//       total % limit === 0
+//         ? Math.floor(total / limit)
+//         : Math.floor(total / limit) + 1;
+
+//     const questions = await Question.find({
+//       questionBounty: { $lte: 0 },
+//       questionStatus: 1,
+//     })
+//       .sort({ totalAnswer: -1, totalUpvote: -1 })
+//       .skip((page - 1) * limit)
+//       .limit(limit)
+//       .populate("questionTag", "tagName")
+//       .populate("userId", "customerName");
+//     return res.status(StatusCodes.OK).json({
+//       totalPages,
+//       page,
+//       limit,
+//       questions,
+//     });
+//   } else {
+//     //Get all question
+//     const total = await Question.countDocuments({ questionStatus: 1 });
+//     const totalPages =
+//       total % limit === 0
+//         ? Math.floor(total / limit)
+//         : Math.floor(total / limit) + 1;
+
+//     const questions = await Question.find({ questionStatus: 1 })
+//       .sort({ createdAt: -1 })
+//       .skip((page - 1) * limit)
+//       .limit(limit)
+//       .populate("questionTag", "tagName")
+//       .populate({ path: "userId", select: ["customerName", "customerEmail"] });
+//     return res.status(StatusCodes.OK).json({
+//       totalPages,
+//       page,
+//       limit,
+//       questions,
+//     });
+//   }
+// };
 
 const getQuestions = async (req: Request, res: Response) => {
   const query = req.query as IQuery;
   const page = parseInt(query.page!) || Constants.defaultPageNumber;
   const limit = parseInt(query.limit!) || Constants.defaultLimit;
-
-  // const a = query.selectWith;
-
+  const tag = query.tag;
   const selectWith = query.selectWith?.toLowerCase().trim() || "all";
 
-  //Get bounty question
+  //Handle with Query Parameters
+  var queryString: any = { questionStatus: 1 };
+
+  //Checking selectWith option
   if (selectWith === "bounty") {
-    const total = await Question.countDocuments({ questionBounty: { $gt: 0 } });
-    const totalPages =
-      total % limit === 0
-        ? Math.floor(total / limit)
-        : Math.floor(total / limit) + 1;
-
-    const questions = await Question.find({ questionBounty: { $gt: 0 } })
-      .sort({ questionBounty: -1, totalView: -1 })
-      .skip((page - 1) * limit)
-      .limit(limit)
-      .populate("questionTag", "tagName")
-      .populate("userId", "customerName");
-    return res.status(StatusCodes.OK).json({
-      totalPages,
-      page,
-      limit,
-      questions,
-    });
+    queryString.questionBounty = { $gt: 0 };
   } else if (selectWith === "popular") {
-    //Get popular question
-    const total = await Question.countDocuments({
-      questionBounty: { $lte: 0 },
-    });
-    const totalPages =
-      total % limit === 0
-        ? Math.floor(total / limit)
-        : Math.floor(total / limit) + 1;
-
-    const questions = await Question.find({ questionBounty: { $lte: 0 } })
-      .sort({ totalAnswer: -1, totalUpvote: -1 })
-      .skip((page - 1) * limit)
-      .limit(limit)
-      .populate("questionTag", "tagName")
-      .populate("userId", "customerName");
-    return res.status(StatusCodes.OK).json({
-      totalPages,
-      page,
-      limit,
-      questions,
-    });
-  } else {
-    //Get all question
-    const total = await Question.countDocuments();
-    const totalPages =
-      total % limit === 0
-        ? Math.floor(total / limit)
-        : Math.floor(total / limit) + 1;
-
-    const questions = await Question.find()
-      .sort({ createdAt: -1 })
-      .skip((page - 1) * limit)
-      .limit(limit)
-      .populate("questionTag", "tagName")
-      .populate({ path: "userId", select: ["customerName", "customerEmail"] });
-    return res.status(StatusCodes.OK).json({
-      totalPages,
-      page,
-      limit,
-      questions,
-    });
+    queryString.questionBounty = { $lte: 0 };
   }
+
+  //Checking tag options
+  if (tag === "true") {
+    const tagList = req.body.tag;
+
+    if (!tagList) {
+      throw new BadRequestError("Please insert tag in the body");
+    }
+    queryString.questionTag = { $in: tagList };
+  }
+
+  const total = await Question.countDocuments(queryString);
+  const totalPages =
+    total % limit === 0
+      ? Math.floor(total / limit)
+      : Math.floor(total / limit) + 1;
+
+  const questions = await Question.find(queryString)
+    .sort({ questionBounty: -1, totalView: -1 })
+    .skip((page - 1) * limit)
+    .limit(limit)
+    .populate("questionTag", "tagName")
+    .populate("userId", "customerName");
+
+  return res.status(StatusCodes.OK).json({
+    totalPages,
+    page,
+    limit,
+    questions,
+  });
 };
 
 const getQuestionByID = async (req: IUserRequest, res: Response) => {
@@ -154,9 +220,76 @@ const getQuestionByID = async (req: IUserRequest, res: Response) => {
   }
 };
 
+const chooseBestAnswer = async (req: IUserRequest, res: Response) => {
+  //Checking whether this user is owner of this post
+  const { userId } = req.user!;
+  const question = await Question.findById(req.params.questionId);
+
+  if (!question) {
+    throw new BadRequestError("Invalid Question ID");
+  } else if (userId != question.userId) {
+    throw new BadRequestError("Only owner of this post can do this action");
+  }
+
+  //Checking whether this question have best answer or not
+  const answer = await AnswerModel.find({
+    questionId: req.params.questionId,
+    bestAnswer: 1,
+  });
+  if (answer.length > 0) {
+    throw new BadRequestError("This question already have best answer");
+  }
+
+  const bestAnswer = await AnswerModel.findByIdAndUpdate(
+    req.params.answerId,
+    { bestAnswer: 1 },
+    { new: true, lean: true },
+  );
+
+  if (bestAnswer) {
+    res.status(StatusCodes.OK).json(bestAnswer);
+  }
+};
+
+const deleteQuestion = async (req: IUserRequest, res: Response) => {
+  //Checking whether this user is owner of this post
+  const { userId } = req.user!;
+  const question = await Question.findById(req.params.questionId);
+
+  if (!question) {
+    throw new BadRequestError("Invalid Question ID");
+  } else if (userId != question.userId) {
+    throw new BadRequestError("Only owner of this post can do this action");
+  } else if (question.questionStatus == 0) {
+    throw new BadRequestError("This question has already deleted");
+  }
+
+  //Set question status to 0 and decrease total question in tag by 1
+  question.questionStatus = 0;
+  question.questionTag.map(async (tag: string) => {
+    let tags = await QuestionTag.updateOne(
+      { _id: tag },
+      { $inc: { totalQuestion: -1 } },
+    );
+
+    if (!tags) {
+      throw new BadRequestError("Invalid Question Tag ID");
+    }
+  });
+  const result = await question.save();
+
+  //Return result
+  if (result) {
+    res.status(StatusCodes.OK).json(result);
+  } else {
+    res.status(StatusCodes.NO_CONTENT).send("Delete failed");
+  }
+};
+
 export {
-  //
   createQuestion,
   getQuestions,
   getQuestionByID,
+  chooseBestAnswer,
+  deleteQuestion,
 };

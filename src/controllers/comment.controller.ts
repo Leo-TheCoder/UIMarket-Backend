@@ -4,16 +4,16 @@ import CommentModel from "../models/Comment.model";
 import { StatusCodes } from "http-status-codes";
 import AnswerModel from "../models/Answer.model";
 import { BadRequestError } from "../errors";
-import { getStatusVote } from "../utils/ultils";
+import { getStatusVote } from "../utils/statusVote";
 
 const createComment = async (req: IUserRequest, res: Response) => {
-    const { userId } = req.user!;
-    const comment = await CommentModel.create({
-      ...req.body,
-      userId,
-      rootId: req.params.rootId,
-    });
-    res.status(StatusCodes.CREATED).json(comment);
+  const { userId } = req.user!;
+  const comment = await CommentModel.create({
+    ...req.body,
+    userId,
+    rootId: req.params.rootId,
+  });
+  res.status(StatusCodes.CREATED).json(comment);
 };
 
 const getComments = async (req: IUserRequest, res: Response) => {

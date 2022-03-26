@@ -3,17 +3,25 @@ import {
   createQuestion,
   getQuestionByID,
   getQuestions,
+  chooseBestAnswer,
+  deleteQuestion,
 } from "../controllers/question.controller";
 
-import * as authenticationMiddleware from "../middlewares/authentication";
+import { compulsoryAuth, optionalAuth } from "../middlewares/authentication";
 
 const router = express.Router();
 
 //GET Methods
 router.get("/", getQuestions);
-router.get("/:id", authenticationMiddleware.optionalAuth, getQuestionByID);
+router.get("/:id", optionalAuth, getQuestionByID);
 
 //POST Methods
-router.post("/", authenticationMiddleware.compulsoryAuth, createQuestion);
+router.post("/", compulsoryAuth, createQuestion);
+
+//PUT Methods
+router.put("/:questionId/:answerId", compulsoryAuth, chooseBestAnswer);
+
+//DELETE Methods
+router.delete("/:questionId", compulsoryAuth, deleteQuestion);
 
 export default router;
