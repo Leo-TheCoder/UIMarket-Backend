@@ -35,7 +35,7 @@ const createQuestion = async (req: IUserRequest, res: Response) => {
   const tagList: [String] = req.body.questionTag;
 
   let list = [];
-  if(!tagList || tagList.length < 1) {
+  if (!tagList || tagList.length < 1) {
     list = [];
   } else {
     list = await createTagList(tagList);
@@ -53,80 +53,139 @@ interface IQuery {
   page?: string;
   limit?: string;
   selectWith?: string;
+  tag?: string;
 }
+
+// const getQuestions = async (req: Request, res: Response) => {
+//   const query = req.query as IQuery;
+//   const page = parseInt(query.page!) || Constants.defaultPageNumber;
+//   const limit = parseInt(query.limit!) || Constants.defaultLimit;
+
+//
+
+//   const selectWith = query.selectWith?.toLowerCase().trim() || "all";
+
+//   //Get bounty question
+//   if (selectWith === "bounty") {
+//     const total = await Question.countDocuments({
+//       questionBounty: { $gt: 0 },
+//       questionStatus: 1,
+//     });
+//     const totalPages =
+//       total % limit === 0
+//         ? Math.floor(total / limit)
+//         : Math.floor(total / limit) + 1;
+
+//     const questions = await Question.find({
+//       questionBounty: { $gt: 0 },
+//       questionStatus: 1,
+//     })
+//       .sort({ questionBounty: -1, totalView: -1 })
+//       .skip((page - 1) * limit)
+//       .limit(limit)
+//       .populate("questionTag", "tagName")
+//       .populate("userId", "customerName");
+//     return res.status(StatusCodes.OK).json({
+//       totalPages,
+//       page,
+//       limit,
+//       questions,
+//     });
+//   } else if (selectWith === "popular") {
+//     //Get popular question
+//     const total = await Question.countDocuments({
+//       questionBounty: { $lte: 0 },
+//       questionStatus: 1,
+//     });
+//     const totalPages =
+//       total % limit === 0
+//         ? Math.floor(total / limit)
+//         : Math.floor(total / limit) + 1;
+
+//     const questions = await Question.find({
+//       questionBounty: { $lte: 0 },
+//       questionStatus: 1,
+//     })
+//       .sort({ totalAnswer: -1, totalUpvote: -1 })
+//       .skip((page - 1) * limit)
+//       .limit(limit)
+//       .populate("questionTag", "tagName")
+//       .populate("userId", "customerName");
+//     return res.status(StatusCodes.OK).json({
+//       totalPages,
+//       page,
+//       limit,
+//       questions,
+//     });
+//   } else {
+//     //Get all question
+//     const total = await Question.countDocuments({ questionStatus: 1 });
+//     const totalPages =
+//       total % limit === 0
+//         ? Math.floor(total / limit)
+//         : Math.floor(total / limit) + 1;
+
+//     const questions = await Question.find({ questionStatus: 1 })
+//       .sort({ createdAt: -1 })
+//       .skip((page - 1) * limit)
+//       .limit(limit)
+//       .populate("questionTag", "tagName")
+//       .populate({ path: "userId", select: ["customerName", "customerEmail"] });
+//     return res.status(StatusCodes.OK).json({
+//       totalPages,
+//       page,
+//       limit,
+//       questions,
+//     });
+//   }
+// };
 
 const getQuestions = async (req: Request, res: Response) => {
   const query = req.query as IQuery;
   const page = parseInt(query.page!) || Constants.defaultPageNumber;
   const limit = parseInt(query.limit!) || Constants.defaultLimit;
-
-  // const a = query.selectWith;
-
+  const tag = query.tag;
   const selectWith = query.selectWith?.toLowerCase().trim() || "all";
 
-  //Get bounty question
+  //Handle with Query Parameters
+  var queryString: any = { questionStatus: 1 };
+
+  //Checking selectWith option
   if (selectWith === "bounty") {
-    const total = await Question.countDocuments({ questionBounty: { $gt: 0 } });
-    const totalPages =
-      total % limit === 0
-        ? Math.floor(total / limit)
-        : Math.floor(total / limit) + 1;
-
-    const questions = await Question.find({ questionBounty: { $gt: 0 } })
-      .sort({ questionBounty: -1, totalView: -1 })
-      .skip((page - 1) * limit)
-      .limit(limit)
-      .populate("questionTag", "tagName")
-      .populate("userId", "customerName");
-    return res.status(StatusCodes.OK).json({
-      totalPages,
-      page,
-      limit,
-      questions,
-    });
+    queryString.questionBounty = { $gt: 0 };
   } else if (selectWith === "popular") {
-    //Get popular question
-    const total = await Question.countDocuments({
-      questionBounty: { $lte: 0 },
-    });
-    const totalPages =
-      total % limit === 0
-        ? Math.floor(total / limit)
-        : Math.floor(total / limit) + 1;
-
-    const questions = await Question.find({ questionBounty: { $lte: 0 } })
-      .sort({ totalAnswer: -1, totalUpvote: -1 })
-      .skip((page - 1) * limit)
-      .limit(limit)
-      .populate("questionTag", "tagName")
-      .populate("userId", "customerName");
-    return res.status(StatusCodes.OK).json({
-      totalPages,
-      page,
-      limit,
-      questions,
-    });
-  } else {
-    //Get all question
-    const total = await Question.countDocuments();
-    const totalPages =
-      total % limit === 0
-        ? Math.floor(total / limit)
-        : Math.floor(total / limit) + 1;
-
-    const questions = await Question.find()
-      .sort({ createdAt: -1 })
-      .skip((page - 1) * limit)
-      .limit(limit)
-      .populate("questionTag", "tagName")
-      .populate({ path: "userId", select: ["customerName", "customerEmail"] });
-    return res.status(StatusCodes.OK).json({
-      totalPages,
-      page,
-      limit,
-      questions,
-    });
+    queryString.questionBounty = { $lte: 0 };
   }
+
+  //Checking tag options
+  if (tag === "true") {
+    const tagList = req.body.tag;
+
+    if (!tagList) {
+      throw new BadRequestError("Please insert tag in the body");
+    }
+    queryString.questionTag = { $in: tagList };
+  }
+
+  const total = await Question.countDocuments(queryString);
+  const totalPages =
+    total % limit === 0
+      ? Math.floor(total / limit)
+      : Math.floor(total / limit) + 1;
+
+  const questions = await Question.find(queryString)
+    .sort({ questionBounty: -1, totalView: -1 })
+    .skip((page - 1) * limit)
+    .limit(limit)
+    .populate("questionTag", "tagName")
+    .populate("userId", "customerName");
+
+  return res.status(StatusCodes.OK).json({
+    totalPages,
+    page,
+    limit,
+    questions,
+  });
 };
 
 const getQuestionByID = async (req: IUserRequest, res: Response) => {
