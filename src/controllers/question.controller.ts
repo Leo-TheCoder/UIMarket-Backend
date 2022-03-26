@@ -33,7 +33,13 @@ const createQuestion = async (req: IUserRequest, res: Response) => {
 
   //get array of tags' list
   const tagList: [String] = req.body.questionTag;
-  const list = await createTagList(tagList);
+
+  let list = [];
+  if(!tagList || tagList.length < 1) {
+    list = [];
+  } else {
+    list = await createTagList(tagList);
+  }
 
   const question = await Question.create({
     ...req.body,
