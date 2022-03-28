@@ -1,12 +1,14 @@
 import { StatusCodes } from "http-status-codes";
-import { BadRequestError, UnauthenticatedError } from "../errors";
+import {
+  BadRequestError,
+  ForbiddenError,
+  GoneError,
+  NotFoundError,
+} from "../errors";
 import { Request, Response } from "express";
 import { IUserRequest } from "../types/express";
 import Question from "../models/Question.model";
 import QuestionTag from "../models/QuestionTag.model";
-import VotingModel from "../models/Voting.model";
-import { downvote } from "./downvoting.controller";
-import { upvote } from "./upvoting.controller";
 import * as Constants from "../constants";
 import AnswerModel from "../models/Answer.model";
 import { getStatusVote } from "../utils/statusVote";
@@ -55,90 +57,6 @@ interface IQuery {
   selectWith?: string;
   tag?: string;
 }
-
-// const getQuestions = async (req: Request, res: Response) => {
-//   const query = req.query as IQuery;
-//   const page = parseInt(query.page!) || Constants.defaultPageNumber;
-//   const limit = parseInt(query.limit!) || Constants.defaultLimit;
-
-//
-
-//   const selectWith = query.selectWith?.toLowerCase().trim() || "all";
-
-//   //Get bounty question
-//   if (selectWith === "bounty") {
-//     const total = await Question.countDocuments({
-//       questionBounty: { $gt: 0 },
-//       questionStatus: 1,
-//     });
-//     const totalPages =
-//       total % limit === 0
-//         ? Math.floor(total / limit)
-//         : Math.floor(total / limit) + 1;
-
-//     const questions = await Question.find({
-//       questionBounty: { $gt: 0 },
-//       questionStatus: 1,
-//     })
-//       .sort({ questionBounty: -1, totalView: -1 })
-//       .skip((page - 1) * limit)
-//       .limit(limit)
-//       .populate("questionTag", "tagName")
-//       .populate("userId", "customerName");
-//     return res.status(StatusCodes.OK).json({
-//       totalPages,
-//       page,
-//       limit,
-//       questions,
-//     });
-//   } else if (selectWith === "popular") {
-//     //Get popular question
-//     const total = await Question.countDocuments({
-//       questionBounty: { $lte: 0 },
-//       questionStatus: 1,
-//     });
-//     const totalPages =
-//       total % limit === 0
-//         ? Math.floor(total / limit)
-//         : Math.floor(total / limit) + 1;
-
-//     const questions = await Question.find({
-//       questionBounty: { $lte: 0 },
-//       questionStatus: 1,
-//     })
-//       .sort({ totalAnswer: -1, totalUpvote: -1 })
-//       .skip((page - 1) * limit)
-//       .limit(limit)
-//       .populate("questionTag", "tagName")
-//       .populate("userId", "customerName");
-//     return res.status(StatusCodes.OK).json({
-//       totalPages,
-//       page,
-//       limit,
-//       questions,
-//     });
-//   } else {
-//     //Get all question
-//     const total = await Question.countDocuments({ questionStatus: 1 });
-//     const totalPages =
-//       total % limit === 0
-//         ? Math.floor(total / limit)
-//         : Math.floor(total / limit) + 1;
-
-//     const questions = await Question.find({ questionStatus: 1 })
-//       .sort({ createdAt: -1 })
-//       .skip((page - 1) * limit)
-//       .limit(limit)
-//       .populate("questionTag", "tagName")
-//       .populate({ path: "userId", select: ["customerName", "customerEmail"] });
-//     return res.status(StatusCodes.OK).json({
-//       totalPages,
-//       page,
-//       limit,
-//       questions,
-//     });
-//   }
-// };
 
 const getQuestions = async (req: Request, res: Response) => {
   const query = req.query as IQuery;
@@ -216,7 +134,7 @@ const getQuestionByID = async (req: IUserRequest, res: Response) => {
       _doc,
     });
   } else {
-    res.status(StatusCodes.BAD_REQUEST).send("Invalid Question ID");
+    throw new NotFoundError("Invalid Question ID");
   }
 };
 
@@ -226,9 +144,9 @@ const chooseBestAnswer = async (req: IUserRequest, res: Response) => {
   const question = await Question.findById(req.params.questionId);
 
   if (!question) {
-    throw new BadRequestError("Invalid Question ID");
+    throw new NotFoundError("Invalid Question ID");
   } else if (userId != question.userId) {
-    throw new BadRequestError("Only owner of this post can do this action");
+    throw new ForbiddenError("Only owner of this post can do this action");
   }
 
   //Checking whether this question have best answer or not
@@ -257,11 +175,11 @@ const deleteQuestion = async (req: IUserRequest, res: Response) => {
   const question = await Question.findById(req.params.questionId);
 
   if (!question) {
-    throw new BadRequestError("Invalid Question ID");
+    throw new NotFoundError("Invalid Question ID");
   } else if (userId != question.userId) {
-    throw new BadRequestError("Only owner of this post can do this action");
+    throw new ForbiddenError("Only owner of this post can do this action");
   } else if (question.questionStatus == 0) {
-    throw new BadRequestError("This question has already deleted");
+    throw new GoneError("This question has already deleted");
   }
 
   //Set question status to 0 and decrease total question in tag by 1
@@ -282,7 +200,42 @@ const deleteQuestion = async (req: IUserRequest, res: Response) => {
   if (result) {
     res.status(StatusCodes.OK).json(result);
   } else {
-    res.status(StatusCodes.NO_CONTENT).send("Delete failed");
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).send("Delete failed");
+  }
+};
+
+const updateQuestion = async (req: IUserRequest, res: Response) => {
+  const { userId } = req.user!;
+  const question = await Question.findOne({
+    _id: req.params.questionId,
+    questionStatus: 1,
+  });
+
+  if (!question) {
+    throw new NotFoundError("Invalid Question ID");
+  } else if (userId != question.userId) {
+    throw new ForbiddenError("Only owner of this question can do this action");
+  }
+
+  const questionTitle = req.body.questionTitle || question.questionTitle;
+  const questionContent = req.body.questionContent || question.questionContent;
+  const questionBounty = req.body.questionBounty || question.questionBounty;
+
+  if (
+    questionTitle === question.questionTitle &&
+    questionContent === question.questionContent &&
+    questionBounty === question.questionBounty
+  ) {
+    res.status(StatusCodes.OK).send("Nothing updated");
+  } else {
+    question.updateAt = new Date();
+    question.questionTitle = questionTitle;
+    question.questionContent = questionContent;
+    question.questionBounty = questionBounty;
+
+    const result = await question.save();
+
+    res.status(StatusCodes.OK).json(result);
   }
 };
 
@@ -292,4 +245,5 @@ export {
   getQuestionByID,
   chooseBestAnswer,
   deleteQuestion,
+  updateQuestion,
 };
