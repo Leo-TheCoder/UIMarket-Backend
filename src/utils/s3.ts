@@ -65,9 +65,4 @@ async function generateUploadURL(folder: String) {
   return uploadURL;
 }
 
-export {
-  //
-  // uploadFile,
-  // getFileStream,
-  generateUploadURL,
-};
+export { generateUploadURL };

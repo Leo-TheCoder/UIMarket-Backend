@@ -1,21 +1,14 @@
-import multer from "multer";
 import { StatusCodes } from "http-status-codes";
 import { Request, Response } from "express";
-import { ObjectId } from "mongodb";
-
-import { BadRequestError, UnauthenticatedError } from "../errors";
 import { IUserRequest } from "../types/express";
-import * as Constants from "../constants";
-import {
-  // uploadFile,
-  // getFileStream,
-  generateUploadURL,
-} from "../utils/s3";
+import {} from "../errors";
 import UserModel from "../models/User.model";
-import fs from "fs";
-import ultil from "util";
+import * as Constants from "../constants";
+import { generateUploadURL } from "../utils/s3";
+// import fs from "fs";
+// import ultil from "util";
 
-const unlinkFile = ultil.promisify(fs.unlink);
+// const unlinkFile = ultil.promisify(fs.unlink);
 
 //BE Solution
 
@@ -66,8 +59,4 @@ const uploadURL = async (req: Request, res: Response) => {
   }
 };
 
-export {
-  //uploadAvatar,
-  // downloadAvatar,
-  uploadURL,
-};
+export { uploadURL };
