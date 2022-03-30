@@ -96,7 +96,8 @@ const getQuestions = async (req: Request, res: Response) => {
     .skip((page - 1) * limit)
     .limit(limit)
     .populate("questionTag", "tagName")
-    .populate("userId", "customerName");
+    .populate("userId", "customerName")
+    .lean();
 
   return res.status(StatusCodes.OK).json({
     totalPages,
@@ -130,9 +131,7 @@ const getQuestionByID = async (req: IUserRequest, res: Response) => {
     const { _doc } = question;
     _doc.voteStatus = voteStatus;
 
-    res.status(StatusCodes.OK).json({
-      _doc,
-    });
+    res.status(StatusCodes.OK).json({ _doc });
   } else {
     throw new NotFoundError("Invalid Question ID");
   }
@@ -141,31 +140,75 @@ const getQuestionByID = async (req: IUserRequest, res: Response) => {
 const chooseBestAnswer = async (req: IUserRequest, res: Response) => {
   //Checking whether this user is owner of this post
   const { userId } = req.user!;
-  const question = await Question.findById(req.params.questionId);
+  const question = await Question.findOne({
+    _id: req.params.questionId,
+    questionStatus: 1,
+  });
+  const answer = await AnswerModel.findOne({
+    _id: req.params.answerId,
+    questionId: req.params.questionId,
+    answerStatus: 1,
+  });
 
   if (!question) {
     throw new NotFoundError("Invalid Question ID");
+  } else if (!answer) {
+    throw new NotFoundError("Invalid Answer ID");
   } else if (userId != question.userId) {
     throw new ForbiddenError("Only owner of this post can do this action");
   }
 
   //Checking whether this question have best answer or not
-  const answer = await AnswerModel.find({
-    questionId: req.params.questionId,
-    bestAnswer: 1,
-  });
-  if (answer.length > 0) {
-    throw new BadRequestError("This question already have best answer");
+  let currentBestAnswer = question.bestAnswer || null;
+
+  if (currentBestAnswer) {
+    currentBestAnswer = String(currentBestAnswer);
   }
 
-  const bestAnswer = await AnswerModel.findByIdAndUpdate(
-    req.params.answerId,
-    { bestAnswer: 1 },
-    { new: true, lean: true },
-  );
+  //Case already had best answer
+  if (currentBestAnswer) {
+    //Undo best answer
+    if (currentBestAnswer === req.params.answerId) {
+      answer.bestAnswer = 0;
+      question.bestAnswer = null;
 
-  if (bestAnswer) {
-    res.status(StatusCodes.OK).json(bestAnswer);
+      const result = await answer.save();
+      await question.save();
+
+      res
+        .status(StatusCodes.OK)
+        .json({ Acction: "Unvote best answer", result });
+    }
+    //Choose new best answer
+    else {
+      const oldBestAnswer = await AnswerModel.findById(currentBestAnswer);
+
+      if (!oldBestAnswer) {
+        throw new GoneError("Something went wrong with database");
+      }
+
+      oldBestAnswer.bestAnswer = 0;
+      question.bestAnswer = answer._id;
+      answer.bestAnswer = 1;
+
+      await oldBestAnswer.save();
+      await question.save();
+      const result = await answer.save();
+
+      res
+        .status(StatusCodes.OK)
+        .json({ Action: "Choose another best answer", result });
+    }
+  }
+  //Case doesn't have best answer
+  else {
+    answer.bestAnswer = 1;
+    question.bestAnswer = answer._id;
+
+    const result = await answer.save();
+    await question.save();
+
+    res.status(StatusCodes.OK).json({ Action: "Choose best answer", result });
   }
 };
 
