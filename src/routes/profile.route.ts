@@ -8,7 +8,7 @@ const router = express.Router();
 
 //GET Method
 router.get(
-  "/:userId",
+  "/activity/:userId",
   authenticationMiddleware.optionalAuth,
   getProfileActivity
 );
