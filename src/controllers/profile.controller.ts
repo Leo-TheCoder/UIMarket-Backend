@@ -21,7 +21,7 @@ const getProfileActivity = async (req: IUserRequest, res: Response) => {
   //Promise fetch questions of user
   const questionsPromise = QuestionModel.find(
     { userId },
-    { totalUpvote: 1, questionTitle: 1, totalDownvote: 1 }
+    { totalUpvote: 1, questionTitle: 1, totalDownvote: 1, questionBounty: 1 }
   ).populate({
     path: "questionTag",
     select: "tagName",
@@ -105,16 +105,25 @@ const getProfileActivity = async (req: IUserRequest, res: Response) => {
   });
 
   //Delete redundant fields
-  const questionResult = questions.map(question => {
-    const doc = {...question._doc};
+  const questionResult = questions.map((question) => {
+    const doc = { ...question._doc };
     delete doc.questionTag;
+    delete doc.questionBounty;
     return doc;
   });
-  const answerResult = answers.map(answer => {
+  const answerResult = answers.map((answer) => {
+    //deep copy
     const doc = JSON.parse(JSON.stringify(answer._doc));
     delete doc.questionId.questionTag;
     return doc;
-  })
+  });
+  //Fill question with bounty
+  const questionBountyResult = questions.filter(
+    (question) => {
+      delete question._doc.questionTag;
+      return question.questionBounty > 0;
+    }
+  );
 
   res.status(StatusCodes.OK).json({
     stat: {
@@ -125,6 +134,7 @@ const getProfileActivity = async (req: IUserRequest, res: Response) => {
     questions: questionResult,
     answers: answerResult,
     tagStats: tagStatsArray,
+    questionBounty: questionBountyResult,
   });
 };
 
