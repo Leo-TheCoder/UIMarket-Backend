@@ -1,13 +1,13 @@
 import express from "express";
+import { compulsoryAuth, optionalAuth } from "../middlewares/authentication";
 import {
   createQuestion,
   getQuestionByID,
   getQuestions,
   chooseBestAnswer,
   deleteQuestion,
+  updateQuestion,
 } from "../controllers/question.controller";
-
-import { compulsoryAuth, optionalAuth } from "../middlewares/authentication";
 
 const router = express.Router();
 
@@ -20,6 +20,7 @@ router.post("/", compulsoryAuth, createQuestion);
 
 //PUT Methods
 router.put("/:questionId/:answerId", compulsoryAuth, chooseBestAnswer);
+router.put("/:questionId", compulsoryAuth, updateQuestion);
 
 //DELETE Methods
 router.delete("/:questionId", compulsoryAuth, deleteQuestion);

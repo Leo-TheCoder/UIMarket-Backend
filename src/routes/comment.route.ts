@@ -1,17 +1,24 @@
 import express from "express";
-import { createComment, getComments } from "../controllers/comment.controller";
-import * as authenticationMiddleware from "../middlewares/authentication";
+import { compulsoryAuth, optionalAuth } from "../middlewares/authentication";
+import {
+  createComment,
+  getComments,
+  deleteComment,
+  updateComment,
+} from "../controllers/comment.controller";
 
 const router = express.Router();
 
 //GET Method
-router.get("/:rootId", authenticationMiddleware.optionalAuth, getComments);
+router.get("/:rootId", optionalAuth, getComments);
 
 //POST Method
-router.post(
-  "/:rootId",
-  authenticationMiddleware.compulsoryAuth,
-  createComment,
-);
+router.post("/", compulsoryAuth, createComment);
+
+//DELETE Method
+router.delete("/:commentId", compulsoryAuth, deleteComment);
+
+//PUT Method
+router.put("/:commentId", compulsoryAuth, updateComment);
 
 export default router;

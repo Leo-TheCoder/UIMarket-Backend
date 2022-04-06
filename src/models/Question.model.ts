@@ -31,6 +31,10 @@ const QuestionSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    bestAnswer: {
+      type: mongoose.Types.ObjectId,
+      ref: "Answer",
+    },
     totalView: {
       type: Number,
       default: 0,

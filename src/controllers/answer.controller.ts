@@ -1,5 +1,10 @@
 import { StatusCodes } from "http-status-codes";
-import { BadRequestError, UnauthenticatedError } from "../errors";
+import {
+  BadRequestError,
+  ForbiddenError,
+  NotFoundError,
+  UnauthenticatedError,
+} from "../errors";
 import { Request, Response } from "express";
 import { IUserRequest } from "../types/express";
 import Question from "../models/Question.model";
@@ -114,15 +119,16 @@ const deleteAnswer = async (req: IUserRequest, res: Response) => {
   const { userId } = req.user!;
 
   if (!answer) {
-    throw new BadRequestError("Invalid answer ID");
+    throw new NotFoundError("Invalid answer ID");
   } else if (answer.userId != userId) {
-    throw new BadRequestError("Only owner of this answer can do this action");
+    throw new ForbiddenError("Only owner of this answer can do this action");
   }
 
   //Checking answer status
   if (answer.answerStatus == 1) {
     //Update answer status
     answer.answerStatus = 0;
+    answer.updateAt = new Date();
     const result = await answer.save();
 
     //Update total answer
@@ -138,31 +144,42 @@ const deleteAnswer = async (req: IUserRequest, res: Response) => {
     if (result && question) {
       res.status(StatusCodes.OK).json(result);
     } else {
-      res.status(StatusCodes.NO_CONTENT).send("Delete failed");
+      res.status(StatusCodes.INTERNAL_SERVER_ERROR).send("Delete failed");
     }
   } else {
-    throw new BadRequestError("This answer has already deleted");
+    res.status(StatusCodes.GONE).send("This answer has already deleted");
   }
 };
 
 const updateAnswer = async (req: IUserRequest, res: Response) => {
-  //Checking whether user is answer's owner
-  const answer = await Answer.findById(req.params.answerId);
   const { userId } = req.user!;
 
+  //Checking whether user is answer's owner
+  const answer = await Answer.findOne({
+    _id: req.params.answerId,
+    answerStatus: 1,
+  });
+
   if (!answer) {
-    throw new BadRequestError("Invalid answer Id");
+    throw new NotFoundError("Invalid answer Id");
   } else if (answer.userId != userId) {
-    throw new BadRequestError("Only owner of this answer can do this action");
+    throw new ForbiddenError("Only owner of this answer can do this action");
+  } else if (!req.body.answerContent) {
+    throw new BadRequestError("Please insert request body");
   }
 
-  answer.answerContent = req.body.answerContent;
-  const result = await answer.save();
+  if (answer.answerContent != req.body.answerContent) {
+    answer.answerContent = req.body.answerContent;
+    answer.updateAt = new Date();
 
-  if (result) {
-    res.status(StatusCodes.OK).json(result);
+    const result = await answer.save();
+    if (result) {
+      res.status(StatusCodes.OK).json(result);
+    } else {
+      res.status(StatusCodes.INTERNAL_SERVER_ERROR).send("Update failed");
+    }
   } else {
-    res.status(StatusCodes.NO_CONTENT).send("Update failed");
+    res.status(StatusCodes.NO_CONTENT).send("Nothing's changed");
   }
 };
 
