@@ -5,6 +5,7 @@ import AnswerModel from "../models/Answer.model";
 import UserModel from "../models/User.model";
 import { StatusCodes } from "http-status-codes";
 import UnauthenticatedErorr from "../errors/unauthenticated-error";
+import { NotFoundError } from "../errors";
 
 type TagStatType = {
   _id?: String;
@@ -118,12 +119,10 @@ const getProfileActivity = async (req: IUserRequest, res: Response) => {
     return doc;
   });
   //Fill question with bounty
-  const questionBountyResult = questions.filter(
-    (question) => {
-      delete question._doc.questionTag;
-      return question.questionBounty > 0;
-    }
-  );
+  const questionBountyResult = questions.filter((question) => {
+    delete question._doc.questionTag;
+    return question.questionBounty > 0;
+  });
 
   res.status(StatusCodes.OK).json({
     stat: {
@@ -136,6 +135,28 @@ const getProfileActivity = async (req: IUserRequest, res: Response) => {
     tagStats: tagStatsArray,
     questionBounty: questionBountyResult,
   });
+};
+
+const getProfileInfo = async (req: IUserRequest, res: Response) => {
+  const { userId } = req.params;
+
+  const userDoc = await UserModel.findById(
+    userId,
+    "-authenToken -customerPassword -createdAt -updatedAt"
+  );
+
+  if (!userDoc) {
+    throw new NotFoundError("Cannot find the user");
+  }
+
+  const user = JSON.parse(JSON.stringify(userDoc._doc));
+
+  if (!(req.user && req.user.userId === userId)) {
+    delete user.customerWallet;
+    delete user.customer_Status;
+  }
+
+  res.status(StatusCodes.OK).json({ user });
 };
 
 const updateProfile = async (req: IUserRequest, res: Response) => {
@@ -171,4 +192,4 @@ const updateProfile = async (req: IUserRequest, res: Response) => {
   res.status(StatusCodes.OK).json(result);
 };
 
-export { getProfileActivity, updateProfile };
+export { getProfileActivity, updateProfile, getProfileInfo };

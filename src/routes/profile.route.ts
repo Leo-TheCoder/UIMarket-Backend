@@ -2,6 +2,7 @@ import express from "express";
 import * as authenticationMiddleware from "../middlewares/authentication";
 import {
   getProfileActivity,
+  getProfileInfo,
   updateProfile,
 } from "../controllers/profile.controller";
 const router = express.Router();
@@ -12,6 +13,12 @@ router.get(
   authenticationMiddleware.optionalAuth,
   getProfileActivity
 );
-router.post("/", authenticationMiddleware.compulsoryAuth, updateProfile);
+
+router.get(
+  "/info/:userId",
+  authenticationMiddleware.optionalAuth,
+  getProfileInfo
+);
+router.post("/info", authenticationMiddleware.compulsoryAuth, updateProfile);
 
 export default router;
