@@ -162,7 +162,13 @@ const getProfileInfo = async (req: IUserRequest, res: Response) => {
 const updateProfile = async (req: IUserRequest, res: Response) => {
   const user = req.user!;
 
-  const { customerName, customerDOB, customerAvatar, customerPhone } = req.body;
+  const {
+    customerName,
+    customerDOB,
+    customerAvatar,
+    customerPhone,
+    customerBio,
+  } = req.body;
 
   const updatedUser = await UserModel.findByIdAndUpdate(
     user.userId,
@@ -171,6 +177,7 @@ const updateProfile = async (req: IUserRequest, res: Response) => {
       customerDOB,
       customerAvatar,
       customerPhone,
+      customerBio,
     },
     {
       new: true,
@@ -181,7 +188,7 @@ const updateProfile = async (req: IUserRequest, res: Response) => {
     throw new UnauthenticatedErorr("Invalid user");
   }
 
-  const doc = { ...updatedUser._doc };
+  const doc = JSON.parse(JSON.stringify(updatedUser._doc));
   delete doc.customerPassword;
   delete doc.authenToken;
 

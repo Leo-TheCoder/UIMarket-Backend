@@ -49,6 +49,10 @@ const UserSchema = new mongoose.Schema(
       default: 1,
       enum: [0, 1],
     },
+    customerBio: {
+      type: String,
+      default: null,
+    }
   },
   {
     timestamps: true,
