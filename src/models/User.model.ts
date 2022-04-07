@@ -46,13 +46,17 @@ const UserSchema = new mongoose.Schema(
     },
     customerStatus: {
       type: Number,
-      default: 1,
+      default: 0,
       enum: [0, 1],
     },
     customerBio: {
       type: String,
       default: null,
-    }
+    },
+    refreshToken: {
+      type: String,
+      default: null,
+    },
   },
   {
     timestamps: true,

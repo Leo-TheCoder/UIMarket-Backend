@@ -18,7 +18,7 @@ import answerRouter from "./routes/answer.route";
 import commentRouter from "./routes/comment.route";
 import profileRouter from "./routes/profile.route";
 import pictureRouter from "./routes/picture.route";
-
+import verifyRouter from "./routes/verify.route";
 
 //Middleware
 import errorHandlerMiddleware from "./middlewares/handle-errors";
@@ -29,7 +29,7 @@ app.use(cors());
 app.use(express.json());
 
 app.get("/", (req: Request, res: Response): void => {
-  res.send("Hello this is UIMarket project");
+  res.send("Hello this is DEEX BACKEND");
 });
 
 app.use("/api/v1/auth", authRouter);
@@ -48,6 +48,7 @@ app.use(
   authenticationMiddleware.compulsoryAuth,
   pictureRouter,
 );
+app.use("/api/v1/verify", verifyRouter);
 
 
 app.use(notFoundMiddleware);
