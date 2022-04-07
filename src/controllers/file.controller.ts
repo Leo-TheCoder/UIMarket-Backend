@@ -1,17 +1,17 @@
 import { StatusCodes } from "http-status-codes";
 import { Request, Response } from "express";
 import { IUserRequest } from "../types/express";
-import {} from "../errors";
+import { BadRequestError } from "../errors";
 import UserModel from "../models/User.model";
 import * as Constants from "../constants";
 import { generateUploadURL, uploadFile } from "../utils/s3";
 import fs from "fs";
 import ultil from "util";
+import { String } from "aws-sdk/clients/cloudsearchdomain";
 
 const unlinkFile = ultil.promisify(fs.unlink);
 
 //BE Solution
-
 const uploadAvatar = async (req: IUserRequest, res: Response) => {
   const { userId } = req.user!;
   const file = req.file!;
@@ -29,10 +29,9 @@ const uploadAvatar = async (req: IUserRequest, res: Response) => {
 
   if (user && upload) {
     res.status(StatusCodes.CREATED).json(upload.Location);
+  } else {
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).send("Upload failed");
   }
-  // else {
-  //   res.status(StatusCodes.INTERNAL_SERVER_ERROR).send("Upload failed");
-  // }
 };
 
 // const downloadAvatar = async (req: IUserRequest, res: Response) => {
@@ -48,9 +47,22 @@ const uploadAvatar = async (req: IUserRequest, res: Response) => {
 //   }
 // };
 
+interface IQuery {
+  folder?: string;
+  isPrivate?: boolean;
+}
+
 //FE Solution
 const uploadURL = async (req: Request, res: Response) => {
-  const url = await generateUploadURL(req.params.folder).catch((err) =>
+  const query = req.query as IQuery;
+  const folder = query.folder;
+  const isPrivate = query.isPrivate;
+
+  if (!folder || !isPrivate) {
+    throw new BadRequestError("Please provide folder name and upload type");
+  }
+
+  const url = await generateUploadURL(folder, isPrivate).catch((err) =>
     res.send(err.msg),
   );
 

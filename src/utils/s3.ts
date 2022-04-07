@@ -47,14 +47,20 @@ function getFileStream(fileKey: string) {
 }
 
 //FE Solution
-
-async function generateUploadURL(folder: String) {
+async function generateUploadURL(folder: String, isPrivate: Boolean) {
   const rawBytes = await randomBytes(16);
-  const imageName = rawBytes.toString("hex");
+  const fileName = rawBytes.toString("hex");
+  let bucket;
+
+  if (isPrivate) {
+    bucket = prdbucketName;
+  } else {
+    bucket = bucketName;
+  }
 
   const params = {
-    Bucket: bucketName,
-    Key: `${folder}/${imageName}`,
+    Bucket: bucket,
+    Key: `${folder}/${fileName}`,
     Expires: 60,
   };
 
