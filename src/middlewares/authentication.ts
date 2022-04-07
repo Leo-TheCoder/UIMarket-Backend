@@ -2,7 +2,7 @@ import User from "../models/User.model";
 import jwt from "jsonwebtoken";
 import { UnauthenticatedError } from "../errors";
 import { Response, NextFunction } from "express";
-import { IUserRequest, IShopRequest } from "../types/express";
+import { IUserRequest } from "../types/express";
 
 interface PayloadUser extends jwt.JwtPayload {
   userId: string;
@@ -10,11 +10,11 @@ interface PayloadUser extends jwt.JwtPayload {
   isActive: boolean;
 }
 
-interface PayloadShop extends jwt.JwtPayload {
-  shopId: string;
-  shopName: string;
-  isActive: boolean;
-}
+// interface PayloadShop extends jwt.JwtPayload {
+//   shopId: string;
+//   shopName: string;
+//   isActive: boolean;
+// }
 
 const compulsoryAuth = (
   req: IUserRequest,
@@ -66,29 +66,33 @@ const optionalAuth = (req: IUserRequest, res: Response, next: NextFunction) => {
   }
 };
 
-const shopCompulsoryAuth = (
-  req: IShopRequest,
-  res: Response,
-  next: NextFunction,
-) => {
-  //check header
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith("Bearer")) {
-    throw new UnauthenticatedError("Authentication invalid");
-  }
-  const token = authHeader.split(" ")[1];
+// const shopCompulsoryAuth = (
+//   req: IShopRequest,
+//   res: Response,
+//   next: NextFunction,
+// ) => {
+//   //check header
+//   const authHeader = req.headers.authorization;
+//   if (!authHeader || !authHeader.startsWith("Bearer")) {
+//     throw new UnauthenticatedError("Authentication invalid");
+//   }
+//   const token = authHeader.split(" ")[1];
 
-  try {
-    const payload = jwt.verify(token, process.env.JWT_SECRET!) as PayloadShop;
-    req.shop = {
-      shopId: payload.shopId,
-      shopName: payload.shopName,
-      isActive: payload.isActive,
-    };
-    next();
-  } catch (error) {
-    throw new UnauthenticatedError("Authencation invalid");
-  }
+//   try {
+//     const payload = jwt.verify(token, process.env.JWT_SECRET!) as PayloadShop;
+//     req.shop = {
+//       shopId: payload.shopId,
+//       shopName: payload.shopName,
+//       isActive: payload.isActive,
+//     };
+//     next();
+//   } catch (error) {
+//     throw new UnauthenticatedError("Authencation invalid");
+//   }
+// };
+
+export {
+  compulsoryAuth,
+  optionalAuth,
+  // shopCompulsoryAuth
 };
-
-export { compulsoryAuth, optionalAuth, shopCompulsoryAuth };

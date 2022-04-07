@@ -4,8 +4,8 @@ import { defaultMinLength } from "../constants";
 
 const ProductSchema = new mongoose.Schema(
   {
-    shopID: {
-      type: ObjectId,
+    shopId: {
+      type: mongoose.Types.ObjectId,
       required: true,
     },
     productName: {
@@ -25,6 +25,7 @@ const ProductSchema = new mongoose.Schema(
     },
     productCategory: {
       type: mongoose.Types.ObjectId,
+      ref: "Category",
       required: true,
     },
     productPicture: [
