@@ -6,15 +6,10 @@ import { IUserRequest } from "../types/express";
 
 interface PayloadUser extends jwt.JwtPayload {
   userId: string;
+  shopId: string;
   name: string;
   isActive: boolean;
 }
-
-// interface PayloadShop extends jwt.JwtPayload {
-//   shopId: string;
-//   shopName: string;
-//   isActive: boolean;
-// }
 
 const compulsoryAuth = (
   req: IUserRequest,
@@ -32,6 +27,7 @@ const compulsoryAuth = (
     const payload = jwt.verify(token, process.env.JWT_SECRET!) as PayloadUser;
     req.user = {
       userId: payload.userId,
+      shopId: payload.shopId,
       name: payload.name,
       isActive: payload.isActive,
     };
@@ -55,6 +51,7 @@ const optionalAuth = (req: IUserRequest, res: Response, next: NextFunction) => {
     const payload = jwt.verify(token, process.env.JWT_SECRET!) as PayloadUser;
     req.user = {
       userId: payload.userId,
+      shopId: payload.shopId,
       name: payload.name,
       isActive: payload.isActive,
     };

@@ -6,32 +6,34 @@ const ProductSchema = new mongoose.Schema(
   {
     shopId: {
       type: mongoose.Types.ObjectId,
-      required: true,
+      required: [true, "Please provide shop ID"],
+      immutable: true,
     },
     productName: {
       type: String,
       minlength: defaultMinLength / 2,
-      required: true,
+      required: [true, "Please provide product name"],
     },
     productPrice: {
       type: Number,
-      required: true,
+      required: [true, "Please provide product price"],
       min: 1,
     },
     productDescription: {
       type: String,
       default: true,
       minlength: defaultMinLength,
+      required: [true, "Please provide product description"],
     },
     productCategory: {
       type: mongoose.Types.ObjectId,
       ref: "Category",
-      required: true,
+      required: [true, "Please provide product category"],
     },
     productPicture: [
       {
         type: String,
-        required: true,
+        required: [true, "Please provide at least 1 picture of product"],
       },
     ],
     productStatus: {

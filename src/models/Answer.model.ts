@@ -12,6 +12,7 @@ const AnswerSchema = new mongoose.Schema(
       type: mongoose.Types.ObjectId,
       ref: "Question",
       required: [true, "Please provide question id"],
+      immutable: true,
     },
     answerContent: {
       type: String,

@@ -9,11 +9,19 @@ const UserSchema = new mongoose.Schema(
       required: [true, "Please provide name"],
       minlength: 5,
     },
-    customerAvatar: String,
+    customerAvatar: {
+      type: String,
+      required: false,
+    },
+    shopId: {
+      type: mongoose.Types.ObjectId,
+      default: null,
+    },
     customerEmail: {
       type: String,
       required: [true, "Please provide email"],
       unique: true,
+      immutable: true,
     },
     customerPassword: {
       type: String,
@@ -65,6 +73,7 @@ UserSchema.methods.createJWT = function () {
   return jwt.sign(
     {
       userId: this._id,
+      shopId: this.shopId,
       name: this.customerName,
       isActive: this.customerStatus === 1,
     },

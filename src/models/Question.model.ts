@@ -7,6 +7,7 @@ const QuestionSchema = new mongoose.Schema(
       type: mongoose.Types.ObjectId,
       ref: "Customer",
       required: [true, "Please provide user id"],
+      immutable: true,
     },
     questionTitle: {
       type: String,

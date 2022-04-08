@@ -11,6 +11,7 @@ import {
   GoneError,
   UnauthenticatedError,
 } from "../errors";
+import UserModel from "../models/User.model";
 
 interface IQuery {
   page?: string;
@@ -36,24 +37,28 @@ const createShop = async (req: IUserRequest, res: Response) => {
   });
 
   if (newShop) {
-    res.status(StatusCodes.CREATED).json({ newShop });
+    const user = await UserModel.findByIdAndUpdate(
+      userId,
+      { shopId: newShop._id },
+      { new: true },
+    );
+
+    const token = user.createJWT();
+
+    res.status(StatusCodes.CREATED).json({ newShop, token });
   } else {
     res.status(StatusCodes.INTERNAL_SERVER_ERROR).send("Create shop failed");
   }
 };
 
 const uploadProduct = async (req: IUserRequest, res: Response) => {
-  //Get ShopID
-  const shop = await ShopModel.findOne({
-    userId: req.user?.userId,
-    shopStatus: 1,
-  }).lean();
+  const { shopId } = req.user!;
 
-  if (!shop) {
+  if (!shopId) {
     throw new UnauthenticatedError("Invalid credential");
   }
 
-  const product = await ProductModel.create({ ...req.body, shopId: shop._id });
+  const product = await ProductModel.create({ ...req.body, shopId: shopId });
 
   if (product) {
     res.status(StatusCodes.CREATED).json({ product });
@@ -62,40 +67,62 @@ const uploadProduct = async (req: IUserRequest, res: Response) => {
   }
 };
 
-// const login = async (req: IUserRequest, res: Response) => {
-//   const { userId } = req.user!;
+const deleteProduct = async (req: IUserRequest, res: Response) => {
+  const { shopId } = req.user!;
+  const product = await ProductModel.findOne({ _id: req.params.productId });
 
-//   const shop = await ShopModel.findOne({ userId: userId, shopStatus: 1 });
+  if (!product) {
+    throw new BadRequestError("Invalid product Id");
+  } else if (shopId != product.shopId) {
+    throw new ForbiddenError("Only owner of this shop can do this action");
+  } else if (product.productStatus === 0) {
+    throw new GoneError("This product has already deleted");
+  }
 
-//   if (!shop) {
-//     throw new NotFoundError("This user is not own a shop");
-//   }
+  product.productStatus = 0;
+  product.updatedAt = new Date();
 
-//   //create JWT for authentication
-//   const token = shop.createJWT();
-//   const shopObj = Object.assign({}, shop._doc);
+  const result = await product.save();
 
-//   res.status(StatusCodes.OK).json({ shop: shopObj, token });
-// };
+  if (result) {
+    res.status(StatusCodes.OK).json({ result });
+  } else {
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR);
+  }
+};
 
-// const loginWithToken = async (req: IShopRequest, res: Response) => {
-//   const { shopId } = req.shop!;
+const updateProduct = async (req: IUserRequest, res: Response) => {
+  const { shopId } = req.user!;
+  const product = await ProductModel.findOne({
+    _id: req.params.productId,
+    productStatus: 1,
+  });
 
-//   const shop = await ShopModel.findOne(
-//     { _id: shopId, shopStatus: 1 },
-//     { shopIDCard: 0 },
-//   );
+  if (!product) {
+    throw new BadRequestError("Invalid product Id");
+  } else if (shopId != product.shopId) {
+    throw new ForbiddenError("Only owner of this shop can do this action");
+  }
 
-//   if (!shop) {
-//     return new UnauthenticatedError("Shop not found!");
-//   }
+  product.productName = req.body.productName || product.productName;
+  product.productPrice = req.body.productPrice || product.productPrice;
+  product.productDescription =
+    req.body.productDescription || product.productDescription;
+  product.productPicture = req.body.productPicture || product.productPicture;
+  product.updatedAt = new Date();
 
-//   res.status(StatusCodes.OK).json({ shop });
-// };
+  const result = await product.save();
+  if (result) {
+    res.status(StatusCodes.OK).json({ result });
+  } else {
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).send("Updated failed");
+  }
+};
 
 export {
   createShop,
   uploadProduct,
-  // login,
-  // loginWithToken
+  deleteProduct,
+  updateProduct,
+  //
 };

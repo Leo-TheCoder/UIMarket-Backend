@@ -1,24 +1,24 @@
 import express from "express";
-import {
-  compulsoryAuth,
-  optionalAuth,
-  // shopCompulsoryAuth,
-} from "../middlewares/authentication";
+import { compulsoryAuth, optionalAuth } from "../middlewares/authentication";
 import {
   createShop,
   uploadProduct,
-  // login,
-  // loginWithToken,
+  deleteProduct,
+  updateProduct,
 } from "../controllers/shop.controller";
 
 const router = express.Router();
 
+//GET Method
+
 //POST Method
 router.post("/register", compulsoryAuth, createShop);
 router.post("/product", compulsoryAuth, uploadProduct);
-// router.post("/login", compulsoryAuth, login);
 
-//GET Method
-// router.get("/login", shopCompulsoryAuth, loginWithToken);
+//PUT Method
+router.put("/product/:productId", compulsoryAuth, updateProduct);
+
+//DELETE Method
+router.delete("/product/:productId", compulsoryAuth, deleteProduct);
 
 export default router;

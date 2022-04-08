@@ -7,20 +7,24 @@ const CommentSchema = new mongoose.Schema(
       type: mongoose.Types.ObjectId,
       ref: "Customer",
       required: [true, "Please provide user id"],
+      immutable: true,
     },
     questionId: {
       type: mongoose.Types.ObjectId,
       ref: "Question",
       required: [true, "Please provide question id"],
+      immutable: true,
     },
     rootId: {
       type: mongoose.Types.ObjectId,
       required: [true, "Please provide root id"],
+      immutable: true,
     },
     rootType: {
       type: String,
       required: [true, "Please provide type"],
       enum: ["Question", "Answer"],
+      immutable: true,
     },
     commentContent: {
       type: String,

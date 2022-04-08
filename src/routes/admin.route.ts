@@ -13,4 +13,7 @@ router.get("/category", getAllCategory);
 //POST Method
 router.post("/category", createCategory);
 
+//PUT Method
+//DELETE Method
+
 export default router;

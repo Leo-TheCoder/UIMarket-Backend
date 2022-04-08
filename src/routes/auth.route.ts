@@ -8,8 +8,15 @@ import { compulsoryAuth } from "../middlewares/authentication";
 
 const router = express.Router();
 
+//GET Method
+router.get("/login", compulsoryAuth, loginWithToken);
+
+//POST Method
 router.post("/register", register);
 router.post("/login", login);
-router.get("/login", compulsoryAuth, loginWithToken);
+
+//PUT Method
+
+//DELETE Method
 
 export default router;

@@ -15,10 +15,10 @@ router.get("/:rootId", optionalAuth, getComments);
 //POST Method
 router.post("/", compulsoryAuth, createComment);
 
-//DELETE Method
-router.delete("/:commentId", compulsoryAuth, deleteComment);
-
 //PUT Method
 router.put("/:commentId", compulsoryAuth, updateComment);
+
+//DELETE Method
+router.delete("/:commentId", compulsoryAuth, deleteComment);
 
 export default router;

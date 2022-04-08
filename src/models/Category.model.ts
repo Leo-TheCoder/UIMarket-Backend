@@ -6,7 +6,7 @@ const CategorySchema = new mongoose.Schema(
   {
     categoryName: {
       type: String,
-      required: true,
+      required: [true, "Please provide category name"],
     },
     totalProduct: {
       type: Number,
