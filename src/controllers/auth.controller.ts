@@ -12,10 +12,14 @@ const register = async (req: Request, res: Response) => {
     refreshToken: randomstring.generate(30),
   });
 
-  //send email for verification - need to differentiate google auth and email auth 
+  //send email for verification - need to differentiate google auth and email auth
   sendVerifyEmail(req.body.customerEmail, user._id, user.refreshToken);
 
-  res.status(StatusCodes.CREATED).json({msg: "Account created! Need verify email"});
+  res.status(StatusCodes.CREATED).json({
+    userId: user._id,
+    email: req.body.customerEmail,
+    msg: "Account created! Need verify email",
+  });
 };
 
 const login = async (req: Request, res: Response) => {
@@ -37,8 +41,11 @@ const login = async (req: Request, res: Response) => {
     throw new UnauthenticatedError("Invalid Credentials");
   }
 
-  if(user.customerStatus !== 1) {
-    throw new UnauthenticatedError("Account is not active");
+  if (user.customerStatus !== 1) {
+    return res.status(StatusCodes.UNAUTHORIZED).json({
+      userId: user._id,
+      msg: "Account isn't active!",
+    });
   }
 
   //create JWT for authentication
@@ -76,7 +83,29 @@ const verifyEmailCode = async (req: Request, res: Response) => {
     return res.status(StatusCodes.OK).json({ msg: "Verify successfully!" });
   }
 
-  return res.status(StatusCodes.UNAUTHORIZED).json({msg: "Verify fail!"});
+  return res.status(StatusCodes.UNAUTHORIZED).json({ msg: "Verify fail!" });
 };
 
-export { register, login, loginWithToken, verifyEmailCode };
+const resendVerifyEmail = async (req: Request, res: Response) => {
+  const { userId } = req.query;
+  const user = await User.findById(userId);
+
+  if (!user || !userId) {
+    throw new UnauthenticatedError("Invalid Account");
+  }
+
+  if (user.customerStatus === 1) {
+    return res.status(StatusCodes.OK).json({
+      msg: "Account has already verified!",
+    });
+  }
+
+  user.refreshToken = randomstring.generate(30);
+  await user.save();
+  sendVerifyEmail(user.customerEmail, user._id, user.refreshToken);
+  res.status(StatusCodes.OK).json({
+    msg: "Verify email sent!",
+  });
+};
+
+export { register, login, loginWithToken, verifyEmailCode, resendVerifyEmail };
