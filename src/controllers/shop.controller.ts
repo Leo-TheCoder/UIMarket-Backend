@@ -71,7 +71,9 @@ const deleteProduct = async (req: IUserRequest, res: Response) => {
   const { shopId } = req.user!;
   const product = await ProductModel.findOne({ _id: req.params.productId });
 
-  if (!product) {
+  if (!shopId) {
+    throw new UnauthenticatedError("Invalid credential");
+  } else if (!product) {
     throw new BadRequestError("Invalid product Id");
   } else if (shopId != product.shopId) {
     throw new ForbiddenError("Only owner of this shop can do this action");
@@ -98,7 +100,9 @@ const updateProduct = async (req: IUserRequest, res: Response) => {
     productStatus: 1,
   });
 
-  if (!product) {
+  if (!shopId) {
+    throw new UnauthenticatedError("Invalid credential");
+  } else if (!product) {
     throw new BadRequestError("Invalid product Id");
   } else if (shopId != product.shopId) {
     throw new ForbiddenError("Only owner of this shop can do this action");
@@ -119,10 +123,48 @@ const updateProduct = async (req: IUserRequest, res: Response) => {
   }
 };
 
+const getAllProduct = async (req: IUserRequest, res: Response) => {
+  const { shopId } = req.user!;
+
+  if (!shopId) {
+    throw new UnauthenticatedError("Invalid credential");
+  }
+
+  const product = await ProductModel
+    //
+    .find({ shopId: shopId })
+    .populate({ path: "productCategory", select: ["categoryName"] })
+    .lean();
+  res.status(StatusCodes.OK).json({ product });
+};
+
+const updateShop = async (req: IUserRequest, res: Response) => {
+  const { shopId } = req.user!;
+
+  if (!shopId) {
+    throw new UnauthenticatedError("Invalid credential");
+  }
+
+  const shop = await ShopModel.findOne({ _id: shopId, shopStatus: 1 });
+
+  shop.shopDescription = req.body.shopDescription || shop.shopDescription;
+  shop.shopPhone = req.body.shopPhone || shop.shopPhone;
+  shop.shopEmail = req.body.shopEmail || shop.shopEmail;
+  shop.updatedAt = new Date();
+
+  const result = await shop.save();
+  if (result) {
+    res.status(StatusCodes.OK).json({ result });
+  } else {
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).send("Update failed");
+  }
+};
+
 export {
   createShop,
+  updateShop,
   uploadProduct,
   deleteProduct,
   updateProduct,
-  //
+  getAllProduct,
 };
