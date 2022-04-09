@@ -46,7 +46,7 @@ const getComments = async (req: IUserRequest, res: Response) => {
   const { rootId } = req.params;
   const comments = await CommentModel.find({ rootId, commentStatus: 1 })
     .sort({ createdAt: +1 })
-    .populate("userId", "customerName");
+    .populate("userId", "customerName customerEmail");
 
   let result = comments;
   if (req.user) {
