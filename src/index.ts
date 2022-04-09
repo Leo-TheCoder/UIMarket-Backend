@@ -20,6 +20,7 @@ import profileRouter from "./routes/profile.route";
 import fileRouter from "./routes/file.route";
 import shopRouter from "./routes/shop.route";
 import adminRouter from "./routes/admin.route";
+import productRouter from "./routes/product.route";
 
 //Middleware
 import errorHandlerMiddleware from "./middlewares/handle-errors";
@@ -43,6 +44,7 @@ app.use("/api/v1/profile", profileRouter);
 app.use("/api/v1/file", compulsoryAuth, fileRouter);
 app.use("/api/v1/shop", compulsoryAuth, shopRouter);
 app.use("/api/v1/admin", adminRouter);
+app.use("/api/v1/products", productRouter);
 
 app.use(notFoundMiddleware);
 app.use(errorHandlerMiddleware);
