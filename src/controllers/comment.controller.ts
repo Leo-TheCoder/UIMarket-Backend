@@ -12,6 +12,7 @@ import QuestionModel from "../models/Question.model";
 import CommentModel from "../models/Comment.model";
 import AnswerModel from "../models/Answer.model";
 import * as Constants from "../constants";
+import UserModel from "../models/User.model";
 
 const createComment = async (req: IUserRequest, res: Response) => {
   const { userId } = req.user!;
@@ -40,7 +41,12 @@ const createComment = async (req: IUserRequest, res: Response) => {
     ...req.body,
     userId,
   });
-  res.status(StatusCodes.CREATED).json(comment);
+
+  //populate with user model
+  const user = await UserModel.findById(userId, "customerEmail customerName");
+  const result = JSON.parse(JSON.stringify(comment._doc));
+  result.userId = user;
+  res.status(StatusCodes.CREATED).json(result);
 };
 
 interface IQuery {
