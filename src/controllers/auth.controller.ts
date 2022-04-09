@@ -1,7 +1,6 @@
 import User from "../models/User.model";
 import { StatusCodes } from "http-status-codes";
 import { BadRequestError, UnauthenticatedError } from "../errors";
-import randomstring from "randomstring";
 import { Request, Response } from "express";
 import { IUserRequest } from "../types/express";
 import { sendVerifyEmail } from "../utils/sendMail";
@@ -9,8 +8,10 @@ import { sendVerifyEmail } from "../utils/sendMail";
 const register = async (req: Request, res: Response) => {
   const user = await User.create({
     ...req.body,
-    refreshToken: randomstring.generate(30),
   });
+  await user.createRefreshToken();
+  await user.hashPassword();
+  await user.save();
 
   //send email for verification - need to differentiate google auth and email auth
   sendVerifyEmail(req.body.customerEmail, user._id, user.refreshToken);
@@ -77,7 +78,7 @@ const verifyEmailCode = async (req: Request, res: Response) => {
   const { userId, verifyCode } = req.query;
 
   const user = await User.findById(userId);
-  if (verifyCode === user.refreshToken) {
+  if (user.verifyToken(verifyCode)) {
     user.customerStatus = 1;
     await user.save();
     return res.status(StatusCodes.OK).json({ msg: "Verify successfully!" });
@@ -100,8 +101,9 @@ const resendVerifyEmail = async (req: Request, res: Response) => {
     });
   }
 
-  user.refreshToken = randomstring.generate(30);
+  await user.createRefreshToken();
   await user.save();
+
   sendVerifyEmail(user.customerEmail, user._id, user.refreshToken);
   res.status(StatusCodes.OK).json({
     msg: "Verify email sent!",
