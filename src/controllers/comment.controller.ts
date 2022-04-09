@@ -11,6 +11,7 @@ import { getStatusVote } from "../utils/statusVote";
 import QuestionModel from "../models/Question.model";
 import CommentModel from "../models/Comment.model";
 import AnswerModel from "../models/Answer.model";
+import * as Constants from "../constants";
 
 const createComment = async (req: IUserRequest, res: Response) => {
   const { userId } = req.user!;
@@ -42,11 +43,35 @@ const createComment = async (req: IUserRequest, res: Response) => {
   res.status(StatusCodes.CREATED).json(comment);
 };
 
+interface IQuery {
+  page?: string;
+  limit?: string;
+  selectWith?: string;
+  tag?: string;
+}
+
 const getComments = async (req: IUserRequest, res: Response) => {
   const { rootId } = req.params;
-  const comments = await CommentModel.find({ rootId, commentStatus: 1 })
+  const query = req.query as IQuery;
+  const page = parseInt(query.page!) || Constants.defaultPageNumber;
+  const limit = parseInt(query.limit!) || Constants.defaultLimitComments;
+
+  const queryString = {
+    rootId,
+    commentStatus: 1,
+  };
+
+  const total = await CommentModel.countDocuments(queryString);
+  const totalPages =
+    total % limit === 0
+      ? Math.floor(total / limit)
+      : Math.floor(total / limit) + 1;
+
+  const comments = await CommentModel.find(queryString)
     .sort({ createdAt: +1 })
-    .populate("userId", "customerName customerEmail");
+    .populate("userId", "customerName customerEmail")
+    .skip((page - 1) * limit)
+    .limit(limit);
 
   let result = comments;
   if (req.user) {
@@ -60,7 +85,9 @@ const getComments = async (req: IUserRequest, res: Response) => {
     }
   }
 
-  res.status(StatusCodes.OK).json({ comments: result });
+  res
+    .status(StatusCodes.OK)
+    .json({ comments: result, totalPages, limit, page });
 };
 
 const updateComment = async (req: IUserRequest, res: Response) => {
