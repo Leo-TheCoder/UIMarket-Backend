@@ -43,10 +43,9 @@ const createComment = async (req: IUserRequest, res: Response) => {
   });
 
   //populate with user model
-  const user = await UserModel.findById(userId, "customerEmail customerName");
-  const result = JSON.parse(JSON.stringify(comment._doc));
-  result.userId = user;
-  res.status(StatusCodes.CREATED).json(result);
+  await comment.populate("userId", "customerEmail customerName");
+
+  res.status(StatusCodes.CREATED).json(comment);
 };
 
 interface IQuery {
