@@ -3,7 +3,8 @@ import { StatusCodes } from "http-status-codes";
 import { BadRequestError, UnauthenticatedError } from "../errors";
 import { Request, Response } from "express";
 import { IUserRequest } from "../types/express";
-import { sendVerifyEmail } from "../utils/sendMail";
+import { sendForgetPasswordEmail, sendResetPasswordConfirmEmail, sendVerifyEmail } from "../utils/sendMail";
+import { resolveSoa } from "dns";
 
 const register = async (req: Request, res: Response) => {
   const user = await User.create({
@@ -110,4 +111,64 @@ const resendVerifyEmail = async (req: Request, res: Response) => {
   });
 };
 
-export { register, login, loginWithToken, verifyEmailCode, resendVerifyEmail };
+const forgetPasswordEmail = async (req: Request, res: Response) => {
+  const { email } = req.body;
+  const user = await User.findOne({ customerEmail: email });
+
+  if (!user) {
+    throw new UnauthenticatedError("Invalid Account!");
+  }
+
+  await user.createRefreshToken();
+  await user.save();
+
+  sendForgetPasswordEmail(email, user._id, user.refreshToken);
+  res.status(StatusCodes.OK).json({
+    msg: "Verify email sent!",
+  });
+};
+
+const resetForgetPassword = async (req: Request, res: Response) => {
+  const { userId, verifyCode, newPassword } = req.body;
+  const user = await User.findById(userId);
+  if (user.verifyToken(verifyCode)) {
+    user.customerPassword = newPassword;
+    await user.hashPassword();
+    await user.save();
+    return res
+      .status(StatusCodes.OK)
+      .json({ msg: "Reset password successfully!" });
+  }
+
+  return res.status(StatusCodes.UNAUTHORIZED).json({ msg: "Verify fail!" });
+};
+
+const resetPassword = async (req: IUserRequest, res: Response) => {
+  const {userId} = req.user!;
+  const {newPassword} = req.body;
+  const user = await User.findById(userId);
+
+  if(!user) {
+    throw new UnauthenticatedError("Invalid Account");
+  }
+
+  user.customerPassword = newPassword;
+  await user.hashPassword();
+  await user.save();
+
+  sendResetPasswordConfirmEmail(user.customerEmail);
+  return res.status(StatusCodes.OK).json({
+    msg: "Reset password successfully, email confirm sent!",
+  })
+}
+
+export {
+  register,
+  login,
+  loginWithToken,
+  verifyEmailCode,
+  resendVerifyEmail,
+  forgetPasswordEmail,
+  resetForgetPassword,
+  resetPassword,
+};
