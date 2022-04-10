@@ -112,8 +112,8 @@ const resendVerifyEmail = async (req: Request, res: Response) => {
 };
 
 const forgetPasswordEmail = async (req: Request, res: Response) => {
-  const { email } = req.body;
-  const user = await User.findOne({ customerEmail: email });
+  const { customerEmail } = req.body;
+  const user = await User.findOne({ customerEmail});
 
   if (!user) {
     throw new UnauthenticatedError("Invalid Account!");
@@ -122,7 +122,7 @@ const forgetPasswordEmail = async (req: Request, res: Response) => {
   await user.createRefreshToken();
   await user.save();
 
-  sendForgetPasswordEmail(email, user._id, user.refreshToken);
+  sendForgetPasswordEmail(customerEmail, user._id, user.refreshToken);
   res.status(StatusCodes.OK).json({
     msg: "Verify email sent!",
   });

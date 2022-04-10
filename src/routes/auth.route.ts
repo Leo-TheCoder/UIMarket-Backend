@@ -13,7 +13,7 @@ const router = express.Router();
 router.post("/register", register);
 router.post("/login", login);
 router.get("/login", authenticationMiddleware.compulsoryAuth, loginWithToken);
-router.get("/forgetPassword", forgetPasswordEmail);
+router.post("/forgetPassword", forgetPasswordEmail);
 router.post(
   "/resetPassword",
   authenticationMiddleware.compulsoryAuth,
