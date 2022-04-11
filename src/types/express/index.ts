@@ -1,9 +1,19 @@
-import {Request} from "express";
+import { Request } from "express";
 
-export interface IUserRequest extends Request {
+interface IUserRequest extends Request {
   user?: {
     userId: string;
     name: string;
     isActive: boolean;
   };
 }
+
+interface IShopRequest extends Request {
+  shop?: {
+    shopId: string;
+    shopName: string;
+    isActive: boolean;
+  };
+}
+
+export { IUserRequest, IShopRequest };

@@ -17,13 +17,14 @@ import votingRouter from "./routes/voting.route";
 import answerRouter from "./routes/answer.route";
 import commentRouter from "./routes/comment.route";
 import profileRouter from "./routes/profile.route";
-import pictureRouter from "./routes/picture.route";
-
+import fileRouter from "./routes/file.route";
+import shopRouter from "./routes/shop.route";
+import adminRouter from "./routes/admin.route";
 
 //Middleware
 import errorHandlerMiddleware from "./middlewares/handle-errors";
 import notFoundMiddleware from "./middlewares/not-found";
-import * as authenticationMiddleware from "./middlewares/authentication";
+import { compulsoryAuth } from "./middlewares/authentication";
 
 app.use(cors());
 app.use(express.json());
@@ -35,20 +36,13 @@ app.get("/", (req: Request, res: Response): void => {
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/questions", questionRouter);
 app.use("/api/v1/questionTags", questionTagRouter);
-app.use(
-  "/api/v1/voting",
-  authenticationMiddleware.compulsoryAuth,
-  votingRouter,
-);
+app.use("/api/v1/voting", compulsoryAuth, votingRouter);
 app.use("/api/v1/answers", answerRouter);
 app.use("/api/v1/comments", commentRouter);
 app.use("/api/v1/profile", profileRouter);
-app.use(
-  "/api/v1/pictures",
-  authenticationMiddleware.compulsoryAuth,
-  pictureRouter,
-);
-
+app.use("/api/v1/file", compulsoryAuth, fileRouter);
+app.use("/api/v1/shops", shopRouter);
+app.use("/api/v1/admin", adminRouter);
 
 app.use(notFoundMiddleware);
 app.use(errorHandlerMiddleware);
