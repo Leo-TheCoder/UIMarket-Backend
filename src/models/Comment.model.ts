@@ -25,7 +25,7 @@ const CommentSchema = new mongoose.Schema(
     commentContent: {
       type: String,
       required: [true, "Please provide comment content"],
-      minlength: defaultMinLength,
+      minlength: defaultMinLength / 2,
     },
     totalUpvote: {
       type: Number,
