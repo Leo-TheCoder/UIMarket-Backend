@@ -42,7 +42,7 @@ app.use("/api/v1/answers", answerRouter);
 app.use("/api/v1/comments", commentRouter);
 app.use("/api/v1/profile", profileRouter);
 app.use("/api/v1/file", compulsoryAuth, fileRouter);
-app.use("/api/v1/shop", compulsoryAuth, shopRouter);
+app.use("/api/v1/shop", shopRouter);
 app.use("/api/v1/admin", adminRouter);
 app.use("/api/v1/products", productRouter);
 

@@ -7,22 +7,26 @@ import {
   deleteProduct,
   updateProduct,
   getAllProduct,
+  getShopById,
+  getShopByName,
 } from "../controllers/shop.controller";
 
 const router = express.Router();
 
 //GET Method
-router.get("/product", getAllProduct);
+router.get("/:shopId", optionalAuth, getShopById);
+router.get("/product", compulsoryAuth, getAllProduct);
+router.get("/search/:shopName", getShopByName);
 
-//POST Method
-router.post("/register", createShop);
-router.post("/product", uploadProduct);
+//POST Method/
+router.post("/register", compulsoryAuth, createShop);
+router.post("/product", compulsoryAuth, uploadProduct);
 
 //PUT Method
-router.put("/", updateShop);
-router.put("/product/:productId", updateProduct);
+router.put("/", compulsoryAuth, updateShop);
+router.put("/product/:productId", compulsoryAuth, updateProduct);
 
 //DELETE Method
-router.delete("/product/:productId", deleteProduct);
+router.delete("/product/:productId", compulsoryAuth, deleteProduct);
 
 export default router;

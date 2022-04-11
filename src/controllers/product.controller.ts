@@ -106,11 +106,7 @@ const findByName = async (req: Request, res: Response) => {
       },
     },
     { $match: { productStatus: 1 } },
-    {
-      $addFields: {
-        score: { $meta: "searchScore" },
-      },
-    },
+    { $addFields: { score: { $meta: "searchScore" } } },
     { $skip: (page - 1) * limit },
     { $limit: limit },
     {
