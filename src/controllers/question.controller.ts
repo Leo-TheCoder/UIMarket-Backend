@@ -12,6 +12,7 @@ import QuestionTag from "../models/QuestionTag.model";
 import * as Constants from "../constants";
 import AnswerModel from "../models/Answer.model";
 import { getStatusVote } from "../utils/statusVote";
+import QuestionTagModel from "../models/QuestionTag.model";
 
 //get _id of tags in list (create tags if they don't exist)
 const createTagList = async (tagList: [String]) => {
@@ -21,8 +22,8 @@ const createTagList = async (tagList: [String]) => {
       QuestionTag.findOneAndUpdate(
         { tagName: tag },
         { $inc: { totalQuestion: +1 } },
-        { new: true, upsert: true },
-      ),
+        { new: true, upsert: true }
+      )
     );
   }
   const tagObjects = await Promise.all(promises);
@@ -75,14 +76,21 @@ const getQuestions = async (req: Request, res: Response) => {
     queryString.questionBounty = { $lte: 0 };
   }
 
-  //Checking tag options
-  if (tag === "true") {
-    const tagList = req.body.tag;
+  // //Checking tag options
+  // if (tag === "true") {
+  //   const tagList = req.body.tag;
 
-    if (!tagList) {
-      throw new BadRequestError("Please insert tag in the body");
-    }
-    queryString.questionTag = { $in: tagList };
+  //   if (!tagList) {
+  //     throw new BadRequestError("Please insert tag in the body");
+  //   }
+  //   queryString.questionTag = { $in: tagList };
+  // }
+
+  if (tag) {
+    const tagList: string[] = tag.split(",");
+    const tags = await QuestionTagModel.find({ tagName: { $in: tagList } });
+    const tagIdList = tags.map((tag) => tag._id);
+    queryString.questionTag = { $in: tagIdList };
   }
 
   const total = await Question.countDocuments(queryString);
@@ -230,7 +238,7 @@ const deleteQuestion = async (req: IUserRequest, res: Response) => {
   question.questionTag.map(async (tag: string) => {
     let tags = await QuestionTag.updateOne(
       { _id: tag },
-      { $inc: { totalQuestion: -1 } },
+      { $inc: { totalQuestion: -1 } }
     );
 
     if (!tags) {
