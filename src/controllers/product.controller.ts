@@ -81,7 +81,7 @@ const findByName = async (req: Request, res: Response) => {
         index: "productName",
         text: {
           path: "productName",
-          query: req.params.productName,
+          query: decodeURIComponent(req.params.productName),
         },
       },
     },
@@ -101,7 +101,7 @@ const findByName = async (req: Request, res: Response) => {
         index: "productName",
         text: {
           path: "productName",
-          query: req.params.productName,
+          query: decodeURIComponent(req.params.productName),
         },
       },
     },

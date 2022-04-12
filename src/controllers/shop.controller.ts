@@ -203,7 +203,7 @@ const getShopByName = async (req: IUserRequest, res: Response) => {
         index: "shopName",
         text: {
           path: "shopName",
-          query: req.params.shopName,
+          query: decodeURIComponent(req.params.shopName),
         },
       },
     },
@@ -223,7 +223,7 @@ const getShopByName = async (req: IUserRequest, res: Response) => {
         index: "shopName",
         text: {
           path: "shopName",
-          query: req.params.shopName,
+          query: decodeURIComponent(req.params.shopName),
         },
       },
     },
