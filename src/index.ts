@@ -19,6 +19,7 @@ import commentRouter from "./routes/comment.route";
 import profileRouter from "./routes/profile.route";
 import pictureRouter from "./routes/picture.route";
 import verifyRouter from "./routes/verify.route";
+import paymentRouter from "./routes/payment.route";
 
 //Middleware
 import errorHandlerMiddleware from "./middlewares/handle-errors";
@@ -49,7 +50,7 @@ app.use(
   pictureRouter,
 );
 app.use("/api/v1/verify", verifyRouter);
-
+app.use("/api/v1/payment", paymentRouter);
 
 app.use(notFoundMiddleware);
 app.use(errorHandlerMiddleware);
