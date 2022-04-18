@@ -22,6 +22,7 @@ import adminRouter from "./routes/admin.route";
 import productRouter from "./routes/product.route";
 import fileRouter from "./routes/file.route";
 import verifyRouter from "./routes/verify.route";
+import paymentRouter from "./routes/payment.route";
 
 
 //Middleware
@@ -48,7 +49,7 @@ app.use("/api/v1/shop", compulsoryAuth, shopRouter);
 app.use("/api/v1/admin", adminRouter);
 app.use("/api/v1/products", productRouter);
 app.use("/api/v1/verify", verifyRouter);
-
+app.use("/api/v1/payment", paymentRouter);
 
 app.use(notFoundMiddleware);
 app.use(errorHandlerMiddleware);
