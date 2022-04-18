@@ -1,24 +1,21 @@
 import express from "express";
-import * as authenticationMiddleware from "../middlewares/authentication";
+import { optionalAuth, compulsoryAuth } from "../middlewares/authentication";
 import {
   getProfileActivity,
   getProfileInfo,
   updateProfile,
 } from "../controllers/profile.controller";
+
 const router = express.Router();
 
 //GET Method
-router.get(
-  "/activity/:userId",
-  authenticationMiddleware.optionalAuth,
-  getProfileActivity
-);
+router.get("/:userId", optionalAuth, getProfileActivity);
+router.get("/info/:userId", optionalAuth, getProfileInfo);
 
-router.get(
-  "/info/:userId",
-  authenticationMiddleware.optionalAuth,
-  getProfileInfo
-);
-router.post("/info", authenticationMiddleware.compulsoryAuth, updateProfile);
+//POST Method
+router.post("/info", compulsoryAuth, updateProfile);
+
+//PUT Method
+//DELETE Method
 
 export default router;

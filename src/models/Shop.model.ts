@@ -1,5 +1,4 @@
 import mongoose from "mongoose";
-import jwt from "jsonwebtoken";
 import { defaultMinLength } from "../constants";
 
 const ShopSchema = new mongoose.Schema(
@@ -8,6 +7,7 @@ const ShopSchema = new mongoose.Schema(
       type: mongoose.Types.ObjectId,
       ref: "Customer",
       required: [true, "Please provide user id"],
+      immutable: true,
     },
     shopName: {
       type: String,
@@ -46,19 +46,5 @@ const ShopSchema = new mongoose.Schema(
   },
   { timestamps: true },
 );
-
-ShopSchema.methods.createJWT = function () {
-  return jwt.sign(
-    {
-      shopId: this._id,
-      name: this.shopName,
-      isActive: this.shopStatus === 1,
-    },
-    process.env.JWT_SECRET!,
-    {
-      expiresIn: process.env.JWT_LIFETIME,
-    },
-  );
-};
 
 export default mongoose.model("Shop", ShopSchema);

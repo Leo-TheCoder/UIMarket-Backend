@@ -9,11 +9,19 @@ const UserSchema = new mongoose.Schema(
       required: [true, "Please provide name"],
       minlength: 5,
     },
-    customerAvatar: String,
+    customerAvatar: {
+      type: String,
+      required: false,
+    },
+    shopId: {
+      type: mongoose.Types.ObjectId,
+      default: null,
+    },
     customerEmail: {
       type: String,
       required: [true, "Please provide email"],
       unique: true,
+      immutable: true,
     },
     customerPassword: {
       type: String,
@@ -46,29 +54,33 @@ const UserSchema = new mongoose.Schema(
     },
     customerStatus: {
       type: Number,
-      default: 1,
+      default: 0,
       enum: [0, 1],
     },
     customerBio: {
       type: String,
       default: null,
-    }
+    },
+    refreshToken: {
+      type: String,
+      default: null,
+    },
   },
   {
     timestamps: true,
   },
 );
 
-UserSchema.pre("save", async function () {
-  //Hasing password
+UserSchema.methods.hashPassword = async function () {
   const salt = await bcrypt.genSalt(10);
   this.customerPassword = await bcrypt.hash(this.customerPassword, salt);
-});
+};
 
 UserSchema.methods.createJWT = function () {
   return jwt.sign(
     {
       userId: this._id,
+      shopId: this.shopId,
       name: this.customerName,
       isActive: this.customerStatus === 1,
     },
@@ -87,6 +99,30 @@ UserSchema.methods.comparePassword = async function (
     this.customerPassword,
   );
   return isMatch;
+};
+
+UserSchema.methods.createRefreshToken = async function () {
+  const token = jwt.sign({ userId: this._id }, process.env.JWT_SECRET!, {
+    expiresIn: process.env.JWT_REFRESHTOKEN_LIFETIME, //1 day
+  });
+  this.refreshToken = token;
+  return token;
+};
+
+UserSchema.methods.verifyToken = function (token: string) {
+  interface ITokenPayload {
+    userId: string;
+  }
+  try {
+    const payload = jwt.verify(token, process.env.JWT_SECRET!) as ITokenPayload;
+    return payload.userId;
+  } catch (error) {
+    return null;
+  }
+};
+
+UserSchema.methods.compareToken = function (candidateToken: string) {
+  return candidateToken === this.refreshToken;
 };
 
 export default mongoose.model("Customer", UserSchema);

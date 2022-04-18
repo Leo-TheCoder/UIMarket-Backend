@@ -153,7 +153,7 @@ const getProfileInfo = async (req: IUserRequest, res: Response) => {
 
   if (!(req.user && req.user.userId === userId)) {
     delete user.customerWallet;
-    delete user.customer_Status;
+    delete user.customerStatus;
   }
 
   res.status(StatusCodes.OK).json({ user });
