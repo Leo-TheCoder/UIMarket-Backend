@@ -1,5 +1,5 @@
 import express from "express";
-import { optionalAuth } from "../middlewares/authentication";
+import { optionalAuth, compulsoryAuth } from "../middlewares/authentication";
 import {
   getProfileActivity,
   getProfileInfo,
@@ -13,7 +13,7 @@ router.get("/:userId", optionalAuth, getProfileActivity);
 router.get("/info/:userId", optionalAuth, getProfileInfo);
 
 //POST Method
-router.post("/info", authenticationMiddleware.compulsoryAuth, updateProfile);
+router.post("/info", compulsoryAuth, updateProfile);
 
 //PUT Method
 //DELETE Method
