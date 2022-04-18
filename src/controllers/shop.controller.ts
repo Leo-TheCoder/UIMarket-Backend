@@ -12,10 +12,7 @@ import {
   GoneError,
   NotFoundError,
   UnauthenticatedError,
-  NotFoundError,
 } from "../errors";
-
-
 
 interface IQuery {
   page?: string;
@@ -255,4 +252,3 @@ export {
   getShopById,
   getShopByName,
 };
-

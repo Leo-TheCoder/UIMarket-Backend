@@ -8,23 +8,22 @@ import {
 import { Request, Response } from "express";
 import { IUserRequest } from "../types/express";
 import Question from "../models/Question.model";
-import QuestionTag from "../models/QuestionTag.model";
+import QuestionTagModel from "../models/QuestionTag.model";
 import * as Constants from "../constants";
 import AnswerModel from "../models/Answer.model";
 import { getStatusVote } from "../utils/statusVote";
 import { pointRollBack, pointTransaction } from "../utils/currencyTransaction";
-
 
 //get _id of tags in list (create tags if they don't exist)
 const createTagList = async (tagList: [String]) => {
   const promises = [];
   for (const tag of tagList) {
     promises.push(
-      QuestionTag.findOneAndUpdate(
+      QuestionTagModel.findOneAndUpdate(
         { tagName: tag },
         { $inc: { totalQuestion: +1 } },
-        { new: true, upsert: true }
-      )
+        { new: true, upsert: true },
+      ),
     );
   }
   const tagObjects = await Promise.all(promises);
@@ -296,9 +295,9 @@ const deleteQuestion = async (req: IUserRequest, res: Response) => {
   //Set question status to 0 and decrease total question in tag by 1
   question.questionStatus = 0;
   question.questionTag.map(async (tag: string) => {
-    let tags = await QuestionTag.updateOne(
+    let tags = await QuestionTagModel.updateOne(
       { _id: tag },
-      { $inc: { totalQuestion: -1 } }
+      { $inc: { totalQuestion: -1 } },
     );
 
     if (!tags) {
