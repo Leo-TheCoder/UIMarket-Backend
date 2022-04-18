@@ -21,6 +21,8 @@ import fileRouter from "./routes/file.route";
 import shopRouter from "./routes/shop.route";
 import adminRouter from "./routes/admin.route";
 import productRouter from "./routes/product.route";
+import pictureRouter from "./routes/picture.route";
+import verifyRouter from "./routes/verify.route";
 
 //Middleware
 import errorHandlerMiddleware from "./middlewares/handle-errors";
@@ -31,7 +33,7 @@ app.use(cors());
 app.use(express.json());
 
 app.get("/", (req: Request, res: Response): void => {
-  res.send("Hello this is UIMarket project");
+  res.send("Hello this is DEEX BACKEND");
 });
 
 app.use("/api/v1/auth", authRouter);
@@ -45,6 +47,9 @@ app.use("/api/v1/file", compulsoryAuth, fileRouter);
 app.use("/api/v1/shop", compulsoryAuth, shopRouter);
 app.use("/api/v1/admin", adminRouter);
 app.use("/api/v1/products", productRouter);
+app.use("/api/v1/pictures",compulsoryAuth,pictureRouter);
+app.use("/api/v1/verify", verifyRouter);
+
 
 app.use(notFoundMiddleware);
 app.use(errorHandlerMiddleware);
