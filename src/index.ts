@@ -23,6 +23,7 @@ import productRouter from "./routes/product.route";
 import fileRouter from "./routes/file.route";
 import verifyRouter from "./routes/verify.route";
 
+
 //Middleware
 import errorHandlerMiddleware from "./middlewares/handle-errors";
 import notFoundMiddleware from "./middlewares/not-found";
@@ -47,6 +48,7 @@ app.use("/api/v1/shop", compulsoryAuth, shopRouter);
 app.use("/api/v1/admin", adminRouter);
 app.use("/api/v1/products", productRouter);
 app.use("/api/v1/verify", verifyRouter);
+
 
 app.use(notFoundMiddleware);
 app.use(errorHandlerMiddleware);

@@ -5,6 +5,7 @@ import {
   loginWithToken,
   register,
   resetPassword,
+
 } from "../controllers/auth.controller";
 import { compulsoryAuth } from "../middlewares/authentication";
 

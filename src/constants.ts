@@ -4,6 +4,7 @@ const defaultPageNumber = 1;
 
 //Model
 const defaultMinLength = 20;
+const defaultLimitComments = 5;
 
 //Bounty constant
 const minBountyDueDate = 1;
@@ -15,4 +16,5 @@ export {
   defaultMinLength,
   minBountyDueDate,
   maxBountyDueDate,
+  defaultLimitComments,
 };

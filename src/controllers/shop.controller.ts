@@ -5,13 +5,16 @@ import Shop from "../models/Shop.model";
 import * as Constants from "../constants";
 import ShopModel from "../models/Shop.model";
 import ProductModel from "../models/Product.model";
+import UserModel from "../models/User.model";
 import {
   BadRequestError,
   ForbiddenError,
   GoneError,
   UnauthenticatedError,
+  NotFoundError,
 } from "../errors";
-import UserModel from "../models/User.model";
+
+
 
 interface IQuery {
   page?: string;
@@ -44,7 +47,6 @@ const createShop = async (req: IUserRequest, res: Response) => {
     );
 
     const token = user.createJWT();
-
     res.status(StatusCodes.CREATED).json({ newShop, token });
   } else {
     res.status(StatusCodes.INTERNAL_SERVER_ERROR).send("Create shop failed");
@@ -169,3 +171,4 @@ export {
   updateProduct,
   getAllProduct,
 };
+
