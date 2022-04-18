@@ -22,29 +22,29 @@ const s3 = new aws.S3({
 });
 
 //uploads a file to S3
-function uploadFile(file: Express.Multer.File, folder: String) {
-  const fileStream = fs.createReadStream(file.path);
-  // const fileContent = fs.readFileSync(file.filename);
+// function uploadFile(file: Express.Multer.File, folder: String) {
+//   const fileStream = fs.createReadStream(file.path);
+//   // const fileContent = fs.readFileSync(file.filename);
 
-  const uploadParams = {
-    Bucket: prdbucketName,
-    Body: fileStream,
-    Key: `${folder}/${file.filename}.jpg`,
-    ContentType: "image/jpeg",
-  };
+//   const uploadParams = {
+//     Bucket: prdbucketName,
+//     Body: fileStream,
+//     Key: `${folder}/${file.filename}.jpg`,
+//     ContentType: "image/jpeg",
+//   };
 
-  return s3.upload(uploadParams).promise();
-}
+//   return s3.upload(uploadParams).promise();
+// }
 
-//download a file from S3
-function getFileStream(fileKey: string) {
-  const downloadParams = {
-    Key: fileKey,
-    Bucket: bucketName,
-  };
+// //download a file from S3
+// function getFileStream(fileKey: string) {
+//   const downloadParams = {
+//     Key: fileKey,
+//     Bucket: bucketName,
+//   };
 
-  return s3.getObject(downloadParams).createReadStream();
-}
+//   return s3.getObject(downloadParams).createReadStream();
+// }
 
 //FE Solution
 async function generateUploadURL(folder: String, isPrivate: Boolean) {
@@ -68,4 +68,7 @@ async function generateUploadURL(folder: String, isPrivate: Boolean) {
   return uploadURL;
 }
 
-export { generateUploadURL, uploadFile };
+export {
+  generateUploadURL,
+  //  uploadFile
+};
