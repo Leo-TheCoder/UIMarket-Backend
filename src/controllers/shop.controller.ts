@@ -135,6 +135,7 @@ const getAllProduct = async (req: IUserRequest, res: Response) => {
     .find({ shopId: shopId })
     .populate({ path: "productCategory", select: ["categoryName"] })
     .lean();
+  console.log(product[0].createdAt.toString());
   res.status(StatusCodes.OK).json({ product });
 };
 

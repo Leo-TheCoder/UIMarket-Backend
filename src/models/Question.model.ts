@@ -28,6 +28,15 @@ const QuestionSchema = new mongoose.Schema(
       type: Number,
       default: -1,
     },
+    bountyDueDate: {
+      type: Date,
+      default: new Date(),
+    },
+    bountyActive: {
+      type: Number,
+      default: 0,
+      enum: [0, 1],
+    },
     totalAnswer: {
       type: Number,
       default: 0,
