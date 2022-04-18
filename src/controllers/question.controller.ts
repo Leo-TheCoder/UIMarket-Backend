@@ -60,7 +60,7 @@ const createQuestion = async (req: IUserRequest, res: Response) => {
     //Checking valid due date
     var diff = Math.abs(dueDate.getTime() - new Date().getTime());
     var diffDays = Math.ceil(diff / (1000 * 3600 * 24));
-    console.log(diffDays);
+    // console.log(diffDays);
 
     if (
       diffDays < Constants.minBountyDueDate ||
@@ -91,16 +91,16 @@ const createQuestion = async (req: IUserRequest, res: Response) => {
     } else {
       res.status(StatusCodes.CREATED).json(question);
     }
+  } else {
+    //Normal question
+    const question = await Question.create({
+      ...req.body,
+      userId: userId,
+      questionTag: list,
+    });
+
+    res.status(StatusCodes.CREATED).json(question);
   }
-
-  //Normal question
-  const question = await Question.create({
-    ...req.body,
-    userId: userId,
-    questionTag: list,
-  });
-
-  res.status(StatusCodes.CREATED).json(question);
 };
 
 interface IQuery {

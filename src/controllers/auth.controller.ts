@@ -3,7 +3,11 @@ import { StatusCodes } from "http-status-codes";
 import { BadRequestError, UnauthenticatedError } from "../errors";
 import { Request, Response } from "express";
 import { IUserRequest } from "../types/express";
-import { sendForgetPasswordEmail, sendResetPasswordConfirmEmail, sendVerifyEmail } from "../utils/sendMail";
+import {
+  sendForgetPasswordEmail,
+  sendResetPasswordConfirmEmail,
+  sendVerifyEmail,
+} from "../utils/sendMail";
 import { resolveSoa } from "dns";
 
 const register = async (req: Request, res: Response) => {
@@ -32,6 +36,7 @@ const login = async (req: Request, res: Response) => {
   }
 
   const user = await User.findOne({ customerEmail });
+  // console.log(user);
 
   if (!user) {
     throw new UnauthenticatedError("Invalid Credentials");
@@ -40,7 +45,7 @@ const login = async (req: Request, res: Response) => {
   //checking password
   const isPasswordCorrect = await user.comparePassword(customerPassword);
   if (!isPasswordCorrect) {
-    throw new UnauthenticatedError("Invalid Credentials");
+    throw new UnauthenticatedError("Wrong Password");
   }
 
   if (user.customerStatus !== 1) {
@@ -65,7 +70,7 @@ const loginWithToken = async (req: IUserRequest, res: Response) => {
 
   const user = await User.find(
     { _id: userId },
-    { customerPassword: 0, authenToken: 0 }
+    { customerPassword: 0, authenToken: 0 },
   );
 
   if (!user) {
@@ -113,7 +118,7 @@ const resendVerifyEmail = async (req: Request, res: Response) => {
 
 const forgetPasswordEmail = async (req: Request, res: Response) => {
   const { customerEmail } = req.body;
-  const user = await User.findOne({ customerEmail});
+  const user = await User.findOne({ customerEmail });
 
   if (!user) {
     throw new UnauthenticatedError("Invalid Account!");
@@ -144,11 +149,11 @@ const resetForgetPassword = async (req: Request, res: Response) => {
 };
 
 const resetPassword = async (req: IUserRequest, res: Response) => {
-  const {userId} = req.user!;
-  const {newPassword} = req.body;
+  const { userId } = req.user!;
+  const { newPassword } = req.body;
   const user = await User.findById(userId);
 
-  if(!user) {
+  if (!user) {
     throw new UnauthenticatedError("Invalid Account");
   }
 
@@ -159,8 +164,8 @@ const resetPassword = async (req: IUserRequest, res: Response) => {
   sendResetPasswordConfirmEmail(user.customerEmail);
   return res.status(StatusCodes.OK).json({
     msg: "Reset password successfully, email confirm sent!",
-  })
-}
+  });
+};
 
 export {
   register,
