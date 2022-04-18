@@ -12,7 +12,8 @@ import QuestionTag from "../models/QuestionTag.model";
 import * as Constants from "../constants";
 import AnswerModel from "../models/Answer.model";
 import { getStatusVote } from "../utils/statusVote";
-import QuestionTagModel from "../models/QuestionTag.model";
+import { pointRollBack, pointTransaction } from "../utils/currencyTransaction";
+
 
 //get _id of tags in list (create tags if they don't exist)
 const createTagList = async (tagList: [String]) => {
@@ -44,12 +45,63 @@ const createQuestion = async (req: IUserRequest, res: Response) => {
     list = await createTagList(tagList);
   }
 
-  const question = await Question.create({
-    ...req.body,
-    userId: userId,
-    questionTag: list,
-  });
-  res.status(StatusCodes.CREATED).json(question);
+  //Case bounty question
+  if (req.body.questionBounty) {
+    //Check bounty value
+    if (req.body.questionBounty < 0) {
+      throw new BadRequestError("Bounty must greater than 0");
+    }
+
+    //Check bounty due date
+    if (!req.body.bountyDueDate) {
+      throw new BadRequestError("Bounty must have due date");
+    }
+    const dueDate = new Date(req.body.bountyDueDate);
+
+    //Checking valid due date
+    var diff = Math.abs(dueDate.getTime() - new Date().getTime());
+    var diffDays = Math.ceil(diff / (1000 * 3600 * 24));
+    // console.log(diffDays);
+
+    if (
+      diffDays < Constants.minBountyDueDate ||
+      diffDays > Constants.maxBountyDueDate
+    ) {
+      throw new BadRequestError(
+        ` Due date at least ${Constants.minBountyDueDate} day(s) and maximum ${Constants.maxBountyDueDate} days`,
+      );
+    }
+
+    //Checking valid balance
+    const changeAmount = req.body.questionBounty * -1;
+    const transaction = await pointTransaction(userId, changeAmount);
+    if (transaction) {
+      req.body.bountyActive = 1;
+    }
+
+    //Create question
+    const question = await Question.create({
+      ...req.body,
+      userId: userId,
+      questionTag: list,
+    });
+
+    if (!question && req.body.questionBounty) {
+      await pointRollBack(userId, transaction._id, changeAmount);
+      res.status(StatusCodes.INTERNAL_SERVER_ERROR).send("Create failed");
+    } else {
+      res.status(StatusCodes.CREATED).json(question);
+    }
+  } else {
+    //Normal question
+    const question = await Question.create({
+      ...req.body,
+      userId: userId,
+      questionTag: list,
+    });
+
+    res.status(StatusCodes.CREATED).json(question);
+  }
 };
 
 interface IQuery {
@@ -169,12 +221,20 @@ const chooseBestAnswer = async (req: IUserRequest, res: Response) => {
   //Checking whether this question have best answer or not
   let currentBestAnswer = question.bestAnswer || null;
 
+  //Convert Object Id to String
   if (currentBestAnswer) {
     currentBestAnswer = String(currentBestAnswer);
   }
 
   //Case already had best answer
   if (currentBestAnswer) {
+    //Can't change best answer if this is bounty question
+    if (question.questionBounty < 0) {
+      throw new BadRequestError(
+        "Can't change best answer of bountied question",
+      );
+    }
+
     //Undo best answer
     if (currentBestAnswer === req.params.answerId) {
       answer.bestAnswer = 0;

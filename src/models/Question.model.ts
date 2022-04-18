@@ -7,6 +7,7 @@ const QuestionSchema = new mongoose.Schema(
       type: mongoose.Types.ObjectId,
       ref: "Customer",
       required: [true, "Please provide user id"],
+      immutable: true,
     },
     questionTitle: {
       type: String,
@@ -26,6 +27,15 @@ const QuestionSchema = new mongoose.Schema(
     questionBounty: {
       type: Number,
       default: -1,
+    },
+    bountyDueDate: {
+      type: Date,
+      default: new Date(),
+    },
+    bountyActive: {
+      type: Number,
+      default: 0,
+      enum: [0, 1],
     },
     totalAnswer: {
       type: Number,

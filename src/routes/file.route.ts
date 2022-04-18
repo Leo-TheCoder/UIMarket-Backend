@@ -5,8 +5,14 @@ import multer from "multer";
 const router = express.Router();
 const upload = multer({ dest: "uploads/" });
 
+//GET Method
 // router.get("/avatar/", downloadAvatar);
 router.get("/upload", uploadURL);
-router.post("/avatar", upload.single("avatar"), uploadAvatar);
+
+//POST Method
+// router.post("/avatar", upload.single("avatar"), uploadAvatar);
+
+//PUT Method
+//DELETE Method
 
 export default router;

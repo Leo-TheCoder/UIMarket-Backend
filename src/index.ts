@@ -17,9 +17,12 @@ import votingRouter from "./routes/voting.route";
 import answerRouter from "./routes/answer.route";
 import commentRouter from "./routes/comment.route";
 import profileRouter from "./routes/profile.route";
-import fileRouter from "./routes/file.route";
 import shopRouter from "./routes/shop.route";
 import adminRouter from "./routes/admin.route";
+import productRouter from "./routes/product.route";
+import fileRouter from "./routes/file.route";
+import verifyRouter from "./routes/verify.route";
+
 
 //Middleware
 import errorHandlerMiddleware from "./middlewares/handle-errors";
@@ -30,7 +33,7 @@ app.use(cors());
 app.use(express.json());
 
 app.get("/", (req: Request, res: Response): void => {
-  res.send("Hello this is UIMarket project");
+  res.send("Hello this is DEEX BACKEND");
 });
 
 app.use("/api/v1/auth", authRouter);
@@ -41,8 +44,11 @@ app.use("/api/v1/answers", answerRouter);
 app.use("/api/v1/comments", commentRouter);
 app.use("/api/v1/profile", profileRouter);
 app.use("/api/v1/file", compulsoryAuth, fileRouter);
-app.use("/api/v1/shops", shopRouter);
+app.use("/api/v1/shop", compulsoryAuth, shopRouter);
 app.use("/api/v1/admin", adminRouter);
+app.use("/api/v1/products", productRouter);
+app.use("/api/v1/verify", verifyRouter);
+
 
 app.use(notFoundMiddleware);
 app.use(errorHandlerMiddleware);
