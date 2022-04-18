@@ -43,6 +43,10 @@ const ShopSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    taxCode: {
+      type: String,
+      default: null,
+    },
   },
   { timestamps: true },
 );

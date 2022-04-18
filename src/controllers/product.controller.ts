@@ -81,7 +81,7 @@ const findByName = async (req: Request, res: Response) => {
         index: "productName",
         text: {
           path: "productName",
-          query: req.params.productName,
+          query: decodeURIComponent(req.params.productName),
         },
       },
     },
@@ -101,16 +101,12 @@ const findByName = async (req: Request, res: Response) => {
         index: "productName",
         text: {
           path: "productName",
-          query: req.params.productName,
+          query: decodeURIComponent(req.params.productName),
         },
       },
     },
     { $match: { productStatus: 1 } },
-    {
-      $addFields: {
-        score: { $meta: "searchScore" },
-      },
-    },
+    { $addFields: { score: { $meta: "searchScore" } } },
     { $skip: (page - 1) * limit },
     { $limit: limit },
     {

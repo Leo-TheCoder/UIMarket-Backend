@@ -10,6 +10,7 @@ import {
   BadRequestError,
   ForbiddenError,
   GoneError,
+  NotFoundError,
   UnauthenticatedError,
   NotFoundError,
 } from "../errors";
@@ -163,6 +164,87 @@ const updateShop = async (req: IUserRequest, res: Response) => {
   }
 };
 
+const getShopById = async (req: IUserRequest, res: Response) => {
+  var selectOption: any = { __v: 0 };
+
+  if (!req.user?.shopId || req.user.shopId != req.params.shopId) {
+    selectOption.shopIDCard = 0;
+    selectOption.shopBalance = 0;
+    selectOption.userId = 0;
+    selectOption.taxCode = 0;
+  }
+
+  const shop = await ShopModel.find({
+    _id: req.params.shopId,
+    shopStatus: 1,
+  })
+    .select(selectOption)
+    .lean();
+
+  if (!shop) {
+    throw new NotFoundError("Invalid Shop ID");
+  } else {
+    res.status(StatusCodes.OK).json({ shop });
+  }
+};
+
+const getShopByName = async (req: IUserRequest, res: Response) => {
+  const query = req.query as IQuery;
+  const page = parseInt(query.page!) || Constants.defaultPageNumber;
+  const limit = parseInt(query.limit!) || Constants.defaultLimit;
+  const selectOption = {
+    __v: 0,
+    shopIDCard: 0,
+    shopBalance: 0,
+    userId: 0,
+    taxCode: 0,
+  };
+
+  const totalShop = await ShopModel.aggregate([
+    {
+      $search: {
+        index: "shopName",
+        text: {
+          path: "shopName",
+          query: decodeURIComponent(req.params.shopName),
+        },
+      },
+    },
+    { $match: { shopStatus: 1 } },
+    { $count: "total" },
+  ]);
+  const total = totalShop[0].total;
+
+  const totalPages =
+    total % limit === 0
+      ? Math.floor(total / limit)
+      : Math.floor(total / limit) + 1;
+
+  const shops = await ShopModel.aggregate([
+    {
+      $search: {
+        index: "shopName",
+        text: {
+          path: "shopName",
+          query: decodeURIComponent(req.params.shopName),
+        },
+      },
+    },
+    { $match: { shopStatus: 1 } },
+    { $addFields: { score: { $meta: "searchScore" } } },
+    { $skip: (page - 1) * limit },
+    { $limit: limit },
+    { $project: selectOption },
+  ]);
+
+  res.status(StatusCodes.OK).json({
+    totalPages,
+    page,
+    limit,
+    shops,
+  });
+};
+
 export {
   createShop,
   updateShop,
@@ -170,5 +252,7 @@ export {
   deleteProduct,
   updateProduct,
   getAllProduct,
+  getShopById,
+  getShopByName,
 };
 
