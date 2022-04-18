@@ -213,12 +213,20 @@ const chooseBestAnswer = async (req: IUserRequest, res: Response) => {
   //Checking whether this question have best answer or not
   let currentBestAnswer = question.bestAnswer || null;
 
+  //Convert Object Id to String
   if (currentBestAnswer) {
     currentBestAnswer = String(currentBestAnswer);
   }
 
   //Case already had best answer
   if (currentBestAnswer) {
+    //Can't change best answer if this is bounty question
+    if (question.questionBounty < 0) {
+      throw new BadRequestError(
+        "Can't change best answer of bountied question",
+      );
+    }
+
     //Undo best answer
     if (currentBestAnswer === req.params.answerId) {
       answer.bestAnswer = 0;
