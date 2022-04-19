@@ -52,12 +52,12 @@ async function generateUploadURL(folder: String, isPrivate: Boolean) {
   const fileName = rawBytes.toString("hex");
   let bucket;
 
-  if (isPrivate) {
+  if (isPrivate === true) {
     bucket = prdbucketName;
   } else {
     bucket = bucketName;
   }
-
+  console.log(bucket);
   const params = {
     Bucket: bucket,
     Key: `${folder}/${fileName}`,
