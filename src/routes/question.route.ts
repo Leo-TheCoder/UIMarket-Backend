@@ -7,6 +7,7 @@ import {
   chooseBestAnswer,
   deleteQuestion,
   updateQuestion,
+  rebountyQuestion,
 } from "../controllers/question.controller";
 
 const router = express.Router();
@@ -19,8 +20,9 @@ router.get("/:id", optionalAuth, getQuestionByID);
 router.post("/", compulsoryAuth, createQuestion);
 
 //PUT Methods
-router.put("/:questionId/:answerId", compulsoryAuth, chooseBestAnswer);
+router.put("/rebounty/:questionId/", compulsoryAuth, rebountyQuestion);
 router.put("/:questionId", compulsoryAuth, updateQuestion);
+router.put("/:questionId/:answerId", compulsoryAuth, chooseBestAnswer);
 
 //DELETE Methods
 router.delete("/:questionId", compulsoryAuth, deleteQuestion);

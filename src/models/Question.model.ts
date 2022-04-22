@@ -30,7 +30,11 @@ const QuestionSchema = new mongoose.Schema(
     },
     bountyDueDate: {
       type: Date,
-      default: new Date(),
+      default: null,
+    },
+    awardDueDate: {
+      type: Date,
+      default: null,
     },
     bountyActive: {
       type: Number,

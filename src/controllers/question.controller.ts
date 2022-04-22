@@ -47,8 +47,13 @@ const createQuestion = async (req: IUserRequest, res: Response) => {
   //Case bounty question
   if (req.body.questionBounty) {
     //Check bounty value
-    if (req.body.questionBounty < 0) {
-      throw new BadRequestError("Bounty must greater than 0");
+    if (
+      req.body.questionBounty < Constants.minBounty ||
+      req.body.questionBounty > Constants.maxBounty
+    ) {
+      throw new BadRequestError(
+        `Bounty must in range ${Constants.minBounty} - ${Constants.maxBounty}`,
+      );
     }
 
     //Check bounty due date
@@ -60,7 +65,6 @@ const createQuestion = async (req: IUserRequest, res: Response) => {
     //Checking valid due date
     var diff = Math.abs(dueDate.getTime() - new Date().getTime());
     var diffDays = Math.ceil(diff / (1000 * 3600 * 24));
-    // console.log(diffDays);
 
     if (
       diffDays < Constants.minBountyDueDate ||
@@ -70,6 +74,8 @@ const createQuestion = async (req: IUserRequest, res: Response) => {
         ` Due date at least ${Constants.minBountyDueDate} day(s) and maximum ${Constants.maxBountyDueDate} days`,
       );
     }
+
+    const awardDueDate = new Date(dueDate.getTime());
 
     //Checking valid balance
     const changeAmount = req.body.questionBounty * -1;
@@ -83,6 +89,7 @@ const createQuestion = async (req: IUserRequest, res: Response) => {
       ...req.body,
       userId: userId,
       questionTag: list,
+      awardDueDate: awardDueDate.setDate(awardDueDate.getDate() + 14),
     });
 
     if (!question && req.body.questionBounty) {
@@ -220,7 +227,7 @@ const chooseBestAnswer = async (req: IUserRequest, res: Response) => {
   //Checking whether this question have best answer or not
   let currentBestAnswer = question.bestAnswer || null;
 
-  //Convert Object Id to String
+  //Convert type Object Id to String
   if (currentBestAnswer) {
     currentBestAnswer = String(currentBestAnswer);
   }
@@ -228,7 +235,7 @@ const chooseBestAnswer = async (req: IUserRequest, res: Response) => {
   //Case already had best answer
   if (currentBestAnswer) {
     //Can't change best answer if this is bounty question
-    if (question.questionBounty < 0) {
+    if (question.questionBounty > 0) {
       throw new BadRequestError(
         "Can't change best answer of bountied question",
       );
@@ -269,13 +276,29 @@ const chooseBestAnswer = async (req: IUserRequest, res: Response) => {
   }
   //Case doesn't have best answer
   else {
+    const answerOwner = answer.userId;
+    let pointReward = Constants.bestAnswerAward;
+
+    //Note this answer is best answer
     answer.bestAnswer = 1;
+    const resultAnswer = await answer.save();
+
+    //If this is bountied question, award bounty to answer owner
+    if (question.questionBounty > 0 && question.bountyActive == 1) {
+      //Noted that this bounty has been resolved
+      question.bountyActive = 0;
+      pointReward = question.questionBounty;
+    }
+
+    const transaction = await pointTransaction(answerOwner, pointReward);
     question.bestAnswer = answer._id;
+    const resultQuestion = await question.save();
 
-    const result = await answer.save();
-    await question.save();
-
-    res.status(StatusCodes.OK).json({ Action: "Choose best answer", result });
+    if (resultAnswer && resultQuestion && transaction) {
+      res
+        .status(StatusCodes.OK)
+        .json({ Action: "Choose best answer", resultAnswer });
+    }
   }
 };
 
@@ -349,6 +372,77 @@ const updateQuestion = async (req: IUserRequest, res: Response) => {
   }
 };
 
+const rebountyQuestion = async (req: IUserRequest, res: Response) => {
+  //Checking whether this user is owner of this post
+  const { userId } = req.user!;
+  const question = await Question.findOne({
+    _id: req.params.questionId,
+    questionStatus: 1,
+    bountyActive: 1,
+  });
+
+  if (!question) {
+    throw new NotFoundError("Invalid Question ID");
+  } else if (userId != question.userId) {
+    throw new ForbiddenError("Only owner of this post can do this action");
+  } else if (question.questionBounty < 0) {
+    throw new BadRequestError("This question cannot rebounty");
+  }
+
+  //Checking whether rebounty value is greater than old value
+  const newBounty = req.body.newBounty;
+  if (!newBounty) {
+    throw new BadRequestError("Please insert new bounty value");
+  } else if (newBounty <= question.questionBounty) {
+    throw new BadRequestError("New bounty value must greater than old value");
+  } else if (
+    newBounty < Constants.minBounty ||
+    newBounty > Constants.maxBounty
+  ) {
+    throw new BadRequestError(
+      `Bounty must in range ${Constants.minBounty} - ${Constants.maxBounty}`,
+    );
+  }
+
+  //Checking new bounty due date
+  const newDueDate = new Date(req.body.newDueDate);
+  if (!newDueDate) {
+    throw new BadRequestError("Please insert new due date");
+  } else if (newDueDate <= question.bountyDueDate) {
+    throw new BadRequestError("New due date must larger than old one");
+  }
+
+  var diff = Math.abs(newDueDate.getTime() - new Date().getTime());
+  var diffDays = Math.ceil(diff / (1000 * 3600 * 24));
+
+  if (
+    diffDays < Constants.minBountyDueDate ||
+    diffDays > Constants.maxBountyDueDate
+  ) {
+    throw new BadRequestError(
+      `Due date at least ${Constants.minBountyDueDate} day(s) and maximum ${Constants.maxBountyDueDate} days from today`,
+    );
+  }
+
+  const awardDueDate = new Date(newDueDate.getTime());
+  question.questionBounty = newBounty;
+  question.bountyDueDate = newDueDate;
+  question.awardDueDate = awardDueDate.setDate(awardDueDate.getDate() + 14);
+  question.updateAt = new Date();
+
+  const transaction = await pointTransaction(userId, newBounty * -1);
+  if (!transaction) {
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).send("Rebounty failed");
+  } else {
+    const result = await question.save();
+    if (result) {
+      res.status(StatusCodes.OK).json(result);
+    } else {
+      res.status(StatusCodes.INTERNAL_SERVER_ERROR).send("Rebounty failed");
+    }
+  }
+};
+
 export {
   createQuestion,
   getQuestions,
@@ -356,4 +450,5 @@ export {
   chooseBestAnswer,
   deleteQuestion,
   updateQuestion,
+  rebountyQuestion,
 };
