@@ -23,7 +23,7 @@ import productRouter from "./routes/product.route";
 import fileRouter from "./routes/file.route";
 import verifyRouter from "./routes/verify.route";
 import paymentRouter from "./routes/payment.route";
-
+import productCategory from "./routes/productCategory.route";
 
 //Middleware
 import errorHandlerMiddleware from "./middlewares/handle-errors";
@@ -50,6 +50,7 @@ app.use("/api/v1/admin", adminRouter);
 app.use("/api/v1/products", productRouter);
 app.use("/api/v1/verify", verifyRouter);
 app.use("/api/v1/payment", paymentRouter);
+app.use("/api/v1/category", productCategory);
 
 app.use(notFoundMiddleware);
 app.use(errorHandlerMiddleware);

@@ -8,10 +8,10 @@ import {
 const router = express.Router();
 
 //GET Method
-// router.get("/category", getAllCategory);
+router.get("/", getAllCategory);
 
 //POST Method
-router.post("/category", createCategory);
+// router.post("/category", createCategory);
 
 //PUT Method
 //DELETE Method
