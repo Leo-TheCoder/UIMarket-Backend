@@ -45,7 +45,7 @@ const createQuestion = async (req: IUserRequest, res: Response) => {
   }
 
   //Case bounty question
-  if (req.body.questionBounty) {
+  if (req.body.questionBounty && req.body.questionBounty > 0) {
     //Check bounty value
     if (
       req.body.questionBounty < Constants.minBounty ||

@@ -14,7 +14,7 @@ import {
 const router = express.Router();
 
 //GET Method
-router.get("/:shopId", optionalAuth, getShopById);
+router.get("/info/:shopId", optionalAuth, getShopById);
 router.get("/product", compulsoryAuth, getAllProduct);
 router.get("/search/:shopName", getShopByName);
 
