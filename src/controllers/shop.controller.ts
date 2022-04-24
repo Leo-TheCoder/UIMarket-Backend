@@ -130,13 +130,13 @@ const getAllProduct = async (req: IUserRequest, res: Response) => {
     throw new UnauthenticatedError("Invalid credential");
   }
 
-  const product = await ProductModel
+  const products = await ProductModel
     //
     .find({ shopId: shopId })
     .populate({ path: "productCategory", select: ["categoryName"] })
     .lean();
-  console.log(product[0].createdAt.toString());
-  res.status(StatusCodes.OK).json({ product });
+  console.log(products[0].createdAt.toString());
+  res.status(StatusCodes.OK).json({ products });
 };
 
 const updateShop = async (req: IUserRequest, res: Response) => {
