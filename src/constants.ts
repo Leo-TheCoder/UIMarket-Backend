@@ -14,6 +14,7 @@ const maxBounty = 5000;
 
 //Question
 const bestAnswerAward = 10;
+const upvoteAward = 2;
 
 export {
   defaultLimit,
@@ -24,5 +25,6 @@ export {
   minBounty,
   maxBounty,
   bestAnswerAward,
+  upvoteAward,
   defaultLimitComments,
 };
