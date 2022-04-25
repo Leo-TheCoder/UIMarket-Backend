@@ -197,7 +197,7 @@ const getQuestionByID = async (req: IUserRequest, res: Response) => {
     const { _doc } = question;
     _doc.voteStatus = voteStatus;
 
-    res.status(StatusCodes.OK).json({ _doc });
+    res.status(StatusCodes.OK).json({ question: _doc });
   } else {
     throw new NotFoundError("Invalid Question ID");
   }
