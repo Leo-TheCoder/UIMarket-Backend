@@ -9,7 +9,7 @@ import {
 const router = express.Router();
 
 //GET Method
-router.get("/:userId", optionalAuth, getProfileActivity);
+router.get("/activity/:userId", optionalAuth, getProfileActivity);
 router.get("/info/:userId", optionalAuth, getProfileInfo);
 
 //POST Method
