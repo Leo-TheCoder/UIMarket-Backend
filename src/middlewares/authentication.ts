@@ -3,13 +3,7 @@ import jwt from "jsonwebtoken";
 import { UnauthenticatedError } from "../errors";
 import { Response, NextFunction } from "express";
 import { IUserRequest } from "../types/express";
-
-interface PayloadUser extends jwt.JwtPayload {
-  userId: string;
-  shopId: string;
-  name: string;
-  isActive: boolean;
-}
+import { IPayloadUser } from "../types/jwt-payload";
 
 const compulsoryAuth = (
   req: IUserRequest,
@@ -24,7 +18,7 @@ const compulsoryAuth = (
   const token = authHeader.split(" ")[1];
 
   try {
-    const payload = jwt.verify(token, process.env.JWT_SECRET!) as PayloadUser;
+    const payload = jwt.verify(token, process.env.JWT_SECRET!) as IPayloadUser;
     req.user = {
       userId: payload.userId,
       shopId: payload.shopId,
@@ -33,7 +27,7 @@ const compulsoryAuth = (
     };
     next();
   } catch (error) {
-    throw new UnauthenticatedError("Authencation invalid");
+    throw new UnauthenticatedError("Access Token Invalid");
   }
 };
 
@@ -48,7 +42,7 @@ const optionalAuth = (req: IUserRequest, res: Response, next: NextFunction) => {
   const token = authHeader.split(" ")[1];
 
   try {
-    const payload = jwt.verify(token, process.env.JWT_SECRET!) as PayloadUser;
+    const payload = jwt.verify(token, process.env.JWT_SECRET!) as IPayloadUser;
     req.user = {
       userId: payload.userId,
       shopId: payload.shopId,

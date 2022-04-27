@@ -57,12 +57,15 @@ const login = async (req: Request, res: Response) => {
 
   //create JWT for authentication
   const token = user.createJWT();
+  const refreshToken = await user.createRefreshToken();
+  await user.save();
 
   const userObj = Object.assign({}, user._doc);
   delete userObj.customerPassword;
   delete userObj.authenToken;
+  delete userObj.refreshToken;
 
-  res.status(StatusCodes.OK).json({ user: userObj, token });
+  res.status(StatusCodes.OK).json({ user: userObj, token, refreshToken });
 };
 
 const loginWithToken = async (req: IUserRequest, res: Response) => {
