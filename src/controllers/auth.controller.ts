@@ -8,7 +8,8 @@ import {
   sendResetPasswordConfirmEmail,
   sendVerifyEmail,
 } from "../utils/sendMail";
-import { resolveSoa } from "dns";
+import UserModel from "../models/User.model";
+import { v4 as uuidv4 } from "uuid";
 
 const register = async (req: Request, res: Response) => {
   const user = await User.create({
@@ -73,7 +74,7 @@ const loginWithToken = async (req: IUserRequest, res: Response) => {
 
   const user = await User.find(
     { _id: userId },
-    { customerPassword: 0, authenToken: 0 },
+    { customerPassword: 0, authenToken: 0 }
   );
 
   if (!user) {
@@ -179,4 +180,41 @@ export {
   forgetPasswordEmail,
   resetForgetPassword,
   resetPassword,
+};
+
+export const googleLogin = async (req: Request, res: Response) => {
+  const { customerName, googleId, customerEmail, customerAvatar } = req.body;
+
+  if (!customerName || !googleId || !customerEmail) {
+    throw new BadRequestError("not-enough-fields");
+  }
+
+  let user = await UserModel.findOne({ customerEmail });
+  if (!user) {
+    user = new UserModel();
+    user.customerName = customerName;
+    user.customerEmail = customerEmail;
+    user.customerAvatar = customerAvatar;
+    user.authenToken.Google = googleId;
+    //random password
+    user.customerPassword = uuidv4();
+    //active account
+    user.customerStatus = 1; 
+    await user.hashPassword();
+    await user.save();
+  } else {
+    user.authenToken.Google = googleId;
+    //active account
+    user.customerStatus = 1; 
+    await user.save();
+  }
+
+  const accessToken = user.createJWT();
+  const refressToken = await user.createRefreshToken();
+  const userObj = JSON.parse(JSON.stringify(user));
+  delete userObj.customerPassword;
+  delete userObj.authenToken;
+  delete userObj.refreshToken;
+
+  res.status(StatusCodes.OK).json({ user: userObj, accessToken, refressToken });
 };
