@@ -9,7 +9,6 @@ import {
   sendVerifyEmail,
 } from "../utils/sendMail";
 import UserModel from "../models/User.model";
-import { v4 as uuidv4 } from "uuid";
 
 const register = async (req: Request, res: Response) => {
   const user = await User.create({
@@ -192,21 +191,21 @@ export const googleLogin = async (req: Request, res: Response) => {
   let user = await UserModel.findOne({ customerEmail });
   if (!user) {
     user = new UserModel();
-    user.customerName = customerName;
-    user.customerEmail = customerEmail;
-    user.customerAvatar = customerAvatar;
-    user.authenToken.Google = googleId;
-    //random password
-    user.customerPassword = uuidv4();
-    //active account
-    user.customerStatus = 1; 
-    await user.hashPassword();
-    await user.save();
+    await user.createAccountWithGoogleID(
+      customerName,
+      googleId,
+      customerEmail,
+      customerAvatar
+    );
   } else {
-    user.authenToken.Google = googleId;
-    //active account
-    user.customerStatus = 1; 
-    await user.save();
+    if (user.doesAccountCreatedWithGoogle()) {
+      //Compare this googleId with googleId in db
+      if (!user.verifyGoogleID(googleId)) {
+        throw new UnauthenticatedError("invalid-googleid");
+      }
+    } else {
+      await user.updateAccountWithGoogle(googleId, customerAvatar);
+    }
   }
 
   const accessToken = user.createJWT();
