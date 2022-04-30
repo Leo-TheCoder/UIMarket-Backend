@@ -14,12 +14,15 @@ const ShopSchema = new mongoose.Schema(
       required: [true, "Please provide shop name"],
       minlength: defaultMinLength / 2,
     },
-    shopIDCard: [
-      {
+    shopPayPal: {
+      required: false,
+      paypalEmail: {
         type: String,
-        required: [true, "Please provide shop ID Card picture"],
       },
-    ],
+      paypalId: {
+        type: String,
+      }
+    },
     shopDescription: {
       type: String,
       required: [true, "Please provide shop description"],
@@ -27,7 +30,7 @@ const ShopSchema = new mongoose.Schema(
     },
     shopPhone: {
       type: String,
-      required: [true, "Please provide shop phone number"],
+      required: false,
       length: 10,
     },
     shopEmail: {

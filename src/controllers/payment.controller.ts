@@ -5,6 +5,8 @@ import { StatusCodes } from "http-status-codes";
 import { IUserRequest } from "../types/express";
 import {v4 as uuidv4} from "uuid";
 import UserModel from "../models/User.model";
+import ShopModel from "../models/Shop.model";
+import UnauthenticatedErorr from "../errors/unauthenticated-error";
 
 const PAYPAL_API_CLIENT = process.env.PAYPAL_API_CLIENT!;
 const PAYPAL_API_SECRET = process.env.PAYPAL_API_SECRET!;
@@ -99,8 +101,16 @@ export const payoutOrder = async (req: IUserRequest, res: Response) => {
   const user = req.user;
   const {amountValue} = req.body;
 
-  //need to get email or paypal id from db ...
-  const receiver = "rongbac9@gmail.com";
+  //get email or paypal id from db
+  const {shopId} = user!;
+  const shop = await ShopModel.findById(shopId, "shopPayPal");
+  if(!shop) {
+    throw new UnauthenticatedErorr("invalid-shop");
+  }
+  if(!shop.shopPayPal.paypalEmail) {
+    throw new UnauthenticatedErorr("invalid-paypal")
+  }
+  const receiver = shop.shopPayPal.paypalEmail;
 
   const payoutObj = {
     sender_batch_header: {
@@ -178,8 +188,12 @@ export const returnAfterLoginPaypal = async (
     }
   );
 
-  //need to store paypal info into db ...
-  //...
+  //store paypal info into db
+  const {shopId} = req.query;
+  const {profile} = profileInfo.data;
+  const email = profile.emails[0].value;
+  const paypalId = profile.payer_id;
+  console.log(shopId, email, paypalId);
 
   res.status(StatusCodes.OK).json({
     returnUrl: {
@@ -195,6 +209,8 @@ export const authorizationEndpoint = async (
   req: IUserRequest,
   res: Response
 ) => {
+  const user = req.user;
+  const {shopId} = user!;
   const returnURL = encodeURIComponent(
     `http://127.0.0.1:5000/api/v1/payment/after-login`
   );
