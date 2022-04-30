@@ -3,6 +3,8 @@ import { encodeBase64 } from "bcryptjs";
 import { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
 import { IUserRequest } from "../types/express";
+import {v4 as uuidv4} from "uuid";
+import UserModel from "../models/User.model";
 
 const PAYPAL_API_CLIENT = process.env.PAYPAL_API_CLIENT!;
 const PAYPAL_API_SECRET = process.env.PAYPAL_API_SECRET!;
@@ -89,36 +91,20 @@ export const createOrder = async (req: IUserRequest, res: Response) => {
   }
 };
 
-export const captureOrder = async (req: IUserRequest, res: Response) => {
-  const { token } = req.query;
-
-  try {
-    const response = await axios.post(
-      `${process.env.PAYPAL_API}/v2/checkout/orders/${token}/capture`,
-      {},
-      {
-        auth: {
-          username: PAYPAL_API_CLIENT,
-          password: PAYPAL_API_SECRET,
-        },
-      }
-    );
-
-    res.status(StatusCodes.OK).json(response.data);
-  } catch (error) {
-    console.log(error);
-    res.status(StatusCodes.INTERNAL_SERVER_ERROR).send("Something gone wrong!");
-  }
-};
-
 export const cancelPayment = (req: IUserRequest, res: Response) => {
   res.status(StatusCodes.OK).send("Cancel Payment!");
 };
 
 export const payoutOrder = async (req: IUserRequest, res: Response) => {
+  const user = req.user;
+  const {amountValue} = req.body;
+
+  //need to get email or paypal id from db ...
+  const receiver = "rongbac9@gmail.com";
+
   const payoutObj = {
     sender_batch_header: {
-      sender_batch_id: "Payouts_16052006_00028091_02",
+      sender_batch_id: uuidv4(),
       email_subject: "You have a payout!",
       email_message: "You have receive a payout! Thanks for using our service!",
     },
@@ -126,10 +112,10 @@ export const payoutOrder = async (req: IUserRequest, res: Response) => {
       {
         recipient_type: "EMAIL",
         amount: {
-          value: "100.00",
+          value: amountValue,
           currency: "USD",
         },
-        receiver: "rongbac9@gmail.com",
+        receiver: receiver,
       },
     ],
   };
@@ -147,6 +133,8 @@ export const payoutOrder = async (req: IUserRequest, res: Response) => {
         },
       }
     );
+
+    //update point
 
     res.status(StatusCodes.OK).json(response.data);
   } catch (error) {
@@ -190,6 +178,9 @@ export const returnAfterLoginPaypal = async (
     }
   );
 
+  //need to store paypal info into db ...
+  //...
+
   res.status(StatusCodes.OK).json({
     returnUrl: {
       message: "Return URL work!",
@@ -209,4 +200,72 @@ export const authorizationEndpoint = async (
   );
   const url = `https://www.sandbox.paypal.com/connect?flowEntry=static&client_id=${PAYPAL_API_CLIENT}&scope=openid profile email https://uri.paypal.com/services/paypalattributes&redirect_uri=${returnURL}`;
   return res.status(StatusCodes.OK).json({ url });
+};
+
+export const chargeCoin = async (req: IUserRequest, res: Response) => {
+  const { user } = req;
+  const { amountValue } = req.body;
+
+  const order = {
+    intent: "CAPTURE",
+    purchase_units: [
+      {
+        description: `Deposit money to your account`,
+        amount: {
+          currency_code: "USD",
+          value: amountValue,
+        },
+      },
+    ],
+    application_context: {
+      brand_name: "deexmarket.com",
+      landing_page: "NO_PREFERENCE",
+      user_action: "PAY_NOW",
+      return_url: `${DOMAIN_NAME}/api/v1/payment/capture-order?amount=${amountValue}`,
+      cancel_url: `${DOMAIN_NAME}/api/v1/payment/cancel-payment`,
+    },
+  };
+
+  const access_token = await getAccessToken();
+
+  // make a request
+  const response = await axios.post(
+    `${process.env.PAYPAL_API}/v2/checkout/orders`,
+    order,
+    {
+      headers: {
+        Authorization: `Bearer ${access_token}`,
+      },
+    }
+  );
+
+  res.json(response.data);
+};
+
+export const captureOrder = async (req: IUserRequest, res: Response) => {
+  const { token, amount } = req.query;
+
+  try {
+    const response = await axios.post(
+      `${process.env.PAYPAL_API}/v2/checkout/orders/${token}/capture`,
+      {},
+      {
+        auth: {
+          username: PAYPAL_API_CLIENT,
+          password: PAYPAL_API_SECRET,
+        },
+      }
+    );
+
+    //Update point
+    //...
+
+    res.status(StatusCodes.OK).json({
+      data: response.data,
+      amount,
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).send("Something gone wrong!");
+  }
 };

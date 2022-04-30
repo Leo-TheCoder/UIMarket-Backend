@@ -8,7 +8,7 @@ import {
   sendResetPasswordConfirmEmail,
   sendVerifyEmail,
 } from "../utils/sendMail";
-import { resolveSoa } from "dns";
+import UserModel from "../models/User.model";
 
 const register = async (req: Request, res: Response) => {
   const user = await User.create({
@@ -57,12 +57,15 @@ const login = async (req: Request, res: Response) => {
 
   //create JWT for authentication
   const token = user.createJWT();
+  const refreshToken = await user.createRefreshToken();
+  await user.save();
 
   const userObj = Object.assign({}, user._doc);
   delete userObj.customerPassword;
   delete userObj.authenToken;
+  delete userObj.refreshToken;
 
-  res.status(StatusCodes.OK).json({ user: userObj, token });
+  res.status(StatusCodes.OK).json({ user: userObj, token, refreshToken });
 };
 
 const loginWithToken = async (req: IUserRequest, res: Response) => {
@@ -70,7 +73,7 @@ const loginWithToken = async (req: IUserRequest, res: Response) => {
 
   const user = await User.find(
     { _id: userId },
-    { customerPassword: 0, authenToken: 0 },
+    { customerPassword: 0, authenToken: 0 }
   );
 
   if (!user) {
@@ -176,4 +179,41 @@ export {
   forgetPasswordEmail,
   resetForgetPassword,
   resetPassword,
+};
+
+export const googleLogin = async (req: Request, res: Response) => {
+  const { customerName, googleId, customerEmail, customerAvatar } = req.body;
+
+  if (!customerName || !googleId || !customerEmail) {
+    throw new BadRequestError("not-enough-fields");
+  }
+
+  let user = await UserModel.findOne({ customerEmail });
+  if (!user) {
+    user = new UserModel();
+    await user.createAccountWithGoogleID(
+      customerName,
+      googleId,
+      customerEmail,
+      customerAvatar
+    );
+  } else {
+    if (user.doesAccountCreatedWithGoogle()) {
+      //Compare this googleId with googleId in db
+      if (!user.verifyGoogleID(googleId)) {
+        throw new UnauthenticatedError("invalid-googleid");
+      }
+    } else {
+      await user.updateAccountWithGoogle(googleId, customerAvatar);
+    }
+  }
+
+  const accessToken = user.createJWT();
+  const refressToken = await user.createRefreshToken();
+  const userObj = JSON.parse(JSON.stringify(user));
+  delete userObj.customerPassword;
+  delete userObj.authenToken;
+  delete userObj.refreshToken;
+
+  res.status(StatusCodes.OK).json({ user: userObj, accessToken, refressToken });
 };
