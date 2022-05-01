@@ -28,7 +28,4 @@ const getStatusVote = async (userId: String, objectId: String) => {
   return voteStatus;
 };
 
-export {
-  //
-  getStatusVote,
-};
+export { getStatusVote };

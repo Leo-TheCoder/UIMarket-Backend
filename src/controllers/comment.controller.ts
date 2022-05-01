@@ -6,21 +6,28 @@ import {
   NotFoundError,
   ForbiddenError,
   GoneError,
+  InternalServerError,
 } from "../errors";
 import { getStatusVote } from "../utils/statusVote";
 import QuestionModel from "../models/Question.model";
 import CommentModel from "../models/Comment.model";
 import AnswerModel from "../models/Answer.model";
 import * as Constants from "../constants";
-import UserModel from "../models/User.model";
+import * as ErrorMessage from "../errors/error_message";
 
+interface IQuery {
+  page?: string;
+  limit?: string;
+  selectWith?: string;
+  tag?: string;
+}
 const createComment = async (req: IUserRequest, res: Response) => {
   const { userId } = req.user!;
 
   //Checking whether questionId is valid
   const question = await QuestionModel.findById(req.body.questionId);
   if (!question) {
-    throw new NotFoundError("Invalid Question Id");
+    throw new NotFoundError(ErrorMessage.ERROR_INVALID_QUESTION_ID);
   }
 
   //Checking whether rootId is valid
@@ -31,10 +38,10 @@ const createComment = async (req: IUserRequest, res: Response) => {
     });
 
     if (!answer) {
-      throw new NotFoundError("Invalid Answer Id");
+      throw new NotFoundError(ErrorMessage.ERROR_INVALID_ANSWER_ID);
     }
   } else if (req.body.rootId != req.body.questionId) {
-    throw new BadRequestError("Invalid Root Id");
+    throw new BadRequestError(ErrorMessage.ERROR_INVALID_ROOT_ID);
   }
 
   const comment = await CommentModel.create({
@@ -47,13 +54,6 @@ const createComment = async (req: IUserRequest, res: Response) => {
 
   res.status(StatusCodes.CREATED).json(comment);
 };
-
-interface IQuery {
-  page?: string;
-  limit?: string;
-  selectWith?: string;
-  tag?: string;
-}
 
 const getComments = async (req: IUserRequest, res: Response) => {
   const { rootId } = req.params;
@@ -104,12 +104,11 @@ const updateComment = async (req: IUserRequest, res: Response) => {
 
   //Validation
   if (!comment) {
-    throw new NotFoundError("Invalid comment ID");
+    throw new NotFoundError(ErrorMessage.ERROR_INVALID_COMMENT_ID);
   } else if (comment.userId != userId) {
-    res;
-    throw new ForbiddenError("Only owner of this commemt can do this action");
+    throw new ForbiddenError(ErrorMessage.ERROR_FORBIDDEN);
   } else if (!req.body.commentContent) {
-    throw new BadRequestError("Please input comment content");
+    throw new BadRequestError(ErrorMessage.ERROR_MISSING_BODY);
   }
 
   //Update comment
@@ -124,13 +123,13 @@ const deleteComment = async (req: IUserRequest, res: Response) => {
   const { userId } = req.user!;
   const commemt = await CommentModel.findById(req.params.commentId);
 
-  //Validate
+  //Validation
   if (!commemt) {
-    throw new NotFoundError("Invalid Comment ID");
+    throw new NotFoundError(ErrorMessage.ERROR_INVALID_COMMENT_ID);
   } else if (commemt.userId != userId) {
-    throw new ForbiddenError("Only owner of this comment can do this question");
+    throw new ForbiddenError(ErrorMessage.ERROR_FORBIDDEN);
   } else if (commemt.commentStatus != 1) {
-    throw new GoneError("This comment has already deleted");
+    throw new GoneError(ErrorMessage.ERROR_GONE);
   }
 
   commemt.commentStatus = 0;
@@ -140,7 +139,7 @@ const deleteComment = async (req: IUserRequest, res: Response) => {
   if (result) {
     res.status(StatusCodes.OK).json(result);
   } else {
-    res.status(StatusCodes.INTERNAL_SERVER_ERROR).send("Deleted failed");
+    throw new InternalServerError(ErrorMessage.ERROR_FAILED);
   }
 };
 

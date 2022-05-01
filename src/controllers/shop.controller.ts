@@ -10,9 +10,11 @@ import {
   BadRequestError,
   ForbiddenError,
   GoneError,
+  InternalServerError,
   NotFoundError,
   UnauthenticatedError,
 } from "../errors";
+import * as ErrorMessage from "../errors/error_message";
 
 interface IQuery {
   page?: string;
@@ -26,9 +28,9 @@ const createShop = async (req: IUserRequest, res: Response) => {
 
   if (shop) {
     if (shop.shopStatus == 0) {
-      throw new GoneError("Your shop has been closed by some reasons");
+      throw new GoneError(ErrorMessage.ERROR_GONE);
     } else {
-      throw new ForbiddenError("This user has already owned a shop");
+      throw new ForbiddenError(ErrorMessage.ERROR_FORBIDDEN);
     }
   }
 
@@ -47,7 +49,7 @@ const createShop = async (req: IUserRequest, res: Response) => {
     const token = user.createJWT();
     res.status(StatusCodes.CREATED).json({ newShop, token });
   } else {
-    res.status(StatusCodes.INTERNAL_SERVER_ERROR).send("Create shop failed");
+    throw new InternalServerError(ErrorMessage.ERROR_FAILED);
   }
 };
 
@@ -55,7 +57,7 @@ const uploadProduct = async (req: IUserRequest, res: Response) => {
   const { shopId } = req.user!;
 
   if (!shopId) {
-    throw new UnauthenticatedError("Invalid credential");
+    throw new UnauthenticatedError(ErrorMessage.ERROR_AUTHENTICATION_INVALID);
   }
 
   const product = await ProductModel.create({ ...req.body, shopId: shopId });
@@ -63,7 +65,7 @@ const uploadProduct = async (req: IUserRequest, res: Response) => {
   if (product) {
     res.status(StatusCodes.CREATED).json({ product });
   } else {
-    res.status(StatusCodes.INTERNAL_SERVER_ERROR);
+    throw new InternalServerError(ErrorMessage.ERROR_FAILED);
   }
 };
 
@@ -72,13 +74,13 @@ const deleteProduct = async (req: IUserRequest, res: Response) => {
   const product = await ProductModel.findOne({ _id: req.params.productId });
 
   if (!shopId) {
-    throw new UnauthenticatedError("Invalid credential");
+    throw new UnauthenticatedError(ErrorMessage.ERROR_AUTHENTICATION_INVALID);
   } else if (!product) {
-    throw new BadRequestError("Invalid product Id");
+    throw new BadRequestError(ErrorMessage.ERROR_INVALID_PRODUCT_ID);
   } else if (shopId != product.shopId) {
-    throw new ForbiddenError("Only owner of this shop can do this action");
+    throw new ForbiddenError(ErrorMessage.ERROR_FORBIDDEN);
   } else if (product.productStatus === 0) {
-    throw new GoneError("This product has already deleted");
+    throw new GoneError(ErrorMessage.ERROR_GONE);
   }
 
   product.productStatus = 0;
@@ -89,7 +91,7 @@ const deleteProduct = async (req: IUserRequest, res: Response) => {
   if (result) {
     res.status(StatusCodes.OK).json({ result });
   } else {
-    res.status(StatusCodes.INTERNAL_SERVER_ERROR);
+    throw new InternalServerError(ErrorMessage.ERROR_FAILED);
   }
 };
 
@@ -101,11 +103,11 @@ const updateProduct = async (req: IUserRequest, res: Response) => {
   });
 
   if (!shopId) {
-    throw new UnauthenticatedError("Invalid credential");
+    throw new UnauthenticatedError(ErrorMessage.ERROR_AUTHENTICATION_INVALID);
   } else if (!product) {
-    throw new BadRequestError("Invalid product Id");
+    throw new BadRequestError(ErrorMessage.ERROR_INVALID_PRODUCT_ID);
   } else if (shopId != product.shopId) {
-    throw new ForbiddenError("Only owner of this shop can do this action");
+    throw new ForbiddenError(ErrorMessage.ERROR_FORBIDDEN);
   }
 
   product.productName = req.body.productName || product.productName;
@@ -119,7 +121,7 @@ const updateProduct = async (req: IUserRequest, res: Response) => {
   if (result) {
     res.status(StatusCodes.OK).json({ result });
   } else {
-    res.status(StatusCodes.INTERNAL_SERVER_ERROR).send("Updated failed");
+    throw new InternalServerError(ErrorMessage.ERROR_FAILED);
   }
 };
 
@@ -127,7 +129,7 @@ const getAllProduct = async (req: IUserRequest, res: Response) => {
   const { shopId } = req.user!;
 
   if (!shopId) {
-    throw new UnauthenticatedError("Invalid credential");
+    throw new UnauthenticatedError(ErrorMessage.ERROR_AUTHENTICATION_INVALID);
   }
 
   const products = await ProductModel
@@ -143,7 +145,7 @@ const updateShop = async (req: IUserRequest, res: Response) => {
   const { shopId } = req.user!;
 
   if (!shopId) {
-    throw new UnauthenticatedError("Invalid credential");
+    throw new UnauthenticatedError(ErrorMessage.ERROR_AUTHENTICATION_INVALID);
   }
 
   const shop = await ShopModel.findOne({ _id: shopId, shopStatus: 1 });
@@ -157,7 +159,7 @@ const updateShop = async (req: IUserRequest, res: Response) => {
   if (result) {
     res.status(StatusCodes.OK).json({ result });
   } else {
-    res.status(StatusCodes.INTERNAL_SERVER_ERROR).send("Update failed");
+    throw new InternalServerError(ErrorMessage.ERROR_FAILED);
   }
 };
 
@@ -179,7 +181,7 @@ const getShopById = async (req: IUserRequest, res: Response) => {
     .lean();
 
   if (!shop) {
-    throw new NotFoundError("Invalid Shop ID");
+    throw new NotFoundError(ErrorMessage.ERROR_INVALID_SHOP_ID);
   } else {
     res.status(StatusCodes.OK).json({ shop });
   }

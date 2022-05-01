@@ -9,6 +9,7 @@ import {
   sendVerifyEmail,
 } from "../utils/sendMail";
 import UserModel from "../models/User.model";
+import * as ErrorMessage from "../errors/error_message";
 
 const register = async (req: Request, res: Response) => {
   const user = await User.create({
@@ -32,26 +33,26 @@ const login = async (req: Request, res: Response) => {
   const { customerEmail, customerPassword } = req.body;
 
   if (!customerEmail || !customerPassword) {
-    throw new BadRequestError("Please provide email and password");
+    throw new BadRequestError(ErrorMessage.ERROR_MISSING_BODY);
   }
 
   const user = await User.findOne({ customerEmail });
-  // console.log(user);
 
+  //Checking email
   if (!user) {
-    throw new UnauthenticatedError("Invalid Credentials");
+    throw new UnauthenticatedError(ErrorMessage.ERROR_AUTHENTICATION_INVALID);
   }
 
   //checking password
   const isPasswordCorrect = await user.comparePassword(customerPassword);
   if (!isPasswordCorrect) {
-    throw new UnauthenticatedError("Wrong Password");
+    throw new UnauthenticatedError(ErrorMessage.ERROR_AUTHENTICATION_INVALID);
   }
 
   if (user.customerStatus !== 1) {
     return res.status(StatusCodes.UNAUTHORIZED).json({
       userId: user._id,
-      msg: "Account isn't active!",
+      msg: ErrorMessage.ERROR_ACCOUNT_INACTIVED,
     });
   }
 
@@ -73,11 +74,11 @@ const loginWithToken = async (req: IUserRequest, res: Response) => {
 
   const user = await User.find(
     { _id: userId },
-    { customerPassword: 0, authenToken: 0 }
+    { customerPassword: 0, authenToken: 0 },
   );
 
   if (!user) {
-    return new UnauthenticatedError("User not found!");
+    return new UnauthenticatedError(ErrorMessage.ERROR_AUTHENTICATION_INVALID);
   }
 
   res.status(StatusCodes.OK).json({ user: user[0] });
@@ -93,7 +94,7 @@ const verifyEmailCode = async (req: Request, res: Response) => {
     return res.status(StatusCodes.OK).json({ msg: "Verify successfully!" });
   }
 
-  return res.status(StatusCodes.UNAUTHORIZED).json({ msg: "Verify fail!" });
+  throw new UnauthenticatedError(ErrorMessage.ERROR_FAILED);
 };
 
 const resendVerifyEmail = async (req: Request, res: Response) => {
@@ -101,7 +102,7 @@ const resendVerifyEmail = async (req: Request, res: Response) => {
   const user = await User.findById(userId);
 
   if (!user || !userId) {
-    throw new UnauthenticatedError("Invalid Account");
+    throw new UnauthenticatedError(ErrorMessage.ERROR_AUTHENTICATION_INVALID);
   }
 
   if (user.customerStatus === 1) {
@@ -124,7 +125,7 @@ const forgetPasswordEmail = async (req: Request, res: Response) => {
   const user = await User.findOne({ customerEmail });
 
   if (!user) {
-    throw new UnauthenticatedError("Invalid Account!");
+    throw new UnauthenticatedError(ErrorMessage.ERROR_AUTHENTICATION_INVALID);
   }
 
   await user.createRefreshToken();
@@ -146,9 +147,9 @@ const resetForgetPassword = async (req: Request, res: Response) => {
     return res
       .status(StatusCodes.OK)
       .json({ msg: "Reset password successfully!" });
+  } else {
+    throw new UnauthenticatedError(ErrorMessage.ERROR_FAILED);
   }
-
-  return res.status(StatusCodes.UNAUTHORIZED).json({ msg: "Verify fail!" });
 };
 
 const resetPassword = async (req: IUserRequest, res: Response) => {
@@ -157,7 +158,7 @@ const resetPassword = async (req: IUserRequest, res: Response) => {
   const user = await User.findById(userId);
 
   if (!user) {
-    throw new UnauthenticatedError("Invalid Account");
+    throw new UnauthenticatedError(ErrorMessage.ERROR_AUTHENTICATION_INVALID);
   }
 
   user.customerPassword = newPassword;
@@ -185,7 +186,7 @@ export const googleLogin = async (req: Request, res: Response) => {
   const { customerName, googleId, customerEmail, customerAvatar } = req.body;
 
   if (!customerName || !googleId || !customerEmail) {
-    throw new BadRequestError("not-enough-fields");
+    throw new BadRequestError(ErrorMessage.ERROR_MISSING_BODY);
   }
 
   let user = await UserModel.findOne({ customerEmail });
@@ -195,13 +196,13 @@ export const googleLogin = async (req: Request, res: Response) => {
       customerName,
       googleId,
       customerEmail,
-      customerAvatar
+      customerAvatar,
     );
   } else {
     if (user.doesAccountCreatedWithGoogle()) {
       //Compare this googleId with googleId in db
       if (!user.verifyGoogleID(googleId)) {
-        throw new UnauthenticatedError("invalid-googleid");
+        throw new UnauthenticatedError(ErrorMessage.ERROR_GOOGLE_INVALID);
       }
     } else {
       await user.updateAccountWithGoogle(googleId, customerAvatar);
