@@ -1,12 +1,11 @@
 import { StatusCodes } from "http-status-codes";
 import { Request, Response } from "express";
-import { IUserRequest } from "../types/express";
-import { BadRequestError } from "../errors";
-import UserModel from "../models/User.model";
+import { BadRequestError, CustomError } from "../errors";
 import * as Constants from "../constants";
 import { generateUploadURL } from "../utils/s3";
 import fs from "fs";
 import ultil from "util";
+import * as ErrorMessage from "../errors/error_message";
 
 // const unlinkFile = ultil.promisify(fs.unlink);
 
@@ -58,12 +57,12 @@ const uploadURL = async (req: Request, res: Response) => {
   const isPrivate = query.isPrivate;
 
   if (!folder || !isPrivate) {
-    throw new BadRequestError("Please provide folder name and upload type");
+    throw new BadRequestError(ErrorMessage.ERROR_MISSING_BODY);
   }
 
-  const url = await generateUploadURL(folder, isPrivate).catch((err) =>
-    res.send(err.msg),
-  );
+  const url = await generateUploadURL(folder, isPrivate).catch((err) => {
+    throw new CustomError(err.msg);
+  });
 
   if (url) {
     res.status(StatusCodes.OK).send({ url });

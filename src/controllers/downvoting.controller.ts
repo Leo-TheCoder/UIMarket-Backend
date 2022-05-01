@@ -1,30 +1,20 @@
 import { StatusCodes } from "http-status-codes";
-import { BadRequestError, UnauthenticatedError } from "../errors";
+import { BadRequestError } from "../errors";
 import { Request, Response } from "express";
 import { IUserRequest } from "../types/express";
 import QuestionModel from "../models/Question.model";
 import VotingModel from "../models/Voting.model";
 import AnswerModel from "../models/Answer.model";
 import CommentModel from "../models/Comment.model";
+import * as ErrorMessage from "../errors/error_message";
 
 const downvote = async (req: IUserRequest, res: Response) => {
   const { type, questionId, objectId } = req.body;
   const userId = req.user?.userId!;
-
-  //Non trigger solution
-  // switch (type) {
-  //   case "question":
-  //     const result = await downvoteQuestion(userId, questionId, objectId);
-  //     return res.status(result.status).json(result.msg);
-  //   case "answer":
-  //   case "comment":
-  //   default:
-  //     return res.status(StatusCodes.BAD_REQUEST).send();
-  // }
   const validType: Array<string> = ["Question", "Comment", "Answer"];
 
   if (!type) {
-    throw new BadRequestError("Please provide type of object");
+    throw new BadRequestError(ErrorMessage.ERROR_MISSING_BODY);
   } else if (!validType.includes(type)) {
     throw new BadRequestError("Valid types are: Question, Answer and Comment");
   }
@@ -32,14 +22,14 @@ const downvote = async (req: IUserRequest, res: Response) => {
   //Checking questionId is available or not
   const question = await QuestionModel.findById(questionId);
   if (!question) {
-    throw new BadRequestError("Invalid Question ID");
+    throw new BadRequestError(ErrorMessage.ERROR_INVALID_QUESTION_ID);
   }
 
   //Checking objectId
   switch (type) {
     case "Question":
       if (questionId != objectId) {
-        throw new BadRequestError("Invalid Question ID");
+        throw new BadRequestError(ErrorMessage.ERROR_INVALID_QUESTION_ID);
       }
       break;
 
@@ -50,7 +40,7 @@ const downvote = async (req: IUserRequest, res: Response) => {
         answerStatus: 1,
       });
       if (answer.length === 0) {
-        throw new BadRequestError("Invalid Answer");
+        throw new BadRequestError(ErrorMessage.ERROR_INVALID_ANSWER_ID);
       }
       break;
 
@@ -61,7 +51,7 @@ const downvote = async (req: IUserRequest, res: Response) => {
         commentStatus: 1,
       });
       if (comment.length === 0) {
-        throw new BadRequestError("Invalid Comment");
+        throw new BadRequestError(ErrorMessage.ERROR_INVALID_COMMENT_ID);
       }
       break;
   }
@@ -72,86 +62,86 @@ const downvote = async (req: IUserRequest, res: Response) => {
 
 export { downvote };
 
-const downvoteQuestion = async (
-  userId: string,
-  questionId: string,
-  objectId: string,
-) => {
-  //get document of voting
-  const votingDoc = await VotingModel.findOne({
-    userId,
-    questionId,
-    objectId,
-  });
-  const question = await QuestionModel.findById(objectId, ["userId"]);
-  //if users are voting their posts
-  if (question.userId == userId) {
-    return {
-      msg: "CANNOT VOTE FOR THIER OWN POSTS",
-      status: StatusCodes.BAD_REQUEST,
-    };
-  }
+// const downvoteQuestion = async (
+//   userId: string,
+//   questionId: string,
+//   objectId: string,
+// ) => {
+//   //get document of voting
+//   const votingDoc = await VotingModel.findOne({
+//     userId,
+//     questionId,
+//     objectId,
+//   });
+//   const question = await QuestionModel.findById(objectId, ["userId"]);
+//   //if users are voting their posts
+//   if (question.userId == userId) {
+//     return {
+//       msg: "CANNOT VOTE FOR THEIR OWN POSTS",
+//       status: StatusCodes.BAD_REQUEST,
+//     };
+//   }
 
-  //if user didn't vote for that object before...
-  if (!votingDoc) {
-    //create new voting object
-    const newVotingDoc = await VotingModel.findOneAndUpdate(
-      { userId, questionId, objectId },
-      { action: 0 },
-      { new: true, upsert: true },
-    );
-    const totalDownvote = await VotingModel.countDocuments({
-      objectId,
-      action: 0,
-    });
-    //update question upvote number
-    await QuestionModel.findOneAndUpdate(
-      {
-        _id: questionId,
-      },
-      { totalDownvote },
-    );
+//   //if user didn't vote for that object before...
+//   if (!votingDoc) {
+//     //create new voting object
+//     const newVotingDoc = await VotingModel.findOneAndUpdate(
+//       { userId, questionId, objectId },
+//       { action: 0 },
+//       { new: true, upsert: true },
+//     );
+//     const totalDownvote = await VotingModel.countDocuments({
+//       objectId,
+//       action: 0,
+//     });
+//     //update question upvote number
+//     await QuestionModel.findOneAndUpdate(
+//       {
+//         _id: questionId,
+//       },
+//       { totalDownvote },
+//     );
 
-    return {
-      msg: "DOWNVOTED",
-      status: StatusCodes.OK,
-    };
-  }
+//     return {
+//       msg: "DOWNVOTED",
+//       status: StatusCodes.OK,
+//     };
+//   }
 
-  //if user has voted for object...
-  else {
-    let msg = "";
-    if (votingDoc.action === 1) {
-      votingDoc.action = 0;
-      await votingDoc.save();
-      msg = "DOWNVOTED";
-    } else {
-      //removing voting object => unvote
-      await votingDoc.remove();
-      msg = "UNVOTED";
-    }
+//   //if user has voted for object...
+//   else {
+//     let msg = "";
+//     if (votingDoc.action === 1) {
+//       votingDoc.action = 0;
+//       await votingDoc.save();
+//       msg = "DOWNVOTED";
+//     } else {
+//       //removing voting object => unvote
+//       await votingDoc.remove();
+//       msg = "UNVOTED";
+//     }
 
-    const totalUpvote = await VotingModel.countDocuments({
-      objectId,
-      action: 1,
-    });
-    const totalDownvote = await VotingModel.countDocuments({
-      objectId,
-      action: 0,
-    });
+//     const totalUpvote = await VotingModel.countDocuments({
+//       objectId,
+//       action: 1,
+//     });
+//     const totalDownvote = await VotingModel.countDocuments({
+//       objectId,
+//       action: 0,
+//     });
 
-    //update voting number
-    await QuestionModel.findOneAndUpdate(
-      { _id: questionId },
-      { totalUpvote, totalDownvote },
-    );
+//     //update voting number
+//     await QuestionModel.findOneAndUpdate(
+//       { _id: questionId },
+//       { totalUpvote, totalDownvote },
+//     );
 
-    return {
-      msg,
-      status: StatusCodes.OK,
-    };
-  }
-};
+//     return {
+//       msg,
+//       status: StatusCodes.OK,
+//     };
+//   }
+// };
 
 const downvoteObject = async (
   userId: string,

@@ -5,6 +5,7 @@ import { IUserRequest } from "../types/express";
 import UserModel from "../models/User.model";
 import jwt from "jsonwebtoken";
 import { IPayloadUser } from "../types/jwt-payload";
+import * as ErrorMessage from "../errors/error_message";
 
 const JWT_SECRET = process.env.JWT_SECRET!;
 
@@ -17,7 +18,7 @@ export const refreshAccessToken = async (req: Request, res: Response) => {
     const { userId } = jwt.verify(
       accessToken,
       JWT_SECRET,
-      opts
+      opts,
     ) as IPayloadUser;
     const user = await UserModel.findById(userId);
     const ret = user.compareToken(refreshToken);
@@ -29,26 +30,26 @@ export const refreshAccessToken = async (req: Request, res: Response) => {
     }
 
     return res.status(StatusCodes.UNAUTHORIZED).json({
-      message: "refreshToken is revoked.",
+      msg: ErrorMessage.ERROR_REFRESH_TOKEN_REVOKED,
     });
   } catch (err) {
     return res.status(StatusCodes.UNAUTHORIZED).json({
-      message: "Invalid accessToken.",
+      msg: ErrorMessage.ERROR_INVALID_ACCESSS_TOKEN,
     });
   }
 };
 
-export const revoke = async(req: IUserRequest, res: Response) => {
-    const {userId} = req.user!;
-    const user = await UserModel.findById(userId);
+export const revoke = async (req: IUserRequest, res: Response) => {
+  const { userId } = req.user!;
+  const user = await UserModel.findById(userId);
 
-    if(!user) {
-        throw new UnauthenticatedError("Invalid account");
-    }
+  if (!user) {
+    throw new UnauthenticatedError(ErrorMessage.ERROR_INVALID_USER_ID);
+  }
 
-    user.refreshToken=null;
-    await user.save();
-    return res.status(StatusCodes.OK).json({
-        message: "Revoke successfully!"
-    })
-}
+  user.refreshToken = null;
+  await user.save();
+  return res.status(StatusCodes.OK).json({
+    message: "Revoke successfully!",
+  });
+};

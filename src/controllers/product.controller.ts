@@ -1,16 +1,11 @@
 import { StatusCodes } from "http-status-codes";
 import { Request, Response } from "express";
-import { IUserRequest } from "../types/express";
 import * as Constants from "../constants";
 import ProductModel from "../models/Product.model";
 import CategoryModel from "../models/Category.model";
-import {
-  BadRequestError,
-  ForbiddenError,
-  GoneError,
-  NotFoundError,
-} from "../errors";
+import { NotFoundError } from "../errors";
 import ShopModel from "../models/Shop.model";
+import * as ErrorMessage from "../errors/error_message";
 
 interface IQuery {
   page?: string;
@@ -25,7 +20,7 @@ const findByCategory = async (req: Request, res: Response) => {
   //Checking valid category
   const category = await CategoryModel.findById(req.params.categoryId).lean();
   if (!category) {
-    throw new NotFoundError("Invalid category");
+    throw new NotFoundError(ErrorMessage.ERROR_INVALID_CATEGORY_ID);
   }
 
   //Get total product
@@ -65,7 +60,7 @@ const findById = async (req: Request, res: Response) => {
   }).lean();
 
   if (!product) {
-    throw new NotFoundError("Invalid product Id");
+    throw new NotFoundError(ErrorMessage.ERROR_INVALID_PRODUCT_ID);
   } else {
     res.status(StatusCodes.OK).json({ product });
   }
@@ -147,7 +142,7 @@ const getProductsByShop = async (req: Request, res: Response) => {
   //Check shop ID
   const shop = await ShopModel.find({ _id: shopId, shopStatus: 1 }).lean();
   if (!shop) {
-    throw new NotFoundError("Invalid shop ID");
+    throw new NotFoundError(ErrorMessage.ERROR_INVALID_SHOP_ID);
   }
 
   //Get total product

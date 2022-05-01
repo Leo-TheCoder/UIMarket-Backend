@@ -57,7 +57,7 @@ async function generateUploadURL(folder: String, isPrivate: Boolean) {
   } else {
     bucket = bucketName;
   }
-  console.log(bucket);
+  // console.log(bucket);
   const params = {
     Bucket: bucket,
     Key: `${folder}/${fileName}`,
