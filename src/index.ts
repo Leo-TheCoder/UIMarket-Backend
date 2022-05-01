@@ -25,6 +25,7 @@ import verifyRouter from "./routes/verify.route";
 import paymentRouter from "./routes/payment.route";
 import productCategoryRouter from "./routes/productCategory.route";
 import tokenRouter from "./routes/token.route";
+import invoiceRouter from "./routes/invoice.route";
 
 //Middleware
 import errorHandlerMiddleware from "./middlewares/handle-errors";
@@ -52,7 +53,8 @@ app.use("/api/v1/products", productRouter);
 app.use("/api/v1/verify", verifyRouter);
 app.use("/api/v1/payment", paymentRouter);
 app.use("/api/v1/category", productCategoryRouter);
-app.use("/api/v1/token", tokenRouter)
+app.use("/api/v1/token", tokenRouter);
+app.use("/api/v1/invoices", compulsoryAuth, invoiceRouter);
 
 app.use(notFoundMiddleware);
 app.use(errorHandlerMiddleware);
