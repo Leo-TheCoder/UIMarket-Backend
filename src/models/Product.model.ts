@@ -6,6 +6,7 @@ const ProductSchema = new mongoose.Schema(
   {
     shopId: {
       type: mongoose.Types.ObjectId,
+      ref: "Shop",
       required: [true, "Please provide shop ID"],
       immutable: true,
     },

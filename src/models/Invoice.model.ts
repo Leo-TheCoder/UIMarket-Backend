@@ -15,28 +15,37 @@ const OrderSchema = new mongoose.Schema(
     },
     productList: [
       {
-        shopId: {
+        shop: {
           type: mongoose.Types.ObjectId,
+          ref: "Shop",
           required: [true, "Please provide shopId"],
         },
-        productId: {
+        product: {
           type: mongoose.Types.ObjectId,
+          ref: "Product",
           required: [true, "Please provide product ID"],
         },
         productPrice: {
           type: Number,
           required: [true, "Please provide product price"],
+          min: 0,
         },
+        _id: false,
       },
     ],
     invoiceTotal: {
       type: Number,
       required: [true, "Please provide invoice total"],
     },
+    transactionId: {
+      type: mongoose.Types.ObjectId,
+      ref: "Coin Transaction",
+      required: [false, "Please provide transaction Id"],
+    },
     invoiceStatus: {
       type: String,
-      default: "Created",
-      enum: ["Created", "Paid", "Canceled", "Succeeded"],
+      default: "Paid",
+      enum: ["Paid", "Reviewed"],
     },
   },
   { timestamps: true },
