@@ -15,7 +15,7 @@ const router = express.Router();
 //GET Method
 router.get("/capture-order", captureOrder);
 router.get("/cancel-payment", cancelPayment);
-router.get("/after-login", returnAfterLoginPaypal);
+router.get("/after-login", compulsoryAuth, returnAfterLoginPaypal);
 router.get("/authorization-endpoint", compulsoryAuth, authorizationEndpoint);
 
 //POST Method
