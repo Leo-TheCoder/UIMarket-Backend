@@ -160,11 +160,17 @@ const findByCategory = async (req: Request, res: Response) => {
     .populate({ path: "productCategory", select: ["categoryName"] })
     .lean();
 
+    const productsResult = products.map((product) => {
+      //get first picture
+      product.productPicture = product.productPicture[0];
+      return product;
+    });
+
   return res.status(StatusCodes.OK).json({
     totalPages,
     page,
     limit,
-    products,
+    products: productsResult,
   });
 };
 
@@ -212,7 +218,7 @@ const findByName = async (req: Request, res: Response) => {
       ? Math.floor(total / limit)
       : Math.floor(total / limit) + 1;
 
-  const product = await ProductModel.aggregate([
+  const products = await ProductModel.aggregate([
     {
       $search: {
         index: "productName",
@@ -226,7 +232,8 @@ const findByName = async (req: Request, res: Response) => {
     { $addFields: { score: { $meta: "searchScore" } } },
     { $skip: (page - 1) * limit },
     { $limit: limit },
-    { $sort: sortObj},
+    // { $sort: sortObj}
+    { $project: projectionProductList},
     {
       $lookup: {
         from: "categories",
@@ -247,11 +254,19 @@ const findByName = async (req: Request, res: Response) => {
     },
   ]);
 
+  const productsResult = products.map((product) => {
+    //get first item in array
+    product.productPicture = product.productPicture[0];
+    product.productCategory = product.productCategory[0];
+    product.shop = product.shop[0];
+    return product;
+  });
+
   res.status(StatusCodes.OK).json({
     totalPages,
     page,
     limit,
-    product,
+    products: productsResult,
   });
 };
 
@@ -297,11 +312,17 @@ const getProductsByShop = async (req: Request, res: Response) => {
     .populate({ path: "productCategory", select: ["categoryName"] })
     .lean();
 
+    const productsResult = products.map((product) => {
+      //get first picture
+      product.productPicture = product.productPicture[0];
+      return product;
+    });
+
   return res.status(StatusCodes.OK).json({
     totalPages,
     page,
     limit,
-    products,
+    products: productsResult,
   });
 };
 
