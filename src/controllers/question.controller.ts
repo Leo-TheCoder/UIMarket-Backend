@@ -20,6 +20,7 @@ interface IQuery {
   limit?: string;
   selectWith?: string;
   tag?: string;
+  title?: string;
 }
 
 //get _id of tags in list (create tags if they don't exist)
@@ -30,8 +31,8 @@ const createTagList = async (tagList: [String]) => {
       QuestionTagModel.findOneAndUpdate(
         { tagName: tag },
         { $inc: { totalQuestion: +1 } },
-        { new: true, upsert: true },
-      ),
+        { new: true, upsert: true }
+      )
     );
   }
   const tagObjects = await Promise.all(promises);
@@ -60,7 +61,7 @@ const createQuestion = async (req: IUserRequest, res: Response) => {
       req.body.questionBounty > Constants.maxBounty
     ) {
       throw new BadRequestError(
-        `Bounty must in range ${Constants.minBounty} - ${Constants.maxBounty}`,
+        `Bounty must in range ${Constants.minBounty} - ${Constants.maxBounty}`
       );
     }
 
@@ -79,7 +80,7 @@ const createQuestion = async (req: IUserRequest, res: Response) => {
       diffDays > Constants.maxBountyDueDate
     ) {
       throw new BadRequestError(
-        ` Due date at least ${Constants.minBountyDueDate} day(s) and maximum ${Constants.maxBountyDueDate} days`,
+        ` Due date at least ${Constants.minBountyDueDate} day(s) and maximum ${Constants.maxBountyDueDate} days`
       );
     }
 
@@ -118,15 +119,78 @@ const createQuestion = async (req: IUserRequest, res: Response) => {
   }
 };
 
+const searchWithTitle = async (
+  page: number,
+  limit: number,
+  title: string,
+  queryString: any,
+  projection: any
+) => {
+  const selectOption = projection;
+
+  const totalQuestion = await Question.aggregate([
+    {
+      $search: {
+        index: "questionTitle",
+        text: {
+          path: "questionTitle",
+          query: decodeURIComponent(title),
+        },
+      },
+    },
+    { $match: queryString },
+    { $count: "total" },
+  ]);
+
+  const total = totalQuestion[0].total;
+
+  const totalPages =
+    total % limit === 0
+      ? Math.floor(total / limit)
+      : Math.floor(total / limit) + 1;
+
+  const questions = await Question.aggregate([
+    {
+      $search: {
+        index: "questionTitle",
+        text: {
+          path: "questionTitle",
+          query: decodeURIComponent(title),
+        },
+      },
+    },
+    { $match: queryString },
+    { $addFields: { score: { $meta: "searchScore" } } },
+    { $skip: (page - 1) * limit },
+    { $limit: limit },
+    { $project: selectOption },
+  ]);
+
+  await Question.populate(questions, {
+    path: "questionTag",
+    select: { tagName: 1 },
+  });
+  await Question.populate(questions, {
+    path: "userId",
+    select: { customerName: 1 },
+  });
+  return {
+    questions,
+    totalPages,
+  };
+};
+
 const getQuestions = async (req: Request, res: Response) => {
   const query = req.query as IQuery;
   const page = parseInt(query.page!) || Constants.defaultPageNumber;
   const limit = parseInt(query.limit!) || Constants.defaultLimit;
   const tag = query.tag;
   const selectWith = query.selectWith?.toLowerCase().trim() || "all";
+  const title = query.title;
 
   //Handle with Query Parameters
   var queryString: any = { questionStatus: 1 };
+  let projection = { questionContent: 0, __v: 0 };
 
   //Checking selectWith option
   if (selectWith === "bounty") {
@@ -142,6 +206,23 @@ const getQuestions = async (req: Request, res: Response) => {
     queryString.questionTag = { $in: tagIdList };
   }
 
+  if (title) {
+    const { questions, totalPages } = await searchWithTitle(
+      page,
+      limit,
+      title,
+      queryString,
+      projection
+    );
+
+    return res.status(StatusCodes.OK).json({
+      totalPages,
+      page,
+      limit,
+      questions,
+    });
+  }
+
   const total = await Question.countDocuments(queryString);
   const totalPages =
     total % limit === 0
@@ -154,6 +235,7 @@ const getQuestions = async (req: Request, res: Response) => {
     .limit(limit)
     .populate("questionTag", "tagName")
     .populate("userId", "customerName")
+    .projection(projection)
     .lean();
 
   return res.status(StatusCodes.OK).json({
@@ -228,7 +310,7 @@ const chooseBestAnswer = async (req: IUserRequest, res: Response) => {
     //Can't change best answer if this is bounty question
     if (question.questionBounty > 0) {
       throw new BadRequestError(
-        "Can't change best answer of bountied question",
+        "Can't change best answer of bountied question"
       );
     }
 
@@ -309,7 +391,7 @@ const deleteQuestion = async (req: IUserRequest, res: Response) => {
   question.questionTag.map(async (tag: string) => {
     let tags = await QuestionTagModel.updateOne(
       { _id: tag },
-      { $inc: { totalQuestion: -1 } },
+      { $inc: { totalQuestion: -1 } }
     );
 
     if (!tags) {
@@ -389,7 +471,7 @@ const rebountyQuestion = async (req: IUserRequest, res: Response) => {
     newBounty > Constants.maxBounty
   ) {
     throw new BadRequestError(
-      `Bounty must in range ${Constants.minBounty} - ${Constants.maxBounty}`,
+      `Bounty must in range ${Constants.minBounty} - ${Constants.maxBounty}`
     );
   }
 
@@ -409,7 +491,7 @@ const rebountyQuestion = async (req: IUserRequest, res: Response) => {
     diffDays > Constants.maxBountyDueDate
   ) {
     throw new BadRequestError(
-      `Due date at least ${Constants.minBountyDueDate} day(s) and maximum ${Constants.maxBountyDueDate} days from today`,
+      `Due date at least ${Constants.minBountyDueDate} day(s) and maximum ${Constants.maxBountyDueDate} days from today`
     );
   }
 
