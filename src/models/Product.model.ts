@@ -54,6 +54,14 @@ const ProductSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    allTimeView: {
+      type: Number,
+      default: 0,
+    },
+    deleteFlagged: {
+      type: Number,
+      default: 0,
+    },
   },
   { timestamps: true },
 );

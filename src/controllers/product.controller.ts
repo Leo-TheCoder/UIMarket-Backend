@@ -96,7 +96,7 @@ export const getAllProducts = async (req: Request, res: Response) => {
       productStatus: 1,
       ...filterObj,
     },
-    projectionProductList
+    projectionProductList,
   )
     .sort(sortObj)
     .skip((page - 1) * limit)
@@ -160,11 +160,11 @@ const findByCategory = async (req: Request, res: Response) => {
     .populate({ path: "productCategory", select: ["categoryName"] })
     .lean();
 
-    const productsResult = products.map((product) => {
-      //get first picture
-      product.productPicture = product.productPicture[0];
-      return product;
-    });
+  const productsResult = products.map((product) => {
+    //get first picture
+    product.productPicture = product.productPicture[0];
+    return product;
+  });
 
   return res.status(StatusCodes.OK).json({
     totalPages,
@@ -175,10 +175,13 @@ const findByCategory = async (req: Request, res: Response) => {
 };
 
 const findById = async (req: Request, res: Response) => {
-  const product = await ProductModel.find({
-    _id: req.params.productId,
-    productStatus: 1,
-  }).lean();
+  const product = await ProductModel.findByIdAndUpdate(
+    {
+      _id: req.params.productId,
+      productStatus: 1,
+    },
+    { $inc: { allTimeView: 1 } },
+  );
 
   if (!product) {
     throw new NotFoundError(ErrorMessage.ERROR_INVALID_PRODUCT_ID);
@@ -208,7 +211,7 @@ const findByName = async (req: Request, res: Response) => {
         },
       },
     },
-    { $match: { productStatus: 1 , ...filterObj} },
+    { $match: { productStatus: 1, ...filterObj } },
     { $count: "total" },
   ]);
   const total = totalProduct[0].total;
@@ -233,7 +236,7 @@ const findByName = async (req: Request, res: Response) => {
     { $skip: (page - 1) * limit },
     { $limit: limit },
     // { $sort: sortObj}
-    { $project: projectionProductList},
+    { $project: projectionProductList },
     {
       $lookup: {
         from: "categories",
@@ -312,11 +315,11 @@ const getProductsByShop = async (req: Request, res: Response) => {
     .populate({ path: "productCategory", select: ["categoryName"] })
     .lean();
 
-    const productsResult = products.map((product) => {
-      //get first picture
-      product.productPicture = product.productPicture[0];
-      return product;
-    });
+  const productsResult = products.map((product) => {
+    //get first picture
+    product.productPicture = product.productPicture[0];
+    return product;
+  });
 
   return res.status(StatusCodes.OK).json({
     totalPages,
