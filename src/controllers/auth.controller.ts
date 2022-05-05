@@ -185,43 +185,6 @@ export {
   resetPassword,
 };
 
-// export const googleLogin = async (req: Request, res: Response) => {
-//   const { customerName, googleId, customerEmail, customerAvatar } = req.body;
-
-//   if (!customerName || !googleId || !customerEmail) {
-//     throw new BadRequestError(ErrorMessage.ERROR_MISSING_BODY);
-//   }
-
-//   let user = await UserModel.findOne({ customerEmail });
-//   if (!user) {
-//     user = new UserModel();
-//     await user.createAccountWithGoogleID(
-//       customerName,
-//       googleId,
-//       customerEmail,
-//       customerAvatar,
-//     );
-// } else {
-//   if (user.doesAccountCreatedWithGoogle()) {
-//     //Compare this googleId with googleId in db
-//     if (!user.verifyGoogleID(googleId)) {
-//       throw new UnauthenticatedError(ErrorMessage.ERROR_GOOGLE_INVALID);
-//     }
-//   } else {
-//     await user.updateAccountWithGoogle(googleId, customerAvatar);
-//   }
-// }
-
-// const accessToken = user.createJWT();
-// const refressToken = await user.createRefreshToken();
-// const userObj = JSON.parse(JSON.stringify(user));
-// delete userObj.customerPassword;
-// delete userObj.authenToken;
-// delete userObj.refreshToken;
-
-//   res.status(StatusCodes.OK).json({ user: userObj, accessToken, refressToken });
-// };
-
 export const googleLogin = async (req: Request, res: Response) => {
   const client = new OAuth2Client(GOOGLE_CLIENT_ID);
   const token = req.body.tokenId;
