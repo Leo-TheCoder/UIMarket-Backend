@@ -8,11 +8,6 @@ const OrderSchema = new mongoose.Schema(
       required: [true, "Please provide user ID"],
       immutable: true,
     },
-    billingEmail: {
-      type: String,
-      required: [true, "Please provide email to receive product"],
-      immutable: true,
-    },
     productList: [
       {
         shop: {
