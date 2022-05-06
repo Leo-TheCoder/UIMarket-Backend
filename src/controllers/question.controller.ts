@@ -235,13 +235,12 @@ const getQuestions = async (req: Request, res: Response) => {
       ? Math.floor(total / limit)
       : Math.floor(total / limit) + 1;
 
-  const questions = await Question.find(queryString)
+  const questions = await Question.find(queryString, projection)
     .sort({ questionBounty: -1, totalView: -1 })
     .skip((page - 1) * limit)
     .limit(limit)
     .populate("questionTag", "tagName")
     .populate("userId", "customerName")
-    .projection(projection)
     .lean();
 
   return res.status(StatusCodes.OK).json({
