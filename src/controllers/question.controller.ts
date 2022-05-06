@@ -142,6 +142,12 @@ const searchWithTitle = async (
     { $count: "total" },
   ]);
 
+  if(totalQuestion.length < 1) {
+    return {
+      questions: [],
+      totalPages: 0,
+    }
+  } 
   const total = totalQuestion[0].total;
 
   const totalPages =
