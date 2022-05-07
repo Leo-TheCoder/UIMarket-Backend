@@ -214,6 +214,15 @@ const findByName = async (req: Request, res: Response) => {
     { $match: { productStatus: 1, ...filterObj } },
     { $count: "total" },
   ]);
+
+  if(totalProduct.length < 1) {
+    return res.status(StatusCodes.OK).json({
+    totalPages: 0,
+    page,
+    limit,
+    products: []
+    })
+  }
   const total = totalProduct[0].total;
 
   const totalPages =

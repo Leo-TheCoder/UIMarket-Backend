@@ -44,7 +44,7 @@ const createShop = async (req: IUserRequest, res: Response) => {
     const user = await UserModel.findByIdAndUpdate(
       userId,
       { shopId: newShop._id },
-      { new: true },
+      { new: true }
     );
 
     const token = user.createJWT();
@@ -225,6 +225,15 @@ const getShopByName = async (req: IUserRequest, res: Response) => {
     { $match: { shopStatus: 1 } },
     { $count: "total" },
   ]);
+
+  if (totalShop.length < 1) {
+    return res.status(StatusCodes.OK).json({
+      totalPages: 0,
+      page,
+      limit,
+      shops: [],
+    });
+  }
   const total = totalShop[0].total;
 
   const totalPages =
