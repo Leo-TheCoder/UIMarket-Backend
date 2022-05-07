@@ -25,6 +25,11 @@ const OrderSchema = new mongoose.Schema(
           required: [true, "Please provide product price"],
           min: 0,
         },
+        isReview: {
+          type: Number,
+          default: 0,
+          enum: [0, 1],
+        },
         _id: false,
       },
     ],
@@ -37,11 +42,11 @@ const OrderSchema = new mongoose.Schema(
       ref: "Coin Transaction",
       required: [false, "Please provide transaction Id"],
     },
-    invoiceStatus: {
-      type: String,
-      default: "Paid",
-      enum: ["Paid", "Reviewed"],
-    },
+    // invoiceStatus: {
+    //   type: String,
+    //   default: "Paid",
+    //   enum: ["Paid", "Reviewed"],
+    // },
   },
   { timestamps: true },
 );

@@ -28,7 +28,10 @@ const errorHandlerMiddleware: ErrorRequestHandler = (
   if (err.code === 11000) {
     return res
       .status(StatusCodes.BAD_REQUEST)
-      .json({ msg: ErrorMessage.ERROR_AUTHENTICATION_DUPLICATE });
+      .json({
+        msg: ErrorMessage.ERROR_AUTHENTICATION_DUPLICATE,
+        mongooseMsg: err.message,
+      });
   }
 
   if (err.name === "ValidationError") {

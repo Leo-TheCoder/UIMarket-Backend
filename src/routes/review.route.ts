@@ -7,7 +7,7 @@ const router = express.Router();
 //GET Method
 
 //POST Method/
-router.post("/:invoiceId", createReview);
+router.post("/:invoiceId/:productId", createReview);
 //PUT Method
 
 //DELETE Method
