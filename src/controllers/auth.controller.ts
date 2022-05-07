@@ -93,8 +93,20 @@ const verifyEmailCode = async (req: Request, res: Response) => {
   const user = await User.findById(userId);
   if (user.verifyToken(verifyCode)) {
     user.customerStatus = 1;
+
+    //create JWT for authentication
+    const token = user.createJWT();
+    const refreshToken = await user.createRefreshToken();
     await user.save();
-    return res.status(StatusCodes.OK).json({ msg: "Verify successfully!" });
+
+    const userObj = Object.assign({}, user._doc);
+    delete userObj.customerPassword;
+    delete userObj.authenToken;
+    delete userObj.refreshToken;
+
+    return res
+      .status(StatusCodes.OK)
+      .json({ user: userObj, token, refreshToken });
   }
 
   throw new UnauthenticatedError(ErrorMessage.ERROR_FAILED);
