@@ -61,11 +61,11 @@ const uploadProduct = async (req: IUserRequest, res: Response) => {
     throw new UnauthenticatedError(ErrorMessage.ERROR_AUTHENTICATION_INVALID);
   }
 
-  const { categoryId } = req.body;
-  if (!categoryId) {
+  const { productCategory } = req.body;
+  if (!productCategory) {
     throw new BadRequestError(ErrorMessage.ERROR_MISSING_BODY);
   }
-  const category = await CategoryModel.findById(categoryId);
+  const category = await CategoryModel.findById(productCategory);
   if (!category) {
     throw new NotFoundError(ErrorMessage.ERROR_INVALID_CATEGORY_ID);
   }
