@@ -37,12 +37,10 @@ const ProductSchema = new mongoose.Schema(
         required: [true, "Please provide at least 1 picture of product"],
       },
     ],
-    productFiles: [
-      {
-        type: String,
-        required: [true, "Please provide at least 1 product file"],
-      },
-    ],
+    productFile: {
+      type: String,
+      required: [true, "Please provide at least 1 product file"],
+    },
     productStatus: {
       type: Number,
       default: 1,
