@@ -5,6 +5,7 @@ import Shop from "../models/Shop.model";
 import * as Constants from "../constants";
 import ShopModel from "../models/Shop.model";
 import ProductModel from "../models/Product.model";
+import CategoryModel from "../models/Category.model";
 import UserModel from "../models/User.model";
 import {
   BadRequestError,
@@ -60,9 +61,21 @@ const uploadProduct = async (req: IUserRequest, res: Response) => {
     throw new UnauthenticatedError(ErrorMessage.ERROR_AUTHENTICATION_INVALID);
   }
 
+  const { categoryId } = req.body;
+  if (!categoryId) {
+    throw new BadRequestError(ErrorMessage.ERROR_MISSING_BODY);
+  }
+  const category = await CategoryModel.findById(categoryId);
+  if (!category) {
+    throw new NotFoundError(ErrorMessage.ERROR_INVALID_CATEGORY_ID);
+  }
+
   const product = await ProductModel.create({ ...req.body, shopId: shopId });
 
   if (product) {
+    category.totalProduct += 1;
+    await category.save();
+
     res.status(StatusCodes.CREATED).json({ product });
   } else {
     throw new InternalServerError(ErrorMessage.ERROR_FAILED);

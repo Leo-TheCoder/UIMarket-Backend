@@ -31,10 +31,16 @@ const ProductSchema = new mongoose.Schema(
       ref: "Category",
       required: [true, "Please provide product category"],
     },
-    productPicture: [
+    productPictures: [
       {
         type: String,
         required: [true, "Please provide at least 1 picture of product"],
+      },
+    ],
+    productFiles: [
+      {
+        type: String,
+        required: [true, "Please provide at least 1 product file"],
       },
     ],
     productStatus: {
