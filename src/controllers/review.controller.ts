@@ -29,14 +29,21 @@ const ratingProduct = async (productId: any, rating: any) => {
 };
 
 export const createReview = async (req: IUserRequest, res: Response) => {
-  //Checking this invoice is reviewed or not
-  const invoice = await InvoiceModel.findOne({
+  //Checking this invoice is valid or not
+  let invoice = await InvoiceModel.findOne({
     _id: req.params.invoiceId,
-    invoiceStatus: "Paid",
+    // "productList.productId": req.params.productId,
   });
-
   if (!invoice) {
     throw new NotFoundError(ErrorMessage.ERROR_INVALID_INVOICE_ID);
+  }
+
+  //Checking valid product
+  const product = invoice.productList.findIndex(
+    (x: any) => String(x.product) == req.params.productId && x.isReview == 0,
+  );
+  if (!product) {
+    throw new NotFoundError(ErrorMessage.ERROR_INVALID_PRODUCT_ID);
   }
 
   //Checking user of this review
@@ -45,56 +52,28 @@ export const createReview = async (req: IUserRequest, res: Response) => {
     throw new ForbiddenError(ErrorMessage.ERROR_FORBIDDEN);
   }
 
-  //Checking body
-  const { productList } = invoice;
-  const productListReq = req.body.productList;
-
-  if (!productListReq) {
-    throw new BadRequestError(ErrorMessage.ERROR_MISSING_BODY);
-  }
-
-  //Remove duplicate productId
-  const seen = new Set();
-  const filteredArr = productListReq.filter((el: any) => {
-    const duplicate = seen.has(el.productId);
-    seen.add(el.productId);
-    return !duplicate;
+  //Create review
+  const review = await ReviewModel.create({
+    user: userId,
+    invoice: req.params.invoiceId,
+    product: req.params.productId,
+    ...req.body,
   });
 
-  for (let i = 0; i < productList.length; i++) {
-    let product = String(productList[i].product);
-    let productReq = filteredArr.find((x: any) => x.productId === product);
-
-    let content = " ";
-    let rating = 5;
-    let picture = [];
-
-    if (productReq) {
-      content = productReq.review;
-      rating = productReq.rating;
-      picture = productReq.picture;
-    }
-
-    //Create review
-    const review = await ReviewModel.create({
-      user: userId,
-      invoice: req.params.invoiceId,
-      product: product,
-      productReview: content,
-      productRating: rating,
-      reviewPicture: picture,
-    });
-
-    if (review) {
-      const result = await ratingProduct(product, rating);
-      if (result == 0) {
-        throw new InternalServerError(ErrorMessage.ERROR_FAILED);
-      }
-    }
+  if (review) {
+    invoice.productList[product].isReview = 1;
+    await invoice.save();
+    await ratingProduct(req.params.productId, req.body.productRating);
+    res.status(StatusCodes.CREATED).json({ review });
+  } else {
+    throw new InternalServerError(ErrorMessage.ERROR_FAILED);
   }
 
-  invoice.invoiceStatus = "Reviewed";
-  const result = await invoice.save();
-
-  res.status(StatusCodes.CREATED).json({ result });
+  // //Remove duplicate productId
+  // const seen = new Set();
+  // const filteredArr = productListReq.filter((el: any) => {
+  //   const duplicate = seen.has(el.productId);
+  //   seen.add(el.productId);
+  //   return !duplicate;
+  // });
 };
