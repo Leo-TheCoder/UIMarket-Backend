@@ -338,44 +338,6 @@ const getProductsByShop = async (req: Request, res: Response) => {
   });
 };
 
-const getProductsByShop = async (req: Request, res: Response) => {
-  const shopId = req.params.shopId;
-  const query = req.query as IQuery;
-  const page = parseInt(query.page!) || Constants.defaultPageNumber;
-  const limit = parseInt(query.limit!) || Constants.defaultLimit;
-
-  //Check shop ID
-  const shop = await ShopModel.find({ _id: shopId, shopStatus: 1 }).lean();
-  if (!shop) {
-    throw new NotFoundError(ErrorMessage.ERROR_INVALID_SHOP_ID);
-  }
-
-  //Get total product
-  const total = await ProductModel.countDocuments({
-    shopId: shopId,
-    productStatus: 1,
-  }).lean();
-
-  const totalPages =
-    total % limit === 0
-      ? Math.floor(total / limit)
-      : Math.floor(total / limit) + 1;
-
-  //Get product
-  const products = await ProductModel.find({ shopId: shopId, productStatus: 1 })
-    .skip((page - 1) * limit)
-    .limit(limit)
-    .populate({ path: "productCategory", select: ["categoryName"] })
-    .lean();
-
-  return res.status(StatusCodes.OK).json({
-    totalPages,
-    page,
-    limit,
-    products,
-  });
-};
-
 export {
   findByCategory,
   findById,
