@@ -4,12 +4,14 @@ import {
   findByCategory,
   findById,
   findByName,
+  getAllProducts,
   getProductsByShop,
 } from "../controllers/product.controller";
 
 const router = express.Router();
 
 //GET Method
+router.get("/", getAllProducts);
 router.get("/info/:productId", findById);
 router.get("/category/:categoryId", findByCategory);
 router.get("/search/:productName", findByName);

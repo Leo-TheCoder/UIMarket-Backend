@@ -9,7 +9,7 @@ export const ERROR_AUTHENTICATION_INVALID = "invalid-authentication";
 export const ERROR_AUTHENTICATION_EXPIRED = "expired-access-token";
 export const ERROR_REFRESH_TOKEN_REVOKED = "revoked-refresh-token";
 export const ERROR_INVALID_ACCESSS_TOKEN = "invalid-access-token";
-export const ERROR_AUTHENTICATION_DUPLICATE = "email-existed";
+export const ERROR_AUTHENTICATION_DUPLICATE = "key-duplicated";
 export const ERROR_ACCOUNT_INACTIVED = "account-inactived";
 export const ERROR_GOOGLE_INVALID = "invalid-googleid";
 export const ERROR_PAYPAL_INVALID = "invalid-paypal";
@@ -29,6 +29,10 @@ export const ERROR_GONE = "already-gone";
 export const ERROR_INVALID_CATEGORY_ID = "invalid-category-id";
 export const ERROR_INVALID_PRODUCT_ID = "invalid-product-id";
 export const ERROR_INVALID_SHOP_ID = "invalid-shop-id";
+export const ERROR_INVALID_INVOICE_ID = "invalid-invoice-id";
 
 //Transaction
 export const ERROR_INVALID_AMOUNT = "invalid-amount";
+
+//License
+export const ERROR_LICENSE_EXISTED = "license-existed";

@@ -7,6 +7,9 @@ const CoinTransactionSchema = new mongoose.Schema(
       ref: "Customer",
       required: [true, "Please provide user id"],
     },
+    reason: {
+      type: String,
+    },
     currentAmount: {
       type: Number,
       required: true,

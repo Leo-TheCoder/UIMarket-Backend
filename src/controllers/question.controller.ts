@@ -1,4 +1,18 @@
+//Library
 import { StatusCodes } from "http-status-codes";
+import { Request, Response } from "express";
+import { IUserRequest } from "../types/express";
+import * as Constants from "../constants";
+import { getStatusVote } from "../utils/statusVote";
+import { pointRollBack, pointTransaction } from "../utils/currencyTransaction";
+
+//Model
+import Question from "../models/Question.model";
+import QuestionTagModel from "../models/QuestionTag.model";
+import AnswerModel from "../models/Answer.model";
+
+//Error
+import * as ErrorMessage from "../errors/error_message";
 import {
   BadRequestError,
   ForbiddenError,
@@ -6,15 +20,7 @@ import {
   InternalServerError,
   NotFoundError,
 } from "../errors";
-import { Request, Response } from "express";
-import { IUserRequest } from "../types/express";
-import Question from "../models/Question.model";
-import QuestionTagModel from "../models/QuestionTag.model";
-import * as Constants from "../constants";
-import AnswerModel from "../models/Answer.model";
-import { getStatusVote } from "../utils/statusVote";
-import { pointRollBack, pointTransaction } from "../utils/currencyTransaction";
-import * as ErrorMessage from "../errors/error_message";
+
 interface IQuery {
   page?: string;
   limit?: string;
@@ -31,8 +37,8 @@ const createTagList = async (tagList: [String]) => {
       QuestionTagModel.findOneAndUpdate(
         { tagName: tag },
         { $inc: { totalQuestion: +1 } },
-        { new: true, upsert: true }
-      )
+        { new: true, upsert: true },
+      ),
     );
   }
   const tagObjects = await Promise.all(promises);
@@ -61,7 +67,7 @@ const createQuestion = async (req: IUserRequest, res: Response) => {
       req.body.questionBounty > Constants.maxBounty
     ) {
       throw new BadRequestError(
-        `Bounty must in range ${Constants.minBounty} - ${Constants.maxBounty}`
+        `Bounty must in range ${Constants.minBounty} - ${Constants.maxBounty}`,
       );
     }
 
@@ -80,7 +86,7 @@ const createQuestion = async (req: IUserRequest, res: Response) => {
       diffDays > Constants.maxBountyDueDate
     ) {
       throw new BadRequestError(
-        ` Due date at least ${Constants.minBountyDueDate} day(s) and maximum ${Constants.maxBountyDueDate} days`
+        ` Due date at least ${Constants.minBountyDueDate} day(s) and maximum ${Constants.maxBountyDueDate} days`,
       );
     }
 
@@ -88,7 +94,11 @@ const createQuestion = async (req: IUserRequest, res: Response) => {
 
     //Checking valid balance
     const changeAmount = req.body.questionBounty * -1;
-    const transaction = await pointTransaction(userId, changeAmount);
+    const transaction = await pointTransaction(
+      userId,
+      changeAmount,
+      "Create bounty question",
+    );
     if (transaction) {
       req.body.bountyActive = 1;
     }
@@ -124,7 +134,7 @@ const searchWithTitle = async (
   limit: number,
   title: string,
   queryString: any,
-  projection: any
+  projection: any,
 ) => {
   const selectOption = projection;
 
@@ -142,12 +152,12 @@ const searchWithTitle = async (
     { $count: "total" },
   ]);
 
-  if(totalQuestion.length < 1) {
+  if (totalQuestion.length < 1) {
     return {
       questions: [],
       totalPages: 0,
-    }
-  } 
+    };
+  }
   const total = totalQuestion[0].total;
 
   const totalPages =
@@ -218,7 +228,7 @@ const getQuestions = async (req: Request, res: Response) => {
       limit,
       title,
       queryString,
-      projection
+      projection,
     );
 
     return res.status(StatusCodes.OK).json({
@@ -315,7 +325,7 @@ const chooseBestAnswer = async (req: IUserRequest, res: Response) => {
     //Can't change best answer if this is bounty question
     if (question.questionBounty > 0) {
       throw new BadRequestError(
-        "Can't change best answer of bountied question"
+        "Can't change best answer of bountied question",
       );
     }
 
@@ -366,7 +376,11 @@ const chooseBestAnswer = async (req: IUserRequest, res: Response) => {
       pointReward = question.questionBounty;
     }
 
-    const transaction = await pointTransaction(answerOwner, pointReward);
+    const transaction = await pointTransaction(
+      answerOwner,
+      pointReward,
+      "Best answer for question",
+    );
     question.bestAnswer = answer._id;
     const resultQuestion = await question.save();
 
@@ -396,7 +410,7 @@ const deleteQuestion = async (req: IUserRequest, res: Response) => {
   question.questionTag.map(async (tag: string) => {
     let tags = await QuestionTagModel.updateOne(
       { _id: tag },
-      { $inc: { totalQuestion: -1 } }
+      { $inc: { totalQuestion: -1 } },
     );
 
     if (!tags) {
@@ -476,7 +490,7 @@ const rebountyQuestion = async (req: IUserRequest, res: Response) => {
     newBounty > Constants.maxBounty
   ) {
     throw new BadRequestError(
-      `Bounty must in range ${Constants.minBounty} - ${Constants.maxBounty}`
+      `Bounty must in range ${Constants.minBounty} - ${Constants.maxBounty}`,
     );
   }
 
@@ -496,7 +510,7 @@ const rebountyQuestion = async (req: IUserRequest, res: Response) => {
     diffDays > Constants.maxBountyDueDate
   ) {
     throw new BadRequestError(
-      `Due date at least ${Constants.minBountyDueDate} day(s) and maximum ${Constants.maxBountyDueDate} days from today`
+      `Due date at least ${Constants.minBountyDueDate} day(s) and maximum ${Constants.maxBountyDueDate} days from today`,
     );
   }
 
@@ -506,7 +520,11 @@ const rebountyQuestion = async (req: IUserRequest, res: Response) => {
   question.awardDueDate = awardDueDate.setDate(awardDueDate.getDate() + 14);
   question.updateAt = new Date();
 
-  const transaction = await pointTransaction(userId, newBounty * -1);
+  const transaction = await pointTransaction(
+    userId,
+    newBounty * -1,
+    "Rebounty for question",
+  );
   if (!transaction) {
     throw new InternalServerError(ErrorMessage.ERROR_FAILED);
   } else {

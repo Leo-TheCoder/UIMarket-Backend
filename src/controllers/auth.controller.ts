@@ -77,7 +77,7 @@ const loginWithToken = async (req: IUserRequest, res: Response) => {
 
   const user = await User.find(
     { _id: userId },
-    { customerPassword: 0, authenToken: 0 }
+    { customerPassword: 0, authenToken: 0 },
   );
 
   if (!user) {
@@ -219,7 +219,7 @@ export const googleLogin = async (req: Request, res: Response) => {
   const customerAvatar = payload.picture;
 
   let user = await UserModel.findOne({ customerEmail });
-  if(!user) {
+  if (!user) {
     user = new UserModel();
     await user.createAccountWithGoogleID(
       customerName,
