@@ -33,3 +33,6 @@ export const ERROR_INVALID_INVOICE_ID = "invalid-invoice-id";
 
 //Transaction
 export const ERROR_INVALID_AMOUNT = "invalid-amount";
+
+//License
+export const ERROR_LICENSE_EXISTED = "license-existed";
