@@ -176,7 +176,11 @@ const upvoteObject = async (
           };
       },
     );
-    const transaction = await pointTransaction(userId, Constants.upvoteAward);
+    const transaction = await pointTransaction(
+      userId,
+      Constants.upvoteAward,
+      "Upvote for question",
+    );
     return {
       status: StatusCodes.OK,
       msg: "UPVOTED",
@@ -188,6 +192,7 @@ const upvoteObject = async (
       const transaction = await pointTransaction(
         userId,
         Constants.upvoteAward * -1,
+        "Unvote for question",
       );
       return {
         status: StatusCodes.OK,
