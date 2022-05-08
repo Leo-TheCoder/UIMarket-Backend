@@ -8,6 +8,7 @@ import AnswerModel from "../models/Answer.model";
 import CommentModel from "../models/Comment.model";
 import { pointRollBack, pointTransaction } from "../utils/currencyTransaction";
 import * as Constants from "../constants";
+import * as ErrorMessage from "../errors/error_message";
 
 const upvote = async (req: IUserRequest, res: Response) => {
   const { type, questionId, objectId } = req.body;
@@ -16,7 +17,7 @@ const upvote = async (req: IUserRequest, res: Response) => {
   //Trigger solution
   const validType: Array<string> = ["Question", "Comment", "Answer"];
   if (!type) {
-    throw new BadRequestError("Please provide type of object");
+    throw new BadRequestError(ErrorMessage.ERROR_MISSING_BODY);
   } else if (!validType.includes(type)) {
     throw new BadRequestError("Valid types are: Question, Answer, and Comment");
   }
@@ -24,14 +25,14 @@ const upvote = async (req: IUserRequest, res: Response) => {
   //Checking questionId is available or not
   const question = await QuestionModel.findById(questionId);
   if (!question) {
-    throw new BadRequestError("Invalid Question ID");
+    throw new BadRequestError(ErrorMessage.ERROR_INVALID_QUESTION_ID);
   }
 
   //Checking objectId
   switch (type) {
     case "Question":
       if (questionId != objectId) {
-        throw new BadRequestError("Invalid Question ID");
+        throw new BadRequestError(ErrorMessage.ERROR_INVALID_QUESTION_ID);
       }
       break;
 
@@ -42,7 +43,7 @@ const upvote = async (req: IUserRequest, res: Response) => {
         answerStatus: 1,
       });
       if (answer.length === 0) {
-        throw new BadRequestError("Invalid Answer");
+        throw new BadRequestError(ErrorMessage.ERROR_INVALID_ANSWER_ID);
       }
       break;
 
@@ -53,7 +54,7 @@ const upvote = async (req: IUserRequest, res: Response) => {
         commentStatus: 1,
       });
       if (comment.length === 0) {
-        throw new BadRequestError("Invalid Comment");
+        throw new BadRequestError(ErrorMessage.ERROR_INVALID_COMMENT_ID);
       }
       break;
   }
@@ -175,7 +176,11 @@ const upvoteObject = async (
           };
       },
     );
-    const transaction = await pointTransaction(userId, Constants.upvoteAward);
+    const transaction = await pointTransaction(
+      userId,
+      Constants.upvoteAward,
+      "Upvote for question",
+    );
     return {
       status: StatusCodes.OK,
       msg: "UPVOTED",
@@ -187,6 +192,7 @@ const upvoteObject = async (
       const transaction = await pointTransaction(
         userId,
         Constants.upvoteAward * -1,
+        "Unvote for question",
       );
       return {
         status: StatusCodes.OK,

@@ -5,14 +5,18 @@ import Shop from "../models/Shop.model";
 import * as Constants from "../constants";
 import ShopModel from "../models/Shop.model";
 import ProductModel from "../models/Product.model";
+import CategoryModel from "../models/Category.model";
 import UserModel from "../models/User.model";
 import {
   BadRequestError,
   ForbiddenError,
   GoneError,
+  InternalServerError,
   NotFoundError,
   UnauthenticatedError,
 } from "../errors";
+import * as ErrorMessage from "../errors/error_message";
+import InvoiceModel from "../models/Invoice.model";
 
 interface IQuery {
   page?: string;
@@ -20,15 +24,15 @@ interface IQuery {
   selectWith?: string;
 }
 
-const createShop = async (req: IUserRequest, res: Response) => {
+export const createShop = async (req: IUserRequest, res: Response) => {
   const { userId } = req.user!;
   const shop = await Shop.findOne({ userId: userId }).lean();
 
   if (shop) {
     if (shop.shopStatus == 0) {
-      throw new GoneError("Your shop has been closed by some reasons");
+      throw new GoneError(ErrorMessage.ERROR_GONE);
     } else {
-      throw new ForbiddenError("This user has already owned a shop");
+      throw new ForbiddenError(ErrorMessage.ERROR_FORBIDDEN);
     }
   }
 
@@ -47,41 +51,54 @@ const createShop = async (req: IUserRequest, res: Response) => {
     const token = user.createJWT();
     res.status(StatusCodes.CREATED).json({ newShop, token });
   } else {
-    res.status(StatusCodes.INTERNAL_SERVER_ERROR).send("Create shop failed");
+    throw new InternalServerError(ErrorMessage.ERROR_FAILED);
   }
 };
 
-const uploadProduct = async (req: IUserRequest, res: Response) => {
+export const uploadProduct = async (req: IUserRequest, res: Response) => {
   const { shopId } = req.user!;
 
   if (!shopId) {
-    throw new UnauthenticatedError("Invalid credential");
+    throw new UnauthenticatedError(ErrorMessage.ERROR_AUTHENTICATION_INVALID);
+  }
+
+  const { productCategory } = req.body;
+  if (!productCategory) {
+    throw new BadRequestError(ErrorMessage.ERROR_MISSING_BODY);
+  }
+  const category = await CategoryModel.findById(productCategory);
+  if (!category) {
+    throw new NotFoundError(ErrorMessage.ERROR_INVALID_CATEGORY_ID);
   }
 
   const product = await ProductModel.create({ ...req.body, shopId: shopId });
 
   if (product) {
+    category.totalProduct += 1;
+    await category.save();
+
     res.status(StatusCodes.CREATED).json({ product });
   } else {
-    res.status(StatusCodes.INTERNAL_SERVER_ERROR);
+    throw new InternalServerError(ErrorMessage.ERROR_FAILED);
   }
 };
 
-const deleteProduct = async (req: IUserRequest, res: Response) => {
+export const deleteProduct = async (req: IUserRequest, res: Response) => {
   const { shopId } = req.user!;
   const product = await ProductModel.findOne({ _id: req.params.productId });
 
   if (!shopId) {
-    throw new UnauthenticatedError("Invalid credential");
+    throw new UnauthenticatedError(ErrorMessage.ERROR_AUTHENTICATION_INVALID);
   } else if (!product) {
-    throw new BadRequestError("Invalid product Id");
+    throw new BadRequestError(ErrorMessage.ERROR_INVALID_PRODUCT_ID);
   } else if (shopId != product.shopId) {
-    throw new ForbiddenError("Only owner of this shop can do this action");
-  } else if (product.productStatus === 0) {
-    throw new GoneError("This product has already deleted");
+    throw new ForbiddenError(ErrorMessage.ERROR_FORBIDDEN);
+  } else if (product.deleteFlagged == 1) {
+    throw new GoneError(ErrorMessage.ERROR_GONE);
   }
 
   product.productStatus = 0;
+  product.deleteFlagged = 1;
   product.updatedAt = new Date();
 
   const result = await product.save();
@@ -89,11 +106,11 @@ const deleteProduct = async (req: IUserRequest, res: Response) => {
   if (result) {
     res.status(StatusCodes.OK).json({ result });
   } else {
-    res.status(StatusCodes.INTERNAL_SERVER_ERROR);
+    throw new InternalServerError(ErrorMessage.ERROR_FAILED);
   }
 };
 
-const updateProduct = async (req: IUserRequest, res: Response) => {
+export const updateProduct = async (req: IUserRequest, res: Response) => {
   const { shopId } = req.user!;
   const product = await ProductModel.findOne({
     _id: req.params.productId,
@@ -101,11 +118,11 @@ const updateProduct = async (req: IUserRequest, res: Response) => {
   });
 
   if (!shopId) {
-    throw new UnauthenticatedError("Invalid credential");
+    throw new UnauthenticatedError(ErrorMessage.ERROR_AUTHENTICATION_INVALID);
   } else if (!product) {
-    throw new BadRequestError("Invalid product Id");
+    throw new BadRequestError(ErrorMessage.ERROR_INVALID_PRODUCT_ID);
   } else if (shopId != product.shopId) {
-    throw new ForbiddenError("Only owner of this shop can do this action");
+    throw new ForbiddenError(ErrorMessage.ERROR_FORBIDDEN);
   }
 
   product.productName = req.body.productName || product.productName;
@@ -119,15 +136,15 @@ const updateProduct = async (req: IUserRequest, res: Response) => {
   if (result) {
     res.status(StatusCodes.OK).json({ result });
   } else {
-    res.status(StatusCodes.INTERNAL_SERVER_ERROR).send("Updated failed");
+    throw new InternalServerError(ErrorMessage.ERROR_FAILED);
   }
 };
 
-const getAllProduct = async (req: IUserRequest, res: Response) => {
+export const getAllProduct = async (req: IUserRequest, res: Response) => {
   const { shopId } = req.user!;
 
   if (!shopId) {
-    throw new UnauthenticatedError("Invalid credential");
+    throw new UnauthenticatedError(ErrorMessage.ERROR_AUTHENTICATION_INVALID);
   }
 
   const products = await ProductModel
@@ -135,15 +152,15 @@ const getAllProduct = async (req: IUserRequest, res: Response) => {
     .find({ shopId: shopId })
     .populate({ path: "productCategory", select: ["categoryName"] })
     .lean();
-  console.log(products[0].createdAt.toString());
+
   res.status(StatusCodes.OK).json({ products });
 };
 
-const updateShop = async (req: IUserRequest, res: Response) => {
+export const updateShop = async (req: IUserRequest, res: Response) => {
   const { shopId } = req.user!;
 
   if (!shopId) {
-    throw new UnauthenticatedError("Invalid credential");
+    throw new UnauthenticatedError(ErrorMessage.ERROR_AUTHENTICATION_INVALID);
   }
 
   const shop = await ShopModel.findOne({ _id: shopId, shopStatus: 1 });
@@ -157,11 +174,11 @@ const updateShop = async (req: IUserRequest, res: Response) => {
   if (result) {
     res.status(StatusCodes.OK).json({ result });
   } else {
-    res.status(StatusCodes.INTERNAL_SERVER_ERROR).send("Update failed");
+    throw new InternalServerError(ErrorMessage.ERROR_FAILED);
   }
 };
 
-const getShopById = async (req: IUserRequest, res: Response) => {
+export const getShopById = async (req: IUserRequest, res: Response) => {
   var selectOption: any = { __v: 0 };
 
   if (!req.user?.shopId || req.user.shopId != req.params.shopId) {
@@ -179,13 +196,13 @@ const getShopById = async (req: IUserRequest, res: Response) => {
     .lean();
 
   if (!shop) {
-    throw new NotFoundError("Invalid Shop ID");
+    throw new NotFoundError(ErrorMessage.ERROR_INVALID_SHOP_ID);
   } else {
     res.status(StatusCodes.OK).json({ shop });
   }
 };
 
-const getShopByName = async (req: IUserRequest, res: Response) => {
+export const getShopByName = async (req: IUserRequest, res: Response) => {
   const query = req.query as IQuery;
   const page = parseInt(query.page!) || Constants.defaultPageNumber;
   const limit = parseInt(query.limit!) || Constants.defaultLimit;
@@ -210,6 +227,15 @@ const getShopByName = async (req: IUserRequest, res: Response) => {
     { $match: { shopStatus: 1 } },
     { $count: "total" },
   ]);
+
+  if (totalShop.length < 1) {
+    return res.status(StatusCodes.OK).json({
+      totalPages: 0,
+      page,
+      limit,
+      shops: [],
+    });
+  }
   const total = totalShop[0].total;
 
   const totalPages =
@@ -242,13 +268,112 @@ const getShopByName = async (req: IUserRequest, res: Response) => {
   });
 };
 
-export {
-  createShop,
-  updateShop,
-  uploadProduct,
-  deleteProduct,
-  updateProduct,
-  getAllProduct,
-  getShopById,
-  getShopByName,
+export const deactiveProduct = async (req: IUserRequest, res: Response) => {
+  const { shopId } = req.user!;
+  const product = await ProductModel.findOne({
+    _id: req.params.productId,
+    deleteFlagged: 0,
+  });
+
+  if (!shopId) {
+    throw new UnauthenticatedError(ErrorMessage.ERROR_AUTHENTICATION_INVALID);
+  } else if (!product) {
+    throw new BadRequestError(ErrorMessage.ERROR_INVALID_PRODUCT_ID);
+  } else if (shopId != product.shopId) {
+    throw new ForbiddenError(ErrorMessage.ERROR_FORBIDDEN);
+  } else if (product.productStatus == 0) {
+    throw new GoneError(ErrorMessage.ERROR_GONE);
+  }
+
+  product.productStatus = 0;
+  product.updatedAt = new Date();
+
+  const result = await product.save();
+
+  if (result) {
+    res.status(StatusCodes.OK).json({ result });
+  } else {
+    throw new InternalServerError(ErrorMessage.ERROR_FAILED);
+  }
+};
+
+export const activeProduct = async (req: IUserRequest, res: Response) => {
+  const { shopId } = req.user!;
+  const product = await ProductModel.findOne({
+    _id: req.params.productId,
+    deleteFlagged: 0,
+  });
+
+  if (!shopId) {
+    throw new UnauthenticatedError(ErrorMessage.ERROR_AUTHENTICATION_INVALID);
+  } else if (!product) {
+    throw new BadRequestError(ErrorMessage.ERROR_INVALID_PRODUCT_ID);
+  } else if (shopId != product.shopId) {
+    throw new ForbiddenError(ErrorMessage.ERROR_FORBIDDEN);
+  } else if (product.productStatus == 1) {
+    throw new GoneError(ErrorMessage.ERROR_GONE);
+  }
+
+  product.productStatus = 1;
+  product.updatedAt = new Date();
+
+  const result = await product.save();
+
+  if (result) {
+    res.status(StatusCodes.OK).json({ result });
+  } else {
+    throw new InternalServerError(ErrorMessage.ERROR_FAILED);
+  }
+};
+
+const getRevenue = async (invoices: any, productId: any) => {
+  var revenue = 0;
+
+  for (let i = 0; i < invoices.length; i++) {
+    var product = invoices[i].productList.find(
+      (x: any) => String(x.product) == String(productId),
+    );
+    revenue += product.productPrice;
+  }
+  return revenue;
+};
+
+export const getProductStatistic = async (req: IUserRequest, res: Response) => {
+  //Get list of products
+  const products = await ProductModel.find({
+    shopId: req.user!.shopId,
+    deleteFlagged: 0,
+  }).select({ productFile: 0, deleteFlagged: 0, __v: 0 });
+
+  const today = new Date();
+  let L30D = new Date(today.getTime());
+  L30D.setDate(L30D.getDate() - 30);
+
+  var productList = [];
+
+  for (let i = 0; i < products.length; i++) {
+    var last30Days = { totalSold: 0, totalRevenue: 0 };
+    var product = products[i]._doc;
+
+    //Get list of invoice which have current product
+    var invoices = await InvoiceModel.find({
+      productList: { $elemMatch: { product: products[i]._id } },
+    }).select({ productList: 1, _id: 0, createdAt: 1 });
+
+    //Get all time revenue
+    product.allTimeRevenue = await getRevenue(invoices, products[i]._id);
+
+    // Get last 30 days sold and revenues
+    var invoices_L30D = invoices.filter(
+      (x: any) => x.createdAt <= today && x.createdAt >= L30D,
+    );
+
+    last30Days.totalSold = invoices_L30D.length;
+    last30Days.totalRevenue = await getRevenue(invoices_L30D, products[i]._id);
+    product.last30Days = last30Days;
+
+    productList.push(product);
+  }
+
+  return res.status(StatusCodes.OK).json(productList);
 };

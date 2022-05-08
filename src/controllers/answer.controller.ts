@@ -1,9 +1,11 @@
 import { StatusCodes } from "http-status-codes";
 import {
   BadRequestError,
+  CustomError,
   ForbiddenError,
+  GoneError,
+  InternalServerError,
   NotFoundError,
-  UnauthenticatedError,
 } from "../errors";
 import { Request, Response } from "express";
 import { IUserRequest } from "../types/express";
@@ -12,6 +14,7 @@ import Answer from "../models/Answer.model";
 import * as Constants from "../constants";
 import { ObjectId } from "mongodb";
 import { getStatusVote } from "../utils/statusVote";
+import * as ErrorMessage from "../errors/error_message";
 
 interface IQuery {
   page?: string;
@@ -37,7 +40,7 @@ const createAnswer = async (req: IUserRequest, res: Response) => {
 
     res.status(StatusCodes.CREATED).json(answer);
   } else {
-    res.status(StatusCodes.BAD_REQUEST).send("Invalid question ID");
+    throw new BadRequestError(ErrorMessage.ERROR_INVALID_QUESTION_ID);
   }
 };
 
@@ -119,9 +122,9 @@ const deleteAnswer = async (req: IUserRequest, res: Response) => {
   const { userId } = req.user!;
 
   if (!answer) {
-    throw new NotFoundError("Invalid answer ID");
+    throw new NotFoundError(ErrorMessage.ERROR_INVALID_ANSWER_ID);
   } else if (answer.userId != userId) {
-    throw new ForbiddenError("Only owner of this answer can do this action");
+    throw new ForbiddenError(ErrorMessage.ERROR_FORBIDDEN);
   }
 
   //Checking answer status
@@ -144,10 +147,10 @@ const deleteAnswer = async (req: IUserRequest, res: Response) => {
     if (result && question) {
       res.status(StatusCodes.OK).json(result);
     } else {
-      res.status(StatusCodes.INTERNAL_SERVER_ERROR).send("Delete failed");
+      throw new InternalServerError(ErrorMessage.ERROR_FAILED);
     }
   } else {
-    res.status(StatusCodes.GONE).send("This answer has already deleted");
+    throw new GoneError(ErrorMessage.ERROR_GONE);
   }
 };
 
@@ -161,11 +164,11 @@ const updateAnswer = async (req: IUserRequest, res: Response) => {
   });
 
   if (!answer) {
-    throw new NotFoundError("Invalid answer Id");
+    throw new NotFoundError(ErrorMessage.ERROR_INVALID_ANSWER_ID);
   } else if (answer.userId != userId) {
-    throw new ForbiddenError("Only owner of this answer can do this action");
+    throw new ForbiddenError(ErrorMessage.ERROR_FORBIDDEN);
   } else if (!req.body.answerContent) {
-    throw new BadRequestError("Please insert request body");
+    throw new BadRequestError(ErrorMessage.ERROR_MISSING_BODY);
   }
 
   if (answer.answerContent != req.body.answerContent) {
@@ -176,7 +179,7 @@ const updateAnswer = async (req: IUserRequest, res: Response) => {
     if (result) {
       res.status(StatusCodes.OK).json(result);
     } else {
-      res.status(StatusCodes.INTERNAL_SERVER_ERROR).send("Update failed");
+      throw new InternalServerError(ErrorMessage.ERROR_FAILED);
     }
   } else {
     res.status(StatusCodes.NO_CONTENT).send("Nothing's changed");

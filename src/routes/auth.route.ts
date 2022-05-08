@@ -1,6 +1,7 @@
 import express from "express";
 import {
   forgetPasswordEmail,
+  googleLogin,
   login,
   loginWithToken,
   register,
@@ -19,6 +20,7 @@ router.post("/register", register);
 router.post("/login", login);
 router.post("/forgetPassword", forgetPasswordEmail);
 router.post("/resetPassword", compulsoryAuth, resetPassword);
+router.post("/login-google", googleLogin);
 
 //PUT Method
 //DELETE Method
