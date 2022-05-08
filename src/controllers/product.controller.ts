@@ -12,6 +12,8 @@ enum SortTypes {
   MoneyDes = "money-des",
   NameAsc = "name-asc",
   NameDes = "name-des",
+  SoldAsc = "sold-asc",
+  SoldDes = "sold-des",
 }
 
 enum FilterTypes {
@@ -41,6 +43,12 @@ const sortObjMongoose = (sort?: SortTypes): any => {
   }
   if (sort === SortTypes.NameDes) {
     return { productName: -1 };
+  }
+  if (sort === SortTypes.SoldAsc) {
+    return { totalSold: 1 };
+  }
+  if (sort === SortTypes.SoldDes) {
+    return { totalSold: -1 };
   }
   return {};
 };
@@ -96,17 +104,21 @@ export const getAllProducts = async (req: Request, res: Response) => {
       productStatus: 1,
       ...filterObj,
     },
-    projectionProductList,
+    projectionProductList
   )
     .sort(sortObj)
     .skip((page - 1) * limit)
     .limit(limit)
     .populate({ path: "productCategory", select: ["categoryName"] })
+    .populate({ path: "shopId", select: ["shopName"] })
     .lean();
 
   const productsResult = products.map((product) => {
+    const productPictureList = product.productPicture;
     //get first picture
-    product.productPicture = product.productPicture[0];
+    product.productPicture = productPictureList
+      ? productPictureList[0]
+      : undefined;
     return product;
   });
 
@@ -158,11 +170,15 @@ const findByCategory = async (req: Request, res: Response) => {
     .skip((page - 1) * limit)
     .limit(limit)
     .populate({ path: "productCategory", select: ["categoryName"] })
+    .populate({ path: "shopId", select: ["shopName"] })
     .lean();
 
   const productsResult = products.map((product) => {
+    const productPictureList = product.productPicture;
     //get first picture
-    product.productPicture = product.productPicture[0];
+    product.productPicture = productPictureList
+      ? productPictureList[0]
+      : undefined;
     return product;
   });
 
@@ -180,7 +196,7 @@ const findById = async (req: Request, res: Response) => {
       _id: req.params.productId,
       productStatus: 1,
     },
-    { $inc: { allTimeView: 1 } },
+    { $inc: { allTimeView: 1 } }
   );
 
   if (!product) {
@@ -215,13 +231,13 @@ const findByName = async (req: Request, res: Response) => {
     { $count: "total" },
   ]);
 
-  if(totalProduct.length < 1) {
+  if (totalProduct.length < 1) {
     return res.status(StatusCodes.OK).json({
-    totalPages: 0,
-    page,
-    limit,
-    products: []
-    })
+      totalPages: 0,
+      page,
+      limit,
+      products: [],
+    });
   }
   const total = totalProduct[0].total;
 
@@ -325,8 +341,11 @@ const getProductsByShop = async (req: Request, res: Response) => {
     .lean();
 
   const productsResult = products.map((product) => {
+    const productPictureList = product.productPicture;
     //get first picture
-    product.productPicture = product.productPicture[0];
+    product.productPicture = productPictureList
+      ? productPictureList[0]
+      : undefined;
     return product;
   });
 
