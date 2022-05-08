@@ -47,17 +47,17 @@ const s3 = new aws.S3({
 // }
 
 //FE Solution
-async function generateUploadURL(folder: String, isPrivate: Boolean) {
+async function generateUploadURL(folder: String, isPrivate: boolean) {
   const rawBytes = await randomBytes(16);
   const fileName = rawBytes.toString("hex");
   let bucket;
 
-  if (isPrivate === true) {
+  if (isPrivate == true) {
     bucket = prdbucketName;
   } else {
     bucket = bucketName;
   }
-  console.log(bucket);
+  // console.log(bucket);
   const params = {
     Bucket: bucket,
     Key: `${folder}/${fileName}`,

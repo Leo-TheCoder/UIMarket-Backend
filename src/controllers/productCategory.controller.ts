@@ -3,12 +3,8 @@ import { Request, Response } from "express";
 import { IUserRequest } from "../types/express";
 import * as Constants from "../constants";
 import CategoryModel from "../models/Category.model";
-import {
-  BadRequestError,
-  ForbiddenError,
-  NotFoundError,
-  UnauthenticatedError,
-} from "../errors";
+import { InternalServerError } from "../errors";
+import * as ErrorMessage from "../errors/error_message";
 
 const createCategory = async (req: Request, res: Response) => {
   const category = await CategoryModel.create({ ...req.body });
@@ -16,12 +12,12 @@ const createCategory = async (req: Request, res: Response) => {
   if (category) {
     res.status(StatusCodes.CREATED).json({ category });
   } else {
-    res.status(StatusCodes.INTERNAL_SERVER_ERROR);
+    throw new InternalServerError(ErrorMessage.ERROR_FAILED);
   }
 };
 
 const getAllCategory = async (req: Request, res: Response) => {
-  const categories = await CategoryModel.find({ categoryStatus: 1 });
+  const categories = await CategoryModel.find({ categoryStatus: 1 }).lean();
 
   res.status(StatusCodes.OK).json({ categories });
 };

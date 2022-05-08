@@ -3,6 +3,7 @@ import {
   BadRequestError,
   ForbiddenError,
   GoneError,
+  InternalServerError,
   NotFoundError,
 } from "../errors";
 import { Request, Response } from "express";
@@ -13,6 +14,13 @@ import * as Constants from "../constants";
 import AnswerModel from "../models/Answer.model";
 import { getStatusVote } from "../utils/statusVote";
 import { pointRollBack, pointTransaction } from "../utils/currencyTransaction";
+import * as ErrorMessage from "../errors/error_message";
+interface IQuery {
+  page?: string;
+  limit?: string;
+  selectWith?: string;
+  tag?: string;
+}
 
 //get _id of tags in list (create tags if they don't exist)
 const createTagList = async (tagList: [String]) => {
@@ -58,7 +66,7 @@ const createQuestion = async (req: IUserRequest, res: Response) => {
 
     //Check bounty due date
     if (!req.body.bountyDueDate) {
-      throw new BadRequestError("Bounty must have due date");
+      throw new BadRequestError(ErrorMessage.ERROR_MISSING_BODY);
     }
     const dueDate = new Date(req.body.bountyDueDate);
 
@@ -92,9 +100,9 @@ const createQuestion = async (req: IUserRequest, res: Response) => {
       awardDueDate: awardDueDate.setDate(awardDueDate.getDate() + 14),
     });
 
-    if (!question && req.body.questionBounty) {
+    if (!question && req.body.bountyActive != 1) {
       await pointRollBack(userId, transaction._id, changeAmount);
-      res.status(StatusCodes.INTERNAL_SERVER_ERROR).send("Create failed");
+      throw new InternalServerError(ErrorMessage.ERROR_FAILED);
     } else {
       res.status(StatusCodes.CREATED).json(question);
     }
@@ -109,13 +117,6 @@ const createQuestion = async (req: IUserRequest, res: Response) => {
     res.status(StatusCodes.CREATED).json(question);
   }
 };
-
-interface IQuery {
-  page?: string;
-  limit?: string;
-  selectWith?: string;
-  tag?: string;
-}
 
 const getQuestions = async (req: Request, res: Response) => {
   const query = req.query as IQuery;
@@ -133,16 +134,6 @@ const getQuestions = async (req: Request, res: Response) => {
   } else if (selectWith === "popular") {
     queryString.questionBounty = { $lte: 0 };
   }
-
-  // //Checking tag options
-  // if (tag === "true") {
-  //   const tagList = req.body.tag;
-
-  //   if (!tagList) {
-  //     throw new BadRequestError("Please insert tag in the body");
-  //   }
-  //   queryString.questionTag = { $in: tagList };
-  // }
 
   if (tag) {
     const tagList: string[] = tag.split(",");
@@ -199,7 +190,7 @@ const getQuestionByID = async (req: IUserRequest, res: Response) => {
 
     res.status(StatusCodes.OK).json({ question: _doc });
   } else {
-    throw new NotFoundError("Invalid Question ID");
+    throw new NotFoundError(ErrorMessage.ERROR_INVALID_QUESTION_ID);
   }
 };
 
@@ -217,11 +208,11 @@ const chooseBestAnswer = async (req: IUserRequest, res: Response) => {
   });
 
   if (!question) {
-    throw new NotFoundError("Invalid Question ID");
+    throw new NotFoundError(ErrorMessage.ERROR_INVALID_QUESTION_ID);
   } else if (!answer) {
-    throw new NotFoundError("Invalid Answer ID");
+    throw new NotFoundError(ErrorMessage.ERROR_INVALID_ANSWER_ID);
   } else if (userId != question.userId) {
-    throw new ForbiddenError("Only owner of this post can do this action");
+    throw new ForbiddenError(ErrorMessage.ERROR_FORBIDDEN);
   }
 
   //Checking whether this question have best answer or not
@@ -249,16 +240,14 @@ const chooseBestAnswer = async (req: IUserRequest, res: Response) => {
       const result = await answer.save();
       await question.save();
 
-      res
-        .status(StatusCodes.OK)
-        .json({ Acction: "Unvote best answer", result });
+      res.status(StatusCodes.OK).json({ Action: "Unvote best answer", result });
     }
     //Choose new best answer
     else {
       const oldBestAnswer = await AnswerModel.findById(currentBestAnswer);
 
       if (!oldBestAnswer) {
-        throw new GoneError("Something went wrong with database");
+        throw new GoneError(ErrorMessage.ERROR_GONE);
       }
 
       oldBestAnswer.bestAnswer = 0;
@@ -308,11 +297,11 @@ const deleteQuestion = async (req: IUserRequest, res: Response) => {
   const question = await Question.findById(req.params.questionId);
 
   if (!question) {
-    throw new NotFoundError("Invalid Question ID");
+    throw new NotFoundError(ErrorMessage.ERROR_INVALID_QUESTION_ID);
   } else if (userId != question.userId) {
-    throw new ForbiddenError("Only owner of this post can do this action");
+    throw new ForbiddenError(ErrorMessage.ERROR_FORBIDDEN);
   } else if (question.questionStatus == 0) {
-    throw new GoneError("This question has already deleted");
+    throw new GoneError(ErrorMessage.ERROR_GONE);
   }
 
   //Set question status to 0 and decrease total question in tag by 1
@@ -324,7 +313,7 @@ const deleteQuestion = async (req: IUserRequest, res: Response) => {
     );
 
     if (!tags) {
-      throw new BadRequestError("Invalid Question Tag ID");
+      throw new InternalServerError(ErrorMessage.ERROR_INVALID_TAG_ID);
     }
   });
   const result = await question.save();
@@ -333,7 +322,7 @@ const deleteQuestion = async (req: IUserRequest, res: Response) => {
   if (result) {
     res.status(StatusCodes.OK).json(result);
   } else {
-    res.status(StatusCodes.INTERNAL_SERVER_ERROR).send("Delete failed");
+    throw new InternalServerError(ErrorMessage.ERROR_FAILED);
   }
 };
 
@@ -345,9 +334,9 @@ const updateQuestion = async (req: IUserRequest, res: Response) => {
   });
 
   if (!question) {
-    throw new NotFoundError("Invalid Question ID");
+    throw new NotFoundError(ErrorMessage.ERROR_INVALID_QUESTION_ID);
   } else if (userId != question.userId) {
-    throw new ForbiddenError("Only owner of this question can do this action");
+    throw new ForbiddenError(ErrorMessage.ERROR_FORBIDDEN);
   }
 
   const questionTitle = req.body.questionTitle || question.questionTitle;
@@ -382,9 +371,9 @@ const rebountyQuestion = async (req: IUserRequest, res: Response) => {
   });
 
   if (!question) {
-    throw new NotFoundError("Invalid Question ID");
+    throw new NotFoundError(ErrorMessage.ERROR_INVALID_QUESTION_ID);
   } else if (userId != question.userId) {
-    throw new ForbiddenError("Only owner of this post can do this action");
+    throw new ForbiddenError(ErrorMessage.ERROR_FORBIDDEN);
   } else if (question.questionBounty < 0) {
     throw new BadRequestError("This question cannot rebounty");
   }
@@ -392,7 +381,7 @@ const rebountyQuestion = async (req: IUserRequest, res: Response) => {
   //Checking whether rebounty value is greater than old value
   const newBounty = req.body.newBounty;
   if (!newBounty) {
-    throw new BadRequestError("Please insert new bounty value");
+    throw new BadRequestError(ErrorMessage.ERROR_MISSING_BODY);
   } else if (newBounty <= question.questionBounty) {
     throw new BadRequestError("New bounty value must greater than old value");
   } else if (
@@ -407,7 +396,7 @@ const rebountyQuestion = async (req: IUserRequest, res: Response) => {
   //Checking new bounty due date
   const newDueDate = new Date(req.body.newDueDate);
   if (!newDueDate) {
-    throw new BadRequestError("Please insert new due date");
+    throw new BadRequestError(ErrorMessage.ERROR_MISSING_BODY);
   } else if (newDueDate <= question.bountyDueDate) {
     throw new BadRequestError("New due date must larger than old one");
   }
@@ -432,13 +421,13 @@ const rebountyQuestion = async (req: IUserRequest, res: Response) => {
 
   const transaction = await pointTransaction(userId, newBounty * -1);
   if (!transaction) {
-    res.status(StatusCodes.INTERNAL_SERVER_ERROR).send("Rebounty failed");
+    throw new InternalServerError(ErrorMessage.ERROR_FAILED);
   } else {
     const result = await question.save();
     if (result) {
       res.status(StatusCodes.OK).json(result);
     } else {
-      res.status(StatusCodes.INTERNAL_SERVER_ERROR).send("Rebounty failed");
+      throw new InternalServerError(ErrorMessage.ERROR_FAILED);
     }
   }
 };

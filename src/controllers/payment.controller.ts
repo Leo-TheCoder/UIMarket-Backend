@@ -3,10 +3,11 @@ import { encodeBase64 } from "bcryptjs";
 import { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
 import { IUserRequest } from "../types/express";
-import {v4 as uuidv4} from "uuid";
-import UserModel from "../models/User.model";
+import { v4 as uuidv4 } from "uuid";
 import ShopModel from "../models/Shop.model";
 import UnauthenticatedErorr from "../errors/unauthenticated-error";
+import * as ErrorMessage from "../errors/error_message";
+import { InternalServerError } from "../errors";
 
 const PAYPAL_API_CLIENT = process.env.PAYPAL_API_CLIENT!;
 const PAYPAL_API_SECRET = process.env.PAYPAL_API_SECRET!;
@@ -89,7 +90,7 @@ export const createOrder = async (req: IUserRequest, res: Response) => {
     res.json(response.data);
   } catch (error) {
     console.log(error);
-    res.status(StatusCodes.INTERNAL_SERVER_ERROR).send("Something gone wrong!");
+    throw new InternalServerError(ErrorMessage.ERROR_FAILED);
   }
 };
 
@@ -99,16 +100,16 @@ export const cancelPayment = (req: IUserRequest, res: Response) => {
 
 export const payoutOrder = async (req: IUserRequest, res: Response) => {
   const user = req.user;
-  const {amountValue} = req.body;
+  const { amountValue } = req.body;
 
   //get email or paypal id from db
-  const {shopId} = user!;
+  const { shopId } = user!;
   const shop = await ShopModel.findById(shopId, "shopPayPal");
-  if(!shop) {
-    throw new UnauthenticatedErorr("invalid-shop");
+  if (!shop) {
+    throw new UnauthenticatedErorr(ErrorMessage.ERROR_INVALID_SHOP_ID);
   }
-  if(!shop.shopPayPal.paypalEmail) {
-    throw new UnauthenticatedErorr("invalid-paypal")
+  if (!shop.shopPayPal.paypalEmail) {
+    throw new UnauthenticatedErorr(ErrorMessage.ERROR_PAYPAL_INVALID);
   }
   const receiver = shop.shopPayPal.paypalEmail;
 
@@ -149,7 +150,7 @@ export const payoutOrder = async (req: IUserRequest, res: Response) => {
     res.status(StatusCodes.OK).json(response.data);
   } catch (error) {
     console.log(error);
-    res.status(StatusCodes.INTERNAL_SERVER_ERROR).send("Something gone wrong!");
+    throw new InternalServerError(ErrorMessage.ERROR_FAILED);
   }
 };
 
@@ -189,19 +190,21 @@ export const returnAfterLoginPaypal = async (
   );
 
   //store paypal info into db
-  const {shopId} = req.query;
-  const {profile} = profileInfo.data;
+  const { shopId } = req.user!;
+  const profile = profileInfo.data;
   const email = profile.emails[0].value;
   const paypalId = profile.payer_id;
-  console.log(shopId, email, paypalId);
+  const shop = await ShopModel.findById(shopId, "shopPayPal");
+  shop.shopPayPal.paypalEmail = email;
+  shop.shopPayPal.paypalId = paypalId;
+  await shop.save();
 
   res.status(StatusCodes.OK).json({
-    returnUrl: {
-      message: "Return URL work!",
-      ...query,
+    msg: "Connect paypal to your shop account successfully!",
+    paypal_profile: {
+      email,
+      paypalId,
     },
-    access_token,
-    profile: profileInfo.data,
   });
 };
 
@@ -210,10 +213,8 @@ export const authorizationEndpoint = async (
   res: Response
 ) => {
   const user = req.user;
-  const {shopId} = user!;
-  const returnURL = encodeURIComponent(
-    `http://127.0.0.1:5000/api/v1/payment/after-login`
-  );
+  const { shopId } = user!;
+  const returnURL = encodeURIComponent(`http://127.0.0.1:3000/return-paypal`);
   const url = `https://www.sandbox.paypal.com/connect?flowEntry=static&client_id=${PAYPAL_API_CLIENT}&scope=openid profile email https://uri.paypal.com/services/paypalattributes&redirect_uri=${returnURL}`;
   return res.status(StatusCodes.OK).json({ url });
 };
@@ -282,6 +283,6 @@ export const captureOrder = async (req: IUserRequest, res: Response) => {
     });
   } catch (error) {
     console.log(error);
-    res.status(StatusCodes.INTERNAL_SERVER_ERROR).send("Something gone wrong!");
+    throw new InternalServerError(ErrorMessage.ERROR_FAILED);
   }
 };

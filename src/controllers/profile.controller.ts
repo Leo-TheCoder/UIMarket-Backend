@@ -6,6 +6,7 @@ import UserModel from "../models/User.model";
 import { StatusCodes } from "http-status-codes";
 import UnauthenticatedErorr from "../errors/unauthenticated-error";
 import { NotFoundError } from "../errors";
+import * as ErrorMessage from "../errors/error_message";
 
 type TagStatType = {
   _id?: String;
@@ -22,7 +23,7 @@ const getProfileActivity = async (req: IUserRequest, res: Response) => {
   //Promise fetch questions of user
   const questionsPromise = QuestionModel.find(
     { userId },
-    { totalUpvote: 1, questionTitle: 1, totalDownvote: 1, questionBounty: 1 }
+    { totalUpvote: 1, questionTitle: 1, totalDownvote: 1, questionBounty: 1 },
   ).populate({
     path: "questionTag",
     select: "tagName",
@@ -31,7 +32,7 @@ const getProfileActivity = async (req: IUserRequest, res: Response) => {
   //Promise fetch answers of user
   const answersPromise = AnswerModel.find(
     { userId },
-    { totalUpvote: 1 }
+    { totalUpvote: 1 },
   ).populate({
     path: "questionId",
     populate: { path: "questionTag", select: "tagName" },
@@ -142,11 +143,11 @@ const getProfileInfo = async (req: IUserRequest, res: Response) => {
 
   const userDoc = await UserModel.findById(
     userId,
-    "-authenToken -customerPassword -createdAt -updatedAt"
+    "-authenToken -customerPassword -createdAt -updatedAt",
   );
 
   if (!userDoc) {
-    throw new NotFoundError("Cannot find the user");
+    throw new NotFoundError(ErrorMessage.ERROR_INVALID_USER_ID);
   }
 
   const user = JSON.parse(JSON.stringify(userDoc._doc));
@@ -181,11 +182,11 @@ const updateProfile = async (req: IUserRequest, res: Response) => {
     },
     {
       new: true,
-    }
+    },
   );
 
   if (!updatedUser) {
-    throw new UnauthenticatedErorr("Invalid user");
+    throw new UnauthenticatedErorr(ErrorMessage.ERROR_INVALID_USER_ID);
   }
 
   const doc = JSON.parse(JSON.stringify(updatedUser._doc));

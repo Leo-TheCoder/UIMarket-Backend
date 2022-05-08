@@ -21,7 +21,7 @@ const ShopSchema = new mongoose.Schema(
       },
       paypalId: {
         type: String,
-      }
+      },
     },
     shopDescription: {
       type: String,
@@ -36,6 +36,10 @@ const ShopSchema = new mongoose.Schema(
     shopEmail: {
       type: String,
       required: [true, "Please provide shop email"],
+    },
+    shopBanner: {
+      type: String,
+      required: false,
     },
     shopStatus: {
       type: Number,

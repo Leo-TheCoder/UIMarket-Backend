@@ -21,8 +21,8 @@ router.post("/", compulsoryAuth, createQuestion);
 
 //PUT Methods
 router.put("/rebounty/:questionId/", compulsoryAuth, rebountyQuestion);
-router.put("/:questionId", compulsoryAuth, updateQuestion);
-router.put("/:questionId/:answerId", compulsoryAuth, chooseBestAnswer);
+router.put("/update/:questionId", compulsoryAuth, updateQuestion);
+router.put("/choose/:questionId/:answerId", compulsoryAuth, chooseBestAnswer);
 
 //DELETE Methods
 router.delete("/:questionId", compulsoryAuth, deleteQuestion);

@@ -6,6 +6,7 @@ const ProductSchema = new mongoose.Schema(
   {
     shopId: {
       type: mongoose.Types.ObjectId,
+      ref: "Shop",
       required: [true, "Please provide shop ID"],
       immutable: true,
     },
@@ -30,12 +31,16 @@ const ProductSchema = new mongoose.Schema(
       ref: "Category",
       required: [true, "Please provide product category"],
     },
-    productPicture: [
+    productPictures: [
       {
         type: String,
         required: [true, "Please provide at least 1 picture of product"],
       },
     ],
+    productFile: {
+      type: String,
+      required: [true, "Please provide at least 1 product file"],
+    },
     productStatus: {
       type: Number,
       default: 1,
@@ -50,6 +55,14 @@ const ProductSchema = new mongoose.Schema(
       default: 0,
     },
     productRating: {
+      type: Number,
+      default: 0,
+    },
+    allTimeView: {
+      type: Number,
+      default: 0,
+    },
+    deleteFlagged: {
       type: Number,
       default: 0,
     },

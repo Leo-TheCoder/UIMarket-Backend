@@ -1,19 +1,21 @@
-import { BadRequestError, NotFoundError } from "../errors";
+import { BadRequestError, InternalServerError, NotFoundError } from "../errors";
 import PointTransactionModel from "../models/PointTransaction.model";
 import UserModel from "../models/User.model";
+import * as ErrorMessage from "../errors/error_message";
+import { INTERNAL_SERVER_ERROR } from "http-status-codes";
 
 const pointTransaction = async (userId: string, changeAmount: number) => {
   //Checking userId
   const user = await UserModel.findOne({ _id: userId, customerStatus: 1 });
   if (!user) {
-    throw new NotFoundError("Not found user ID");
+    throw new NotFoundError(ErrorMessage.ERROR_INVALID_USER_ID);
   }
 
   //Checking amount
   const currentAmount = user.customerWallet.point;
   const balanceAmount = currentAmount + changeAmount;
   if (balanceAmount < 0) {
-    throw new BadRequestError("Invalid amount");
+    throw new BadRequestError(ErrorMessage.ERROR_INVALID_AMOUNT);
   }
 
   //Record the transaction
@@ -25,7 +27,7 @@ const pointTransaction = async (userId: string, changeAmount: number) => {
   });
 
   if (!transaction) {
-    throw new NotFoundError("Something went wrong");
+    throw new NotFoundError(ErrorMessage.ERROR_FAILED);
   } else {
     user.customerWallet.point = balanceAmount;
     const result = await user.save();
@@ -35,7 +37,7 @@ const pointTransaction = async (userId: string, changeAmount: number) => {
         transaction._id,
         { transactionStatus: 0 },
       );
-      throw new NotFoundError("Something went wrong");
+      throw new InternalServerError(ErrorMessage.ERROR_FAILED);
     } else {
       return transaction;
     }
@@ -50,7 +52,7 @@ const pointRollBack = async (
   //Checking userId
   const user = await UserModel.findOne({ _id: userId, customerStatus: 1 });
   if (!user) {
-    throw new NotFoundError("Not found user ID");
+    throw new NotFoundError(ErrorMessage.ERROR_INVALID_USER_ID);
   }
 
   //Delete transaction and roll back point
@@ -73,10 +75,10 @@ const pointRollBack = async (
         transactionId,
         { transactionStatus: 1 },
       );
-      throw new NotFoundError("Something went wrong");
+      throw new InternalServerError(ErrorMessage.ERROR_FAILED);
     }
   } else {
-    throw new NotFoundError("Something went wrong");
+    throw new InternalServerError(ErrorMessage.ERROR_FAILED);
   }
 };
 

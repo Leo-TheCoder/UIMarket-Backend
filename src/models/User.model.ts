@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import { v4 as uuidv4 } from "uuid";
 
 const UserSchema = new mongoose.Schema(
   {
@@ -68,7 +69,7 @@ const UserSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-  },
+  }
 );
 
 UserSchema.methods.hashPassword = async function () {
@@ -87,16 +88,16 @@ UserSchema.methods.createJWT = function () {
     process.env.JWT_SECRET!,
     {
       expiresIn: process.env.JWT_LIFETIME,
-    },
+    }
   );
 };
 
 UserSchema.methods.comparePassword = async function (
-  candidatePassword: string,
+  candidatePassword: string
 ) {
   const isMatch = await bcrypt.compare(
     candidatePassword,
-    this.customerPassword,
+    this.customerPassword
   );
   return isMatch;
 };
@@ -123,6 +124,47 @@ UserSchema.methods.verifyToken = function (token: string) {
 
 UserSchema.methods.compareToken = function (candidateToken: string) {
   return candidateToken === this.refreshToken;
+};
+
+UserSchema.methods.createAccountWithGoogleID = async function (
+  customerName: string,
+  googleId: string,
+  customerEmail: string,
+  customerAvatar: string
+) {
+  this.customerName = customerName;
+  this.customerEmail = customerEmail;
+  this.customerAvatar = customerAvatar;
+  this.authenToken.Google = googleId;
+
+  //active account
+  this.customerStatus = 1;
+
+  //random password
+  this.customerPassword = uuidv4();
+  await this.hashPassword();
+
+  await this.save();
+};
+
+UserSchema.methods.doesAccountCreatedWithGoogle = function () {
+  return this.authenToken.Google ? true : false;
+};
+
+UserSchema.methods.verifyGoogleID = function (googleId: string) {
+  return this.authenToken.Google === googleId;
+};
+
+UserSchema.methods.updateAccountWithGoogle = async function (
+  googleId: string,
+  customerAvatar: string
+) {
+  this.customerStatus = 1;
+  this.authenToken.Google = googleId;
+  if (!this.customerAvatar) {
+    this.customerAvatar = customerAvatar;
+  }
+  await this.save();
 };
 
 export default mongoose.model("Customer", UserSchema);
