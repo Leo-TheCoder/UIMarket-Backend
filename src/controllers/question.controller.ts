@@ -1,4 +1,18 @@
+//Library
 import { StatusCodes } from "http-status-codes";
+import { Request, Response } from "express";
+import { IUserRequest } from "../types/express";
+import * as Constants from "../constants";
+import { getStatusVote } from "../utils/statusVote";
+import { pointRollBack, pointTransaction } from "../utils/currencyTransaction";
+
+//Model
+import Question from "../models/Question.model";
+import QuestionTagModel from "../models/QuestionTag.model";
+import AnswerModel from "../models/Answer.model";
+
+//Error
+import * as ErrorMessage from "../errors/error_message";
 import {
   BadRequestError,
   ForbiddenError,
@@ -6,15 +20,7 @@ import {
   InternalServerError,
   NotFoundError,
 } from "../errors";
-import { Request, Response } from "express";
-import { IUserRequest } from "../types/express";
-import Question from "../models/Question.model";
-import QuestionTagModel from "../models/QuestionTag.model";
-import * as Constants from "../constants";
-import AnswerModel from "../models/Answer.model";
-import { getStatusVote } from "../utils/statusVote";
-import { pointRollBack, pointTransaction } from "../utils/currencyTransaction";
-import * as ErrorMessage from "../errors/error_message";
+
 interface IQuery {
   page?: string;
   limit?: string;
