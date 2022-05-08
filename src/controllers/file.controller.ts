@@ -56,7 +56,7 @@ const uploadURL = async (req: Request, res: Response) => {
   const folder = query.folder;
   const isPrivate = query.isPrivate === "true" || false;
 
-  if (!folder || !query.isPrivate) {
+  if (!folder || !isPrivate) {
     throw new BadRequestError(ErrorMessage.ERROR_MISSING_BODY);
   }
 
