@@ -29,7 +29,7 @@ const sendForgetPasswordEmail = (
   userId: string,
   verifyCode: string
 ) => {
-  const url = `${process.env.DOMAIN_NAME}/api/v1/verify/resetForgetPassword?userId=${userId}&verifyCode=${verifyCode}`;
+  const url = `${process.env.FE_DOMAIN_NAME}/resetforgotpassword?userId=${userId}&verifyCode=${verifyCode}`;
   transporter.sendMail(
     {
       from: "<no-reply> deex.uimarket@gmail.com",
