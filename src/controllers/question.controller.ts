@@ -87,7 +87,11 @@ const createQuestion = async (req: IUserRequest, res: Response) => {
 
     //Checking valid balance
     const changeAmount = req.body.questionBounty * -1;
-    const transaction = await pointTransaction(userId, changeAmount);
+    const transaction = await pointTransaction(
+      userId,
+      changeAmount,
+      "Create bounty question",
+    );
     if (transaction) {
       req.body.bountyActive = 1;
     }
@@ -279,7 +283,11 @@ const chooseBestAnswer = async (req: IUserRequest, res: Response) => {
       pointReward = question.questionBounty;
     }
 
-    const transaction = await pointTransaction(answerOwner, pointReward);
+    const transaction = await pointTransaction(
+      answerOwner,
+      pointReward,
+      "Best answer for question",
+    );
     question.bestAnswer = answer._id;
     const resultQuestion = await question.save();
 
@@ -419,7 +427,11 @@ const rebountyQuestion = async (req: IUserRequest, res: Response) => {
   question.awardDueDate = awardDueDate.setDate(awardDueDate.getDate() + 14);
   question.updateAt = new Date();
 
-  const transaction = await pointTransaction(userId, newBounty * -1);
+  const transaction = await pointTransaction(
+    userId,
+    newBounty * -1,
+    "Rebounty for question",
+  );
   if (!transaction) {
     throw new InternalServerError(ErrorMessage.ERROR_FAILED);
   } else {
