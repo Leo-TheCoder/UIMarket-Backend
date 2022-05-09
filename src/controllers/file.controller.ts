@@ -47,14 +47,14 @@ import * as ErrorMessage from "../errors/error_message";
 
 interface IQuery {
   folder?: string;
-  isPrivate?: boolean;
+  isPrivate?: string;
 }
 
 //FE Solution
 const uploadURL = async (req: Request, res: Response) => {
   const query = req.query as IQuery;
   const folder = query.folder;
-  const isPrivate = query.isPrivate;
+  const isPrivate = query.isPrivate === "true" || false;
 
   if (!folder || !isPrivate) {
     throw new BadRequestError(ErrorMessage.ERROR_MISSING_BODY);

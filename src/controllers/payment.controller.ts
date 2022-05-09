@@ -7,7 +7,6 @@ import { v4 as uuidv4 } from "uuid";
 import ShopModel from "../models/Shop.model";
 import UnauthenticatedErorr from "../errors/unauthenticated-error";
 import * as ErrorMessage from "../errors/error_message";
-import { threadId } from "worker_threads";
 import { InternalServerError } from "../errors";
 
 const PAYPAL_API_CLIENT = process.env.PAYPAL_API_CLIENT!;
@@ -31,7 +30,7 @@ const getAccessToken = async () => {
         username: PAYPAL_API_CLIENT,
         password: PAYPAL_API_SECRET,
       },
-    },
+    }
   );
   return access_token;
 };
@@ -85,7 +84,7 @@ export const createOrder = async (req: IUserRequest, res: Response) => {
         headers: {
           Authorization: `Bearer ${access_token}`,
         },
-      },
+      }
     );
 
     res.json(response.data);
@@ -143,7 +142,7 @@ export const payoutOrder = async (req: IUserRequest, res: Response) => {
           username: PAYPAL_API_CLIENT!,
           password: PAYPAL_API_SECRET!,
         },
-      },
+      }
     );
 
     //update point
@@ -157,11 +156,11 @@ export const payoutOrder = async (req: IUserRequest, res: Response) => {
 
 export const returnAfterLoginPaypal = async (
   req: IUserRequest,
-  res: Response,
+  res: Response
 ) => {
   const query = req.query;
   const authorization_base64 = Buffer.from(
-    `${PAYPAL_API_CLIENT}:${PAYPAL_API_SECRET}`,
+    `${PAYPAL_API_CLIENT}:${PAYPAL_API_SECRET}`
   ).toString("base64");
 
   //GET ACCESS TOKEN
@@ -176,7 +175,7 @@ export const returnAfterLoginPaypal = async (
         "Content-Type": "application/x-www-form-urlencoded",
         Authorization: `Basic ${authorization_base64}`,
       },
-    },
+    }
   );
   const { access_token } = response.data;
 
@@ -187,35 +186,35 @@ export const returnAfterLoginPaypal = async (
         "Content-Type": "application/json",
         Authorization: `Bearer ${access_token}`,
       },
-    },
+    }
   );
 
   //store paypal info into db
-  const { shopId } = req.query;
-  const { profile } = profileInfo.data;
+  const { shopId } = req.user!;
+  const profile = profileInfo.data;
   const email = profile.emails[0].value;
   const paypalId = profile.payer_id;
-  console.log(shopId, email, paypalId);
+  const shop = await ShopModel.findById(shopId, "shopPayPal");
+  shop.shopPayPal.paypalEmail = email;
+  shop.shopPayPal.paypalId = paypalId;
+  await shop.save();
 
   res.status(StatusCodes.OK).json({
-    returnUrl: {
-      message: "Return URL work!",
-      ...query,
+    msg: "Connect paypal to your shop account successfully!",
+    paypal_profile: {
+      email,
+      paypalId,
     },
-    access_token,
-    profile: profileInfo.data,
   });
 };
 
 export const authorizationEndpoint = async (
   req: IUserRequest,
-  res: Response,
+  res: Response
 ) => {
   const user = req.user;
   const { shopId } = user!;
-  const returnURL = encodeURIComponent(
-    `http://127.0.0.1:5000/api/v1/payment/after-login`,
-  );
+  const returnURL = encodeURIComponent(`http://127.0.0.1:3000/return-paypal`);
   const url = `https://www.sandbox.paypal.com/connect?flowEntry=static&client_id=${PAYPAL_API_CLIENT}&scope=openid profile email https://uri.paypal.com/services/paypalattributes&redirect_uri=${returnURL}`;
   return res.status(StatusCodes.OK).json({ url });
 };
@@ -254,7 +253,7 @@ export const chargeCoin = async (req: IUserRequest, res: Response) => {
       headers: {
         Authorization: `Bearer ${access_token}`,
       },
-    },
+    }
   );
 
   res.json(response.data);
@@ -272,7 +271,7 @@ export const captureOrder = async (req: IUserRequest, res: Response) => {
           username: PAYPAL_API_CLIENT,
           password: PAYPAL_API_SECRET,
         },
-      },
+      }
     );
 
     //Update point
