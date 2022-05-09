@@ -7,7 +7,8 @@ import { v4 as uuidv4 } from "uuid";
 import ShopModel from "../models/Shop.model";
 import UnauthenticatedErorr from "../errors/unauthenticated-error";
 import * as ErrorMessage from "../errors/error_message";
-import { InternalServerError } from "../errors";
+import { BadRequestError, InternalServerError } from "../errors";
+import ProductModel from "../models/Product.model";
 
 const PAYPAL_API_CLIENT = process.env.PAYPAL_API_CLIENT!;
 const PAYPAL_API_SECRET = process.env.PAYPAL_API_SECRET!;
@@ -36,39 +37,61 @@ const getAccessToken = async () => {
 };
 
 export const createOrder = async (req: IUserRequest, res: Response) => {
+  const { productList } = req.body;
+  let totalPrice = 0;
+  const products = [];
+  for (let i = 0; i < productList.length; i++) {
+    const productId = productList[i].productId;
+    const product = await ProductModel.findById(productId, {
+      productPrice: 1,
+      productName: 1,
+    }).lean();
+
+    if (!product) {
+      throw new BadRequestError(ErrorMessage.ERROR_INVALID_PRODUCT_ID);
+    }
+
+    totalPrice += product.productPrice;
+    products.push(product);
+  }
+
+  //return res.json({ productList, totalPrice });
+  const items_detail = products.map((product) => {
+    return {
+      name: product.productName,
+      unit_amount: {
+        currency_code: "USD",
+        value: product.productPrice,
+      },
+      quantity: "1",
+      description: "Deex Product",
+    };
+  });
+
   try {
     const order = {
       intent: "CAPTURE",
       purchase_units: [
         {
-          description: "This is product order",
+          description: "This is your product order",
           amount: {
             currency_code: "USD",
-            value: "100.00",
+            value: totalPrice,
             breakdown: {
               item_total: {
                 currency_code: "USD",
-                value: "100.00",
+                value: totalPrice,
               },
             },
           },
-          items: [
-            {
-              name: "Website Marketplace Templete by LeoTheCoder",
-              unit_amount: {
-                currency_code: "USD",
-                value: "100.00",
-              },
-              quantity: "1",
-              description: "Website Template",
-            },
-          ],
+          items: items_detail
         },
       ],
       application_context: {
         brand_name: "deexmarket.com",
         landing_page: "NO_PREFERENCE",
         user_action: "PAY_NOW",
+        shipping_preference: "NO_SHIPPING",
         return_url: `${DOMAIN_NAME}/api/v1/payment/capture-order`,
         cancel_url: `${DOMAIN_NAME}/api/v1/payment/cancel-payment`,
       },
