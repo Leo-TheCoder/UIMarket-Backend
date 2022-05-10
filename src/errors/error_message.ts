@@ -30,6 +30,7 @@ export const ERROR_INVALID_CATEGORY_ID = "invalid-category-id";
 export const ERROR_INVALID_PRODUCT_ID = "invalid-product-id";
 export const ERROR_INVALID_SHOP_ID = "invalid-shop-id";
 export const ERROR_INVALID_INVOICE_ID = "invalid-invoice-id";
+export const ERROR_INVALID_REVIEW_ID = "invalid-review-id";
 
 //Transaction
 export const ERROR_INVALID_AMOUNT = "invalid-amount";
