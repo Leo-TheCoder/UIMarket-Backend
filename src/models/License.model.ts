@@ -27,6 +27,10 @@ const LicenseSchema = new mongoose.Schema(
       type: Date,
       required: [true, "Please provide bought time"],
     },
+    licenseFile: {
+      type: String,
+      required: [true, "Please provide license file"],
+    },
   },
   { timestamps: true },
 );
