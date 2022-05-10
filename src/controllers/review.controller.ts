@@ -44,7 +44,7 @@ export const createReview = async (req: IUserRequest, res: Response) => {
   //Checking this invoice is valid or not
   let invoice = await InvoiceModel.findOne({
     _id: req.params.invoiceId,
-    // "productList.productId": req.params.productId,
+    invoiceStatus: "Paid",
   });
   if (!invoice) {
     throw new NotFoundError(ErrorMessage.ERROR_INVALID_INVOICE_ID);
