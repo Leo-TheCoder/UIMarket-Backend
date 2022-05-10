@@ -12,6 +12,8 @@ enum SortTypes {
   MoneyDes = "money-des",
   NameAsc = "name-asc",
   NameDes = "name-des",
+  SoldAsc = "sold-asc",
+  SoldDes = "sold-des",
 }
 
 enum FilterTypes {
@@ -42,6 +44,12 @@ const sortObjMongoose = (sort?: SortTypes): any => {
   if (sort === SortTypes.NameDes) {
     return { productName: -1 };
   }
+  if (sort === SortTypes.SoldAsc) {
+    return { totalSold: 1 };
+  }
+  if (sort === SortTypes.SoldDes) {
+    return { totalSold: -1 };
+  }
   return {};
 };
 
@@ -67,6 +75,7 @@ const filterObjMongoose = (filter?: FilterTypes) => {
 const projectionProductList = {
   __v: 0,
   productDescription: 0,
+  productFile: 0,
 };
 
 export const getAllProducts = async (req: Request, res: Response) => {
@@ -96,17 +105,23 @@ export const getAllProducts = async (req: Request, res: Response) => {
       productStatus: 1,
       ...filterObj,
     },
-    projectionProductList,
+    projectionProductList
   )
     .sort(sortObj)
     .skip((page - 1) * limit)
     .limit(limit)
     .populate({ path: "productCategory", select: ["categoryName"] })
+    .populate({ path: "shopId", select: ["shopName"] })
     .lean();
 
   const productsResult = products.map((product) => {
+    //get first item in array
+    const productPictureList = product.productPictures;
     //get first picture
-    product.productPicture = product.productPicture[0];
+    product.coverPicture = productPictureList
+      ? productPictureList[0]
+      : undefined;
+    delete product.productPictures;
     return product;
   });
 
@@ -158,11 +173,17 @@ const findByCategory = async (req: Request, res: Response) => {
     .skip((page - 1) * limit)
     .limit(limit)
     .populate({ path: "productCategory", select: ["categoryName"] })
+    .populate({ path: "shopId", select: ["shopName"] })
     .lean();
 
   const productsResult = products.map((product) => {
+    //get first item in array
+    const productPictureList = product.productPictures;
     //get first picture
-    product.productPicture = product.productPicture[0];
+    product.coverPicture = productPictureList
+      ? productPictureList[0]
+      : undefined;
+    delete product.productPictures;
     return product;
   });
 
@@ -180,7 +201,7 @@ const findById = async (req: Request, res: Response) => {
       _id: req.params.productId,
       productStatus: 1,
     },
-    { $inc: { allTimeView: 1 } },
+    { $inc: { allTimeView: 1 } }
   );
 
   if (!product) {
@@ -215,13 +236,13 @@ const findByName = async (req: Request, res: Response) => {
     { $count: "total" },
   ]);
 
-  if(totalProduct.length < 1) {
+  if (totalProduct.length < 1) {
     return res.status(StatusCodes.OK).json({
-    totalPages: 0,
-    page,
-    limit,
-    products: []
-    })
+      totalPages: 0,
+      page,
+      limit,
+      products: [],
+    });
   }
   const total = totalProduct[0].total;
 
@@ -268,7 +289,12 @@ const findByName = async (req: Request, res: Response) => {
 
   const productsResult = products.map((product) => {
     //get first item in array
-    product.productPicture = product.productPicture[0];
+    const productPictureList = product.productPictures;
+    //get first picture
+    product.coverPicture = productPictureList
+      ? productPictureList[0]
+      : undefined;
+    delete product.productPictures;
     product.productCategory = product.productCategory[0];
     product.shop = product.shop[0];
     return product;
@@ -325,8 +351,13 @@ const getProductsByShop = async (req: Request, res: Response) => {
     .lean();
 
   const productsResult = products.map((product) => {
+    //get first item in array
+    const productPictureList = product.productPictures;
     //get first picture
-    product.productPicture = product.productPicture[0];
+    product.coverPicture = productPictureList
+      ? productPictureList[0]
+      : undefined;
+    delete product.productPictures;
     return product;
   });
 
