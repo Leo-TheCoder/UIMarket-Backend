@@ -75,6 +75,7 @@ const filterObjMongoose = (filter?: FilterTypes) => {
 const projectionProductList = {
   __v: 0,
   productDescription: 0,
+  productFile: 0,
 };
 
 export const getAllProducts = async (req: Request, res: Response) => {
@@ -114,11 +115,13 @@ export const getAllProducts = async (req: Request, res: Response) => {
     .lean();
 
   const productsResult = products.map((product) => {
-    const productPictureList = product.productPicture;
+    //get first item in array
+    const productPictureList = product.productPictures;
     //get first picture
-    product.productPicture = productPictureList
+    product.coverPicture = productPictureList
       ? productPictureList[0]
       : undefined;
+    delete product.productPictures;
     return product;
   });
 
@@ -174,11 +177,13 @@ const findByCategory = async (req: Request, res: Response) => {
     .lean();
 
   const productsResult = products.map((product) => {
-    const productPictureList = product.productPicture;
+    //get first item in array
+    const productPictureList = product.productPictures;
     //get first picture
-    product.productPicture = productPictureList
+    product.coverPicture = productPictureList
       ? productPictureList[0]
       : undefined;
+    delete product.productPictures;
     return product;
   });
 
@@ -284,7 +289,12 @@ const findByName = async (req: Request, res: Response) => {
 
   const productsResult = products.map((product) => {
     //get first item in array
-    product.productPicture = product.productPicture[0];
+    const productPictureList = product.productPictures;
+    //get first picture
+    product.coverPicture = productPictureList
+      ? productPictureList[0]
+      : undefined;
+    delete product.productPictures;
     product.productCategory = product.productCategory[0];
     product.shop = product.shop[0];
     return product;
@@ -341,11 +351,13 @@ const getProductsByShop = async (req: Request, res: Response) => {
     .lean();
 
   const productsResult = products.map((product) => {
-    const productPictureList = product.productPicture;
+    //get first item in array
+    const productPictureList = product.productPictures;
     //get first picture
-    product.productPicture = productPictureList
+    product.coverPicture = productPictureList
       ? productPictureList[0]
       : undefined;
+    delete product.productPictures;
     return product;
   });
 
