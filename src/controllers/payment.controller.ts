@@ -9,6 +9,10 @@ import UnauthenticatedErorr from "../errors/unauthenticated-error";
 import * as ErrorMessage from "../errors/error_message";
 import { BadRequestError, InternalServerError } from "../errors";
 import ProductModel from "../models/Product.model";
+import {
+  createOrder as createInvoice,
+  paidInvoice,
+} from "./invoice.controller";
 
 const PAYPAL_API_CLIENT = process.env.PAYPAL_API_CLIENT!;
 const PAYPAL_API_SECRET = process.env.PAYPAL_API_SECRET!;
@@ -36,27 +40,27 @@ const getAccessToken = async () => {
   return access_token;
 };
 
+type Product = {
+  shop: string;
+  product: string;
+  productPrice: number;
+  productName: string;
+  isReview: number;
+};
+
+type Invoice = {
+  productList: Array<Product>;
+  userId: string;
+  invoiceTotal: number;
+  invoiceStatus: string;
+};
+
 export const createOrder = async (req: IUserRequest, res: Response) => {
-  const { productList } = req.body;
-  let totalPrice = 0;
-  const products = [];
-  for (let i = 0; i < productList.length; i++) {
-    const productId = productList[i].productId;
-    const product = await ProductModel.findById(productId, {
-      productPrice: 1,
-      productName: 1,
-    }).lean();
+  const invoice = (await createInvoice(req)) as Invoice;
 
-    if (!product) {
-      throw new BadRequestError(ErrorMessage.ERROR_INVALID_PRODUCT_ID);
-    }
+  const productList = invoice.productList as Array<Product>;
 
-    totalPrice += product.productPrice;
-    products.push(product);
-  }
-
-  //return res.json({ productList, totalPrice });
-  const items_detail = products.map((product) => {
+  const items_detail = productList.map((product) => {
     return {
       name: product.productName,
       unit_amount: {
@@ -76,19 +80,19 @@ export const createOrder = async (req: IUserRequest, res: Response) => {
           description: "This is your product order",
           amount: {
             currency_code: "USD",
-            value: totalPrice,
+            value: invoice.invoiceTotal,
             breakdown: {
               item_total: {
                 currency_code: "USD",
-                value: totalPrice,
+                value: invoice.invoiceTotal,
               },
             },
           },
-          items: items_detail
+          items: items_detail,
         },
       ],
       application_context: {
-        brand_name: "deexmarket.com",
+        brand_name: "DeeX Market",
         landing_page: "NO_PREFERENCE",
         user_action: "PAY_NOW",
         shipping_preference: "NO_SHIPPING",
@@ -115,6 +119,27 @@ export const createOrder = async (req: IUserRequest, res: Response) => {
     console.log(error);
     throw new InternalServerError(ErrorMessage.ERROR_FAILED);
   }
+};
+
+//Error
+export const refundPayment = async (req: IUserRequest, res: Response) => {
+  const { access_token } = await getAccessToken();
+  const { token } = req.body;
+  let response: any = {};
+  try {
+    response = await axios.post(
+      `${process.env.PAYPAL_API}/v2/payments/captures/${token}/refund`,
+      {},
+      {
+        headers: {
+          Authorization: `Bearer ${access_token}`,
+        },
+      }
+    );
+  } catch (err) {
+    console.log(err);
+  }
+  res.json(response.data);
 };
 
 export const cancelPayment = (req: IUserRequest, res: Response) => {

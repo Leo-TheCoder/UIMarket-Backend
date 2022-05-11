@@ -7,6 +7,7 @@ import {
   returnAfterLoginPaypal,
   authorizationEndpoint,
   chargeCoin,
+  refundPayment,
 } from "../controllers/payment.controller";
 import { compulsoryAuth } from "../middlewares/authentication";
 
@@ -19,9 +20,10 @@ router.get("/after-login", compulsoryAuth, returnAfterLoginPaypal);
 router.get("/authorization-endpoint", compulsoryAuth, authorizationEndpoint);
 
 //POST Method
-router.post("/create-order", createOrder);
+router.post("/create-order", compulsoryAuth, createOrder);
 router.post("/payout", payoutOrder);
 router.post("/charge-coin", chargeCoin);
+router.post("/refund", refundPayment);
 
 //PUT Method
 //DELETE Method
