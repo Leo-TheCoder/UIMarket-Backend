@@ -8,6 +8,7 @@ interface IError {
   message?: string;
   code?: number;
   name?: string;
+  kind?: string;
 }
 
 const errorHandlerMiddleware: ErrorRequestHandler = (
@@ -32,7 +33,7 @@ const errorHandlerMiddleware: ErrorRequestHandler = (
     });
   }
 
-  if (err.name === "ValidationError") {
+  if (err.name === "ValidationError" || err.kind === "ObjectId") {
     return res
       .status(StatusCodes.BAD_REQUEST)
       .json({ msg: ErrorMessage.ERROR_VALIDATION, mongooseMsg: err.message });

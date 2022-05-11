@@ -25,7 +25,7 @@ const validProduct = async (productId: String, shopId: any) => {
   }
 };
 
-export const preOrder = async (req: IUserRequest, res: Response) => {
+export const preOrder = async (req: IUserRequest) => {
   let { productList } = req.body;
   var invoiceTotal = 0;
 
@@ -59,35 +59,48 @@ export const preOrder = async (req: IUserRequest, res: Response) => {
     }
   }
 
-  res.status(StatusCodes.OK).json({ productList, invoiceTotal });
+  return { productList, invoiceTotal };
 };
 
-export const createOrder = async (req: IUserRequest, res: Response) => {
-  const { productList } = req.body;
+export const createOrder = async (req: IUserRequest) => {
   const { userId } = req.user!;
-
-  if (!productList) {
-    throw new BadRequestError(ErrorMessage.ERROR_MISSING_BODY);
-  }
-
-  //Checking transactionId
-  //Do sth here
+  const body = await preOrder(req);
+  const { productList } = body;
 
   //Create invoice
   let invoice = await InvoiceModel.create({
-    ...req.body,
+    productList: productList,
+    invoiceTotal: body.invoiceTotal,
     userId: userId,
   });
 
-  //Increase total sold by 1
-  if (invoice) {
-    productList.forEach(async (product: any) => {
+  return invoice;
+};
+
+export const paidInvoice = async (invoiceId: any, transactionId: any) => {
+  //Checking if has transaction Id
+
+  //Checking invoice
+  const invoice = await InvoiceModel.findByIdAndUpdate(
+    invoiceId,
+    {
+      transactionId: transactionId,
+      invoiceStatus: "Paid",
+    },
+    { new: true },
+  );
+
+  if (!invoice) {
+    throw new BadRequestError(ErrorMessage.ERROR_INVALID_INVOICE_ID);
+  } else {
+    //Increase total sold by 1
+    invoice.productList.forEach(async (product: any) => {
       let result = await ProductModel.updateOne(
         { _id: product.product },
         { $inc: { totalSold: 1 } },
       );
     });
-  }
 
-  res.status(StatusCodes.CREATED).json({ invoice });
+    return invoice;
+  }
 };
