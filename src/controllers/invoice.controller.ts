@@ -3,6 +3,7 @@ import { StatusCodes } from "http-status-codes";
 import { Request, Response } from "express";
 import { IUserRequest } from "../types/express";
 import * as Constants from "../constants";
+import { ObjectId } from "mongodb";
 
 //Model
 import ProductModel from "../models/Product.model";
@@ -131,15 +132,39 @@ export const purchaseHistory = async (req: IUserRequest, res: Response) => {
       : Math.floor(total / limit) + 1;
 
   //Get invoice
-  const invoices = await InvoiceModel.find({
-    invoiceStatus: "Paid",
-    userId: userId,
-  })
-    .select({ productList: 1, _id: 0 })
+  const invoices = await InvoiceModel.find(
+    {
+      invoiceStatus: "Paid",
+      userId: userId,
+    },
+    { "productList.shop": 0, _id: 0 },
+  )
     .skip((page - 1) * limit)
     .limit(limit)
-    // .populate({ path: "productList.product", select: "productName -_id" })
+    .populate({
+      path: "productList.product",
+      select: "productPictures, productFile",
+    })
     .lean();
 
-  res.status(StatusCodes.OK).json({ invoices });
+  var products = [];
+
+  for (let i = 0; i < invoices.length; i++) {
+    var productList = invoices[i].productList;
+    for (let j = 0; j < productList.length; j++) {
+      products.push(productList[j]);
+    }
+  }
+
+  products.forEach((product) => {
+    const productPictureList = product.product.productPictures;
+    product._id = product.product._id;
+    product.productFile = product.product.productFile;
+    product.coverPicture = productPictureList
+      ? productPictureList[0]
+      : undefined;
+    delete product.product;
+  });
+
+  res.status(StatusCodes.OK).json({ totalPages, page, limit, products });
 };
