@@ -197,30 +197,27 @@ const findByCategory = async (req: Request, res: Response) => {
   });
 };
 
-const findById = async (req: IUserRequest, res: Response) => {
-  const shopId = req.user?.shopId;
-  let customerEmail = "null";
-  if (shopId) {
-    customerEmail = await ShopModel.findById(shopId).populate({
-      path: "userId",
-      select: "customerEmail -_id",
-    });
-  }
-
-  const result = await ProductModel.findByIdAndUpdate(
+const findById = async (req: Request, res: Response) => {
+  const product = await ProductModel.findByIdAndUpdate(
     {
       _id: req.params.productId,
       productStatus: 1,
     },
     { $inc: { allTimeView: 1 } },
-  ).populate({ path: "shopId", select: "shopEmail" });
+  )
+    .populate({ path: "shopId", select: "shopEmail" })
+    .lean();
 
-  let product = result._doc;
-  // console.log(product);
-  product.customerEmail = customerEmail;
-  // console.log(product);
+  //Add customer email of shop
+  const customerEmail = await ShopModel.findById(product.shopId._id)
+    .select({ userId: 1 })
+    .populate({
+      path: "userId",
+      select: "customerEmail -_id",
+    });
+  product.shopId.customerEmail = customerEmail.userId.customerEmail;
 
-  if (!result) {
+  if (!product) {
     throw new NotFoundError(ErrorMessage.ERROR_INVALID_PRODUCT_ID);
   } else {
     res.status(StatusCodes.OK).json({ product });
