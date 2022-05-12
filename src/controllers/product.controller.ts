@@ -7,6 +7,7 @@ import { NotFoundError } from "../errors";
 import ShopModel from "../models/Shop.model";
 import * as ErrorMessage from "../errors/error_message";
 import { getShopById } from "./shop.controller";
+import { IUserRequest } from "../types/express";
 
 enum SortTypes {
   MoneyAsc = "money-asc",
@@ -203,7 +204,18 @@ const findById = async (req: Request, res: Response) => {
       productStatus: 1,
     },
     { $inc: { allTimeView: 1 } },
-  ).populate({ path: "shopId", select: "shopEmail" });
+  )
+    .populate({ path: "shopId", select: "shopEmail" })
+    .lean();
+
+  //Add customer email of shop
+  const customerEmail = await ShopModel.findById(product.shopId._id)
+    .select({ userId: 1 })
+    .populate({
+      path: "userId",
+      select: "customerEmail -_id",
+    });
+  product.shopId.customerEmail = customerEmail.userId.customerEmail;
 
   if (!product) {
     throw new NotFoundError(ErrorMessage.ERROR_INVALID_PRODUCT_ID);
