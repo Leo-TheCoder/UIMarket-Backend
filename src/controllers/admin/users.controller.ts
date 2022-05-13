@@ -2,7 +2,9 @@ import { Request, Response } from "express";
 import * as Constants from "../../constants";
 import { StatusCodes } from "http-status-codes";
 import UserModel from "../../models/User.model";
-
+import { IUserRequest } from "../../types/express";
+import { BadRequestError } from "../../errors";
+import * as ErrorMessage from "../../errors/error_message";
 interface IQuery {
   page?: string;
   limit?: string;
@@ -59,7 +61,7 @@ const projectionUserList = {
   refreshToken: 0,
 };
 
-export const getAllUsers = async (req: Request, res: Response) => {
+export const getAllUsers = async (req: IUserRequest, res: Response) => {
   const query = req.query as IQuery;
   const page = parseInt(query.page!) || Constants.defaultPageNumber;
   const limit = parseInt(query.limit!) || Constants.defaultLimit;
@@ -98,5 +100,71 @@ export const getAllUsers = async (req: Request, res: Response) => {
     page,
     limit,
     users,
+  });
+};
+
+export const deactiveUser = async (req: IUserRequest, res: Response) => {
+  const { userId } = req.params;
+  const user = await UserModel.findById(userId, {
+    customerStatus: 1,
+  });
+
+  if (!user) {
+    throw new BadRequestError(ErrorMessage.ERROR_INVALID_USER_ID);
+  }
+
+  if (user.customerStatus !== -1) {
+    user.customerStatus = -1; //Deactive
+    await user.save();
+  } else {
+    throw new BadRequestError(ErrorMessage.ERROR_ACCOUNT_INACTIVED);
+  }
+
+  return res.status(StatusCodes.OK).json({
+    user,
+  });
+};
+
+export const activeUser = async (req: IUserRequest, res: Response) => {
+  const { userId } = req.params;
+  const user = await UserModel.findById(userId, {
+    customerStatus: 1,
+  });
+
+  if (!user) {
+    throw new BadRequestError(ErrorMessage.ERROR_INVALID_USER_ID);
+  }
+
+  if (user.customerStatus !== 1) {
+    user.customerStatus = 1; //Active
+    await user.save();
+  } else {
+    throw new BadRequestError(ErrorMessage.ERROR_ACCOUNT_ACTIVATED);
+  }
+
+  return res.status(StatusCodes.OK).json({
+    user,
+  });
+};
+
+export const unverifyUser = async (req: IUserRequest, res: Response) => {
+  const { userId } = req.params;
+  const user = await UserModel.findById(userId, {
+    customerStatus: 1,
+  });
+
+  if (!user) {
+    throw new BadRequestError(ErrorMessage.ERROR_INVALID_USER_ID);
+  }
+
+  if (user.customerStatus !== 0) {
+    user.customerStatus = 0; //Unverify account
+    await user.save();
+  } else {
+    throw new BadRequestError(ErrorMessage.ERROR_ACCOUNT_INACTIVED);
+  }
+
+  return res.status(StatusCodes.OK).json({
+    user,
   });
 };
