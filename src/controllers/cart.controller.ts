@@ -77,7 +77,10 @@ export const viewCart = async (req: IUserRequest, res: Response) => {
   const cart = await CartModel.find({ userId: userId })
     .skip((page - 1) * limit)
     .limit(limit)
-    .populate({ path: "product", select: ["productName", "productPrice"] })
+    .populate({
+      path: "product",
+      select: ["productName", "productPrice", "productPictures"],
+    })
     .lean();
 
   res.status(StatusCodes.OK).json({
