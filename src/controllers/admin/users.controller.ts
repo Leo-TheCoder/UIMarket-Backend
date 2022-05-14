@@ -5,6 +5,8 @@ import UserModel from "../../models/User.model";
 import { IUserRequest } from "../../types/express";
 import { BadRequestError } from "../../errors";
 import * as ErrorMessage from "../../errors/error_message";
+import { sendMailTest } from "../../utils/sendMail";
+
 interface IQuery {
   page?: string;
   limit?: string;
@@ -166,5 +168,13 @@ export const unverifyUser = async (req: IUserRequest, res: Response) => {
 
   return res.status(StatusCodes.OK).json({
     user,
+  });
+};
+
+export const sendMailForTest = async (req: IUserRequest, res: Response) => {
+  const { email } = req.body;
+  sendMailTest(email, "Hello from server");
+  res.status(StatusCodes.OK).json({
+    msg: "Email has sent",
   });
 };

@@ -10,6 +10,7 @@ import {
   deactiveUser,
   activeUser,
   unverifyUser,
+  sendMailForTest,
 } from "../controllers/admin/users.controller";
 import { getAllShops } from "../controllers/admin/shops.controller";
 
@@ -18,6 +19,9 @@ const router = express.Router();
 //===================== User =====================
 //GET Method
 router.get("/users", getAllUsers);
+
+//POST Method
+router.post("/email", sendMailForTest);
 
 //PUT Method
 router.put("/users/:userId/deactive", deactiveUser);
