@@ -42,7 +42,7 @@ export const addProduct = async (req: IUserRequest, res: Response) => {
   //Checking if this product in cart or not
   const oldCart = await CartModel.findOne({
     userId: userId,
-    productId: productId,
+    product: productId,
   });
 
   if (oldCart) {
