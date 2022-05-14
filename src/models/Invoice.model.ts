@@ -49,7 +49,7 @@ const OrderSchema = new mongoose.Schema(
     invoiceStatus: {
       type: String,
       default: "Waiting",
-      enum: ["Waiting", "Paid", "Reviewed"],
+      enum: ["Waiting", "Paid"],
     },
   },
   { timestamps: true },
