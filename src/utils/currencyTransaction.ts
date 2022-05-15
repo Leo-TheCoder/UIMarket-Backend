@@ -102,8 +102,9 @@ export const userTransaction = async (
   reason: string,
 ) => {
   //Checking userId and shopId
-  const user = await UserModel.findOne({ _id: userId, customerStatus: 1 });
-  const invoice = await InvoiceModel.findOne({ _id: invoiceId });
+  const userPromise = UserModel.findOne({ _id: userId, customerStatus: 1 }).lean();
+  const invoicePromise = InvoiceModel.findOne({ _id: invoiceId }).lean();
+  const [user, invoice] = await Promise.all([userPromise, invoicePromise]);
   if (!user) {
     throw new NotFoundError(ErrorMessage.ERROR_INVALID_USER_ID);
   } else if (!invoice) {

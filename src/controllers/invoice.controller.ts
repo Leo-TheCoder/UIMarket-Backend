@@ -17,6 +17,15 @@ interface IQuery {
   page?: string;
   limit?: string;
 }
+
+type Product = {
+  product: string;
+  shop: string;
+  shopName: string;
+  productName: string;
+  productPrice: number;
+};
+
 //Checking product is valid or not
 const validProduct = async (productId: String, shopId: any) => {
   let product = await ProductModel.findOne({
@@ -36,8 +45,8 @@ const validProduct = async (productId: String, shopId: any) => {
 };
 
 export const preOrder = async (req: IUserRequest) => {
-  let { productList } = req.body;
-  var invoiceTotal = 0;
+  let productList = req.body.productList as Product[];
+  let invoiceTotal = 0;
 
   if (!productList) {
     throw new BadRequestError(ErrorMessage.ERROR_MISSING_BODY);
@@ -48,27 +57,25 @@ export const preOrder = async (req: IUserRequest) => {
     (value: any, index: any, self: any) =>
       index ===
       self.findIndex(
-        (t: any) => t.product === value.product && t.shop === value.shop,
-      ),
+        (t: any) => t.product === value.product && t.shop === value.shop
+      )
   );
 
   //Checking product and get its price
-  for (let i = 0; i < productList.length; i++) {
-    var product = await validProduct(
-      productList[i].product,
-      productList[i].shop,
+  const productPromises = productList.map((productObj, index) => {
+    return validProduct(productObj.product, productObj.shop).then(
+      (_validProduct) => {
+        if (_validProduct.productPrice >= 0) {
+          invoiceTotal += _validProduct.productPrice;
+
+          productList[index].shopName = _validProduct.shopId.shopName;
+          productList[index].productName = _validProduct.productName;
+          productList[index].productPrice = _validProduct.productPrice;
+        }
+      }
     );
-    if (product.productPrice >= 0) {
-      invoiceTotal += product.productPrice;
-
-      productList[i].shopName = product.shopId.shopName;
-      productList[i].productName = product.productName;
-      productList[i].productPrice = product.productPrice;
-    } else {
-      throw new NotFoundError(ErrorMessage.ERROR_INVALID_PRODUCT_ID);
-    }
-  }
-
+  });
+  await Promise.all(productPromises);
   return { productList, invoiceTotal };
 };
 
@@ -97,22 +104,24 @@ export const paidInvoice = async (invoiceId: any, transactionId: any) => {
       transactionId: transactionId,
       invoiceStatus: "Paid",
     },
-    { new: true },
-  );
+    { new: true }
+  ).lean();
 
   if (!invoice) {
     throw new BadRequestError(ErrorMessage.ERROR_INVALID_INVOICE_ID);
-  } else {
-    //Increase total sold by 1
-    invoice.productList.forEach(async (product: any) => {
-      let result = await ProductModel.updateOne(
-        { _id: product.product },
-        { $inc: { totalSold: 1 } },
-      );
-    });
-
-    return invoice;
   }
+
+  //Increase total sold by 1
+  invoice.productList.forEach((product: any) => {
+    ProductModel.updateOne(
+      { _id: product.product },
+      { $inc: { totalSold: 1 } }
+    ).catch((error) => {
+      console.log(error);
+    });
+  });
+
+  return invoice;
 };
 
 export const purchaseHistory = async (req: IUserRequest, res: Response) => {
@@ -137,7 +146,7 @@ export const purchaseHistory = async (req: IUserRequest, res: Response) => {
       invoiceStatus: "Paid",
       userId: userId,
     },
-    { "productList.shop": 0, _id: 0 },
+    { "productList.shop": 0, _id: 0 }
   )
     .skip((page - 1) * limit)
     .limit(limit)
