@@ -7,7 +7,16 @@ import { v4 as uuidv4 } from "uuid";
 import ShopModel from "../models/Shop.model";
 import UnauthenticatedErorr from "../errors/unauthenticated-error";
 import * as ErrorMessage from "../errors/error_message";
-import { InternalServerError } from "../errors";
+import { BadRequestError, InternalServerError } from "../errors";
+import ProductModel from "../models/Product.model";
+import {
+  createOrder as createInvoice,
+  paidInvoice,
+} from "./invoice.controller";
+import InvoiceModel from "../models/Invoice.model";
+import { shopTransaction, userTransaction } from "../utils/currencyTransaction";
+import { CreateOrder_PayPal } from "../utils/paypal";
+import { Product, Invoice } from "../types/object-type";
 
 const PAYPAL_API_CLIENT = process.env.PAYPAL_API_CLIENT!;
 const PAYPAL_API_SECRET = process.env.PAYPAL_API_SECRET!;
@@ -36,62 +45,41 @@ const getAccessToken = async () => {
 };
 
 export const createOrder = async (req: IUserRequest, res: Response) => {
+  const invoice = (await createInvoice(req)) as Invoice;
+
+  const productList = invoice.productList as Array<Product>;
+
   try {
-    const order = {
-      intent: "CAPTURE",
-      purchase_units: [
-        {
-          description: "This is product order",
-          amount: {
-            currency_code: "USD",
-            value: "100.00",
-            breakdown: {
-              item_total: {
-                currency_code: "USD",
-                value: "100.00",
-              },
-            },
-          },
-          items: [
-            {
-              name: "Website Marketplace Templete by LeoTheCoder",
-              unit_amount: {
-                currency_code: "USD",
-                value: "100.00",
-              },
-              quantity: "1",
-              description: "Website Template",
-            },
-          ],
-        },
-      ],
-      application_context: {
-        brand_name: "deexmarket.com",
-        landing_page: "NO_PREFERENCE",
-        user_action: "PAY_NOW",
-        return_url: `${DOMAIN_NAME}/api/v1/payment/capture-order`,
-        cancel_url: `${DOMAIN_NAME}/api/v1/payment/cancel-payment`,
-      },
-    };
+    const response = await CreateOrder_PayPal(productList, invoice, 0);
+    res.json({
+      paypal_response: response?.data,
+      invoiceId: invoice._id,
+    });
+  } catch (error) {
+    console.log(error);
+    throw new InternalServerError(ErrorMessage.ERROR_FAILED);
+  }
+};
 
-    const access_token = await getAccessToken();
-
-    // make a request
-    const response = await axios.post(
-      `${process.env.PAYPAL_API}/v2/checkout/orders`,
-      order,
+//Error
+export const refundPayment = async (req: IUserRequest, res: Response) => {
+  const { access_token } = await getAccessToken();
+  const { token } = req.body;
+  let response: any = {};
+  try {
+    response = await axios.post(
+      `${process.env.PAYPAL_API}/v2/payments/captures/${token}/refund`,
+      {},
       {
         headers: {
           Authorization: `Bearer ${access_token}`,
         },
       }
     );
-
-    res.json(response.data);
-  } catch (error) {
-    console.log(error);
-    throw new InternalServerError(ErrorMessage.ERROR_FAILED);
+  } catch (err) {
+    console.log(err);
   }
+  res.json(response.data);
 };
 
 export const cancelPayment = (req: IUserRequest, res: Response) => {
@@ -260,7 +248,18 @@ export const chargeCoin = async (req: IUserRequest, res: Response) => {
 };
 
 export const captureOrder = async (req: IUserRequest, res: Response) => {
-  const { token, amount } = req.query;
+  const { token } = req.query;
+  const { userId } = req.user!;
+
+  if (!req.query.invoiceId) {
+    throw new BadRequestError(ErrorMessage.ERROR_MISSING_BODY);
+  }
+  const invoiceId = req.query.invoiceId as string;
+
+  const invoice = (await InvoiceModel.findById(invoiceId).lean()) as Invoice;
+  if (!invoice) {
+    throw new BadRequestError(ErrorMessage.ERROR_INVALID_INVOICE_ID);
+  }
 
   try {
     const response = await axios.post(
@@ -274,15 +273,34 @@ export const captureOrder = async (req: IUserRequest, res: Response) => {
       }
     );
 
-    //Update point
-    //...
+    //Record user coin
+    const transaction = await userTransaction(
+      userId,
+      invoiceId,
+      -invoice.invoiceTotal, //minus number
+      `Pay for invoice: #${invoiceId}`
+    );
+    //Update invoice status
+    await paidInvoice(invoiceId, transaction._id);
 
     res.status(StatusCodes.OK).json({
       data: response.data,
-      amount,
+      invoiceId,
     });
   } catch (error) {
     console.log(error);
     throw new InternalServerError(ErrorMessage.ERROR_FAILED);
   }
+
+  invoice.productList.forEach((product) => {
+    shopTransaction(
+      product.shop,
+      invoiceId,
+      `Payment from ${invoiceId}`,
+      product.productPrice,
+      0
+    ).catch((err) => {
+      console.log(err);
+    });
+  });
 };
