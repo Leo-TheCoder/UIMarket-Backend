@@ -12,7 +12,11 @@ import {
   unverifyUser,
   sendMailForTest,
 } from "../controllers/admin/users.controller";
-import { getAllShops } from "../controllers/admin/shops.controller";
+import {
+  activeShop,
+  deactiveShop,
+  getAllShops,
+} from "../controllers/admin/shops.controller";
 
 const router = express.Router();
 
@@ -31,6 +35,10 @@ router.put("/users/:userId/unverify", unverifyUser);
 //===================== Shop =====================
 //GET Method
 router.get("/shops", getAllShops);
+
+//PUT Method
+router.put("/shops/:shopId/deactive", deactiveShop);
+router.put("/shops/:shopId/active", activeShop);
 
 //===================== Category =====================
 //POST Method
