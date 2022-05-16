@@ -58,7 +58,7 @@ app.use("/api/v1/payment", paymentRouter);
 app.use("/api/v1/category", productCategoryRouter);
 app.use("/api/v1/token", tokenRouter);
 app.use("/api/v1/invoices", compulsoryAuth, invoiceRouter);
-app.use("/api/v1/reviews", compulsoryAuth, reviewRouter);
+app.use("/api/v1/reviews", reviewRouter);
 app.use("/api/v1/licenses", licenseRouter);
 
 app.use(notFoundMiddleware);
@@ -75,8 +75,8 @@ const start = async () => {
     });
 
     //Scheduled Tasks
-    //Resolve bounty run everyday at 00:01
-    cron.schedule("0 1 * * *", async () => {
+    //Resolve bounty run everyday at every hour
+    cron.schedule("1 * * * *", async () => {
       await resolveBounty();
     });
   } catch (error) {

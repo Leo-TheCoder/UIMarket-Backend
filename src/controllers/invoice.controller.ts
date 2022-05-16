@@ -1,12 +1,22 @@
+//Library
 import { StatusCodes } from "http-status-codes";
-import { BadRequestError, NotFoundError } from "../errors";
 import { Request, Response } from "express";
 import { IUserRequest } from "../types/express";
 import * as Constants from "../constants";
-import * as ErrorMessage from "../errors/error_message";
+import { ObjectId } from "mongodb";
+
+//Model
 import ProductModel from "../models/Product.model";
 import InvoiceModel from "../models/Invoice.model";
 
+//Error
+import { BadRequestError, NotFoundError } from "../errors";
+import * as ErrorMessage from "../errors/error_message";
+
+interface IQuery {
+  page?: string;
+  limit?: string;
+}
 //Checking product is valid or not
 const validProduct = async (productId: String, shopId: any) => {
   let product = await ProductModel.findOne({
@@ -25,7 +35,7 @@ const validProduct = async (productId: String, shopId: any) => {
   }
 };
 
-export const preOrder = async (req: IUserRequest, res: Response) => {
+export const preOrder = async (req: IUserRequest) => {
   let { productList } = req.body;
   var invoiceTotal = 0;
 
@@ -59,35 +69,102 @@ export const preOrder = async (req: IUserRequest, res: Response) => {
     }
   }
 
-  res.status(StatusCodes.OK).json({ productList, invoiceTotal });
+  return { productList, invoiceTotal };
 };
 
-export const createOrder = async (req: IUserRequest, res: Response) => {
-  const { productList } = req.body;
+export const createOrder = async (req: IUserRequest) => {
   const { userId } = req.user!;
-
-  if (!productList) {
-    throw new BadRequestError(ErrorMessage.ERROR_MISSING_BODY);
-  }
-
-  //Checking transactionId
-  //Do sth here
+  const body = await preOrder(req);
+  const { productList } = body;
 
   //Create invoice
   let invoice = await InvoiceModel.create({
-    ...req.body,
+    productList: productList,
+    invoiceTotal: body.invoiceTotal,
     userId: userId,
   });
 
-  //Increase total sold by 1
-  if (invoice) {
-    productList.forEach(async (product: any) => {
+  return invoice;
+};
+
+export const paidInvoice = async (invoiceId: any, transactionId: any) => {
+  //Checking if has transaction Id
+
+  //Checking invoice
+  const invoice = await InvoiceModel.findByIdAndUpdate(
+    invoiceId,
+    {
+      transactionId: transactionId,
+      invoiceStatus: "Paid",
+    },
+    { new: true },
+  );
+
+  if (!invoice) {
+    throw new BadRequestError(ErrorMessage.ERROR_INVALID_INVOICE_ID);
+  } else {
+    //Increase total sold by 1
+    invoice.productList.forEach(async (product: any) => {
       let result = await ProductModel.updateOne(
         { _id: product.product },
         { $inc: { totalSold: 1 } },
       );
     });
+
+    return invoice;
+  }
+};
+
+export const purchaseHistory = async (req: IUserRequest, res: Response) => {
+  const { userId } = req.user!;
+  const query = req.query as IQuery;
+  const page = parseInt(query.page!) || Constants.defaultPageNumber;
+  const limit = parseInt(query.limit!) || Constants.defaultLimit;
+
+  const total = await InvoiceModel.find({
+    invoiceStatus: "Paid",
+    userId: userId,
+  }).count();
+
+  const totalPages =
+    total % limit === 0
+      ? Math.floor(total / limit)
+      : Math.floor(total / limit) + 1;
+
+  //Get invoice
+  const invoices = await InvoiceModel.find(
+    {
+      invoiceStatus: "Paid",
+      userId: userId,
+    },
+    { "productList.shop": 0, _id: 0 },
+  )
+    .skip((page - 1) * limit)
+    .limit(limit)
+    .populate({
+      path: "productList.product",
+      select: "productPictures, productFile",
+    })
+    .lean();
+
+  var products = [];
+
+  for (let i = 0; i < invoices.length; i++) {
+    var productList = invoices[i].productList;
+    for (let j = 0; j < productList.length; j++) {
+      products.push(productList[j]);
+    }
   }
 
-  res.status(StatusCodes.CREATED).json({ invoice });
+  products.forEach((product) => {
+    const productPictureList = product.product.productPictures;
+    product._id = product.product._id;
+    product.productFile = product.product.productFile;
+    product.coverPicture = productPictureList
+      ? productPictureList[0]
+      : undefined;
+    delete product.product;
+  });
+
+  res.status(StatusCodes.OK).json({ totalPages, page, limit, products });
 };

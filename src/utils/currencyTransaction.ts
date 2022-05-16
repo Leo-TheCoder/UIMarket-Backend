@@ -111,7 +111,7 @@ export const coinTransaction = async (
   }
 
   //Record the transaction
-  const transaction = await PointTransactionModel.create({
+  const transaction = await CoinTransactionModel.create({
     toAccount: userId,
     reason: reason,
     currentAmount: currentAmount,

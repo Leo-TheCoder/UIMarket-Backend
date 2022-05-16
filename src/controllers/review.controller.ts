@@ -1,9 +1,15 @@
+//Library
 import { StatusCodes } from "http-status-codes";
 import { Request, Response } from "express";
 import { IUserRequest } from "../types/express";
+import * as Constants from "../constants";
+
+//Model
 import ReviewModel from "../models/Review.model";
 import InvoiceModel from "../models/Invoice.model";
 import ProductModel from "../models/Product.model";
+
+//Error
 import * as ErrorMessage from "../errors/error_message";
 import {
   BadRequestError,
@@ -11,6 +17,12 @@ import {
   InternalServerError,
   NotFoundError,
 } from "../errors";
+
+interface IQuery {
+  page?: string;
+  limit?: string;
+  selectWith?: string;
+}
 
 const ratingProduct = async (productId: any, rating: any) => {
   let product = await ProductModel.findById(productId);
@@ -32,7 +44,7 @@ export const createReview = async (req: IUserRequest, res: Response) => {
   //Checking this invoice is valid or not
   let invoice = await InvoiceModel.findOne({
     _id: req.params.invoiceId,
-    // "productList.productId": req.params.productId,
+    invoiceStatus: "Paid",
   });
   if (!invoice) {
     throw new NotFoundError(ErrorMessage.ERROR_INVALID_INVOICE_ID);
@@ -68,12 +80,77 @@ export const createReview = async (req: IUserRequest, res: Response) => {
   } else {
     throw new InternalServerError(ErrorMessage.ERROR_FAILED);
   }
+};
 
-  // //Remove duplicate productId
-  // const seen = new Set();
-  // const filteredArr = productListReq.filter((el: any) => {
-  //   const duplicate = seen.has(el.productId);
-  //   seen.add(el.productId);
-  //   return !duplicate;
-  // });
+export const getProductReviews = async (req: Request, res: Response) => {
+  const query = req.query as IQuery;
+  const page = parseInt(query.page!) || Constants.defaultPageNumber;
+  const limit = parseInt(query.limit!) || Constants.defaultLimit;
+
+  const total = await ReviewModel.countDocuments({
+    product: req.params.productId,
+  });
+
+  const totalPages =
+    total % limit === 0
+      ? Math.floor(total / limit)
+      : Math.floor(total / limit) + 1;
+
+  const reviews = await ReviewModel.find({ product: req.params.productId })
+    .skip((page - 1) * limit)
+    .limit(limit)
+    .select({ invoice: 0 })
+    .populate({ path: "user", select: "customerName" })
+    .sort({ createdAt: -1 })
+    .lean();
+
+  return res.status(StatusCodes.OK).json({
+    totalPages,
+    page,
+    limit,
+    reviews,
+  });
+};
+
+export const updateReview = async (req: IUserRequest, res: Response) => {
+  const { userId } = req.user!;
+
+  //Checking if this review exist or not
+  const review = await ReviewModel.findById(req.params.reviewId);
+  if (!review) {
+    throw new NotFoundError(ErrorMessage.ERROR_INVALID_REVIEW_ID);
+  }
+
+  //Checking if user of this review
+  if (userId != review.user) {
+    throw new ForbiddenError(ErrorMessage.ERROR_FORBIDDEN);
+  }
+
+  //Checking request body
+  const newRating = req.body.productRating;
+  const newReview = req.body.productReview;
+  const newPicture = req.body.reviewPictures;
+  if (!newRating || !newReview || !newPicture) {
+    throw new BadRequestError(ErrorMessage.ERROR_MISSING_BODY);
+  }
+
+  //Get product of this review
+  const product = await ProductModel.findById(review.product);
+  const oldRating = review.productRating;
+
+  //Checking productRating is changed or not
+  if (newRating != oldRating) {
+    product.productRating =
+      product.productRating + (newRating - oldRating) / product.totalSold;
+    await product.save();
+  }
+
+  //Update review
+  review.productReview = newReview;
+  review.productRating = newRating;
+  review.reviewPictures = newPicture;
+  review.updatedAt = new Date();
+  const result = await review.save();
+
+  res.status(StatusCodes.OK).json(result);
 };
