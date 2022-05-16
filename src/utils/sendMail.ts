@@ -4,63 +4,63 @@ import { readFile } from "fs/promises";
 import path from "path";
 
 const transporter = nodemailer.createTransport({
-	service: 'Gmail',
-	from: 'deex.uimarket@gmail.com',
-	auth: {
-		user: process.env.EMAIL_USERNAME,
-		pass: process.env.EMAIL_PASSWORD,
-	},
+  service: "Gmail",
+  from: "deex.uimarket@gmail.com",
+  auth: {
+    user: process.env.EMAIL_USERNAME,
+    pass: process.env.EMAIL_PASSWORD,
+  },
 });
 
 const sendVerifyEmail = (to: string, userId: string, verifyCode: string) => {
-	const url = `${process.env.FE_DOMAIN_NAME}/verify?userId=${userId}&verifyCode=${verifyCode}`;
-	transporter.sendMail(
-		{
+  const url = `${process.env.FE_DOMAIN_NAME}/verify?userId=${userId}&verifyCode=${verifyCode}`;
+  transporter.sendMail(
+    {
       messageId: uuidv4(),
-			from: '<no-reply> deex.uimarket@gmail.com',
-			to: to,
-			subject: `Verify Account`,
-			html: `Click <a href = '${url}'>here</a> to confirm your email.`,
-		},
-		(err) => {
-			if (err) console.log(err?.message);
-		}
-	);
+      from: "<no-reply> deex.uimarket@gmail.com",
+      to: to,
+      subject: `Verify Account`,
+      html: `Click <a href = '${url}'>here</a> to confirm your email.`,
+    },
+    (err) => {
+      if (err) console.log(err?.message);
+    }
+  );
 };
 
 const sendForgetPasswordEmail = (
-	to: string,
-	userId: string,
-	verifyCode: string
+  to: string,
+  userId: string,
+  verifyCode: string
 ) => {
-	const url = `${process.env.FE_DOMAIN_NAME}/resetforgetpassword?userId=${userId}&verifyCode=${verifyCode}`;
-	transporter.sendMail(
-		{
+  const url = `${process.env.FE_DOMAIN_NAME}/resetforgetpassword?userId=${userId}&verifyCode=${verifyCode}`;
+  transporter.sendMail(
+    {
       messageId: uuidv4(),
-			from: '<no-reply> deex.uimarket@gmail.com',
-			to: to,
-			subject: `Forget Password`,
-			html: `Click <a href = '${url}'>here</a> to reset your password`,
-		},
-		(err) => {
-			if (err) console.log(err.message);
-		}
-	);
+      from: "<no-reply> deex.uimarket@gmail.com",
+      to: to,
+      subject: `Forget Password`,
+      html: `Click <a href = '${url}'>here</a> to reset your password`,
+    },
+    (err) => {
+      if (err) console.log(err.message);
+    }
+  );
 };
 
 const sendResetPasswordConfirmEmail = (to: string) => {
-	transporter.sendMail(
-		{
+  transporter.sendMail(
+    {
       messageId: uuidv4(),
-			from: '<no-reply> deex.uimarket@gmail.com',
-			to: to,
-			subject: `Your Password has been reset`,
-			html: `Just want to say that your password has been changed!`,
-		},
-		(err) => {
-			if (err) console.log(err.message);
-		}
-	);
+      from: "<no-reply> deex.uimarket@gmail.com",
+      to: to,
+      subject: `Your Password has been reset`,
+      html: `Just want to say that your password has been changed!`,
+    },
+    (err) => {
+      if (err) console.log(err.message);
+    }
+  );
 };
 
 export const sendMailTest = async (to: string, content: string) => {
@@ -88,13 +88,13 @@ export const sendMailTest = async (to: string, content: string) => {
       to: to,
       subject: `This is templete mail`,
       html: htmlToSend,
-      attachments: imageFiles.map(image => {
+      attachments: imageFiles.map((image) => {
         return {
           filename: image,
           path: `./src/public/images/${image}`,
-          cid: image
-        }
-      })
+          cid: image,
+        };
+      }),
     },
     (err) => {
       if (err) console.log(err.message);
@@ -103,7 +103,7 @@ export const sendMailTest = async (to: string, content: string) => {
 };
 
 export {
-	sendVerifyEmail,
-	sendForgetPasswordEmail,
-	sendResetPasswordConfirmEmail,
+  sendVerifyEmail,
+  sendForgetPasswordEmail,
+  sendResetPasswordConfirmEmail,
 };
