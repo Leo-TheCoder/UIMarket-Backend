@@ -15,7 +15,7 @@ import {
 } from "./invoice.controller";
 import InvoiceModel from "../models/Invoice.model";
 import { shopTransaction, userTransaction } from "../utils/currencyTransaction";
-import { CreateOrder_PayPal } from "../utils/paypal";
+import { CreateOrder_PayPal, Payout_PayPal } from "../utils/paypal";
 import { Product, Invoice } from "../types/object-type";
 
 const PAYPAL_API_CLIENT = process.env.PAYPAL_API_CLIENT!;
@@ -101,41 +101,15 @@ export const payoutOrder = async (req: IUserRequest, res: Response) => {
   }
   const receiver = shop.shopPayPal.paypalEmail;
 
-  const payoutObj = {
-    sender_batch_header: {
-      sender_batch_id: uuidv4(),
-      email_subject: "You have a payout!",
-      email_message: "You have receive a payout! Thanks for using our service!",
-    },
-    items: [
-      {
-        recipient_type: "EMAIL",
-        amount: {
-          value: amountValue,
-          currency: "USD",
-        },
-        receiver: receiver,
-      },
-    ],
-  };
-
   try {
     //const access_token = await getAccessToken();
-
-    const response = await axios.post(
-      `${process.env.PAYPAL_API}/v1/payments/payouts`,
-      payoutObj,
-      {
-        auth: {
-          username: PAYPAL_API_CLIENT!,
-          password: PAYPAL_API_SECRET!,
-        },
-      }
-    );
+    const response = await Payout_PayPal(amountValue, receiver)
 
     //update point
-
-    res.status(StatusCodes.OK).json(response.data);
+    
+    res.status(StatusCodes.OK).json({
+      response: response?.data
+    });
   } catch (error) {
     console.log(error);
     throw new InternalServerError(ErrorMessage.ERROR_FAILED);

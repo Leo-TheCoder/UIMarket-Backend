@@ -1,5 +1,6 @@
 import axios from "axios";
 import { Invoice, Product } from "../types/object-type";
+import { v4 as uuidv4} from "uuid";
 
 const PAYPAL_API_CLIENT = process.env.PAYPAL_API_CLIENT!;
 const PAYPAL_API_SECRET = process.env.PAYPAL_API_SECRET!;
@@ -93,3 +94,45 @@ export const CreateOrder_PayPal = async (
 
   return response;
 };
+
+export const Payout_PayPal = async (amountValue: number | string, receiver: string) => {
+  const payoutObj = {
+    sender_batch_header: {
+      sender_batch_id: uuidv4(),
+      email_subject: "You have a payout!",
+      email_message: "You have receive a payout! Thanks for using our service!",
+    },
+    items: [
+      {
+        recipient_type: "EMAIL",
+        amount: {
+          value: amountValue,
+          currency: "USD",
+        },
+        receiver: receiver,
+      },
+    ],
+  };
+
+  const payoutPromise = () => {
+    return axios.post(
+      `${process.env.PAYPAL_API}/v1/payments/payouts`,
+      payoutObj,
+      {
+        auth: {
+          username: PAYPAL_API_CLIENT!,
+          password: PAYPAL_API_SECRET!,
+        },
+      }
+    );
+  }
+
+  let response;
+  try {
+    response = await payoutPromise();
+  } catch (error: any) {
+    console.log(error.response.data);
+  }
+
+  return response
+}
