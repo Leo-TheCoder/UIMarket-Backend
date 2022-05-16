@@ -13,8 +13,15 @@ import * as ErrorMessage from "../errors/error_message";
 import { BadRequestError, InternalServerError, NotFoundError } from "../errors";
 
 export const createLicense = async (req: Request, res: Response) => {
+  //Checking body
+  if (!req.body.invoice || !req.body.product || !req.body.licenseFile) {
+    throw new BadRequestError(ErrorMessage.ERROR_MISSING_BODY);
+  }
   //Checking this invoice is valid or not
-  const invoice = await InvoiceModel.findById(req.body.invoice).lean();
+  const invoice = await InvoiceModel.findOne({
+    _id: req.body.invoice,
+    invoiceStatus: "Paid",
+  }).lean();
   if (!invoice) {
     throw new NotFoundError(ErrorMessage.ERROR_INVALID_INVOICE_ID);
   }
@@ -29,8 +36,7 @@ export const createLicense = async (req: Request, res: Response) => {
 
   //Checking license existed or not
   const license = await LicenseModel.findOne({
-    invoice: req.body.invoice,
-    product: req.body.product,
+    ...req.body,
   });
   if (license) {
     throw new BadRequestError(ErrorMessage.ERROR_LICENSE_EXISTED);
