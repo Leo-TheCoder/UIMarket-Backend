@@ -1,4 +1,7 @@
-import nodemailer from 'nodemailer';
+import nodemailer from "nodemailer";
+import { v4 as uuidv4 } from "uuid";
+import { readFile } from "fs/promises";
+import path from "path";
 
 const transporter = nodemailer.createTransport({
 	service: 'Gmail',
@@ -13,6 +16,7 @@ const sendVerifyEmail = (to: string, userId: string, verifyCode: string) => {
 	const url = `${process.env.FE_DOMAIN_NAME}/verify?userId=${userId}&verifyCode=${verifyCode}`;
 	transporter.sendMail(
 		{
+      messageId: uuidv4(),
 			from: '<no-reply> deex.uimarket@gmail.com',
 			to: to,
 			subject: `Verify Account`,
@@ -32,6 +36,7 @@ const sendForgetPasswordEmail = (
 	const url = `${process.env.FE_DOMAIN_NAME}/resetforgetpassword?userId=${userId}&verifyCode=${verifyCode}`;
 	transporter.sendMail(
 		{
+      messageId: uuidv4(),
 			from: '<no-reply> deex.uimarket@gmail.com',
 			to: to,
 			subject: `Forget Password`,
@@ -46,6 +51,7 @@ const sendForgetPasswordEmail = (
 const sendResetPasswordConfirmEmail = (to: string) => {
 	transporter.sendMail(
 		{
+      messageId: uuidv4(),
 			from: '<no-reply> deex.uimarket@gmail.com',
 			to: to,
 			subject: `Your Password has been reset`,
@@ -55,6 +61,45 @@ const sendResetPasswordConfirmEmail = (to: string) => {
 			if (err) console.log(err.message);
 		}
 	);
+};
+
+export const sendMailTest = async (to: string, content: string) => {
+  const htmlToSend = await readFile(
+    path.join(__dirname, "../public/index.html")
+  );
+
+  const imageFiles = [
+    "image-1.png",
+    "image-2.png",
+    "image-3.png",
+    "image-4.png",
+    "image-5.png",
+    "image-6.png",
+    "image-7.png",
+    "image-8.png",
+    "image-9.png",
+    "image-10.jpeg",
+  ];
+  transporter.sendMail(
+    {
+      messageId: uuidv4(),
+      sender: "DeeX UI Market",
+      from: "<no-reply> deex.uimarket@gmail.com",
+      to: to,
+      subject: `This is templete mail`,
+      html: htmlToSend,
+      attachments: imageFiles.map(image => {
+        return {
+          filename: image,
+          path: `./src/public/images/${image}`,
+          cid: image
+        }
+      })
+    },
+    (err) => {
+      if (err) console.log(err.message);
+    }
+  );
 };
 
 export {

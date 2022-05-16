@@ -14,6 +14,7 @@ export const ERROR_ACCOUNT_INACTIVED = "account-inactived";
 export const ERROR_GOOGLE_INVALID = "invalid-googleid";
 export const ERROR_PAYPAL_INVALID = "invalid-paypal";
 export const ERROR_INVALID_USER_ID = "invalid-user-id";
+export const ERROR_ACCOUNT_ACTIVATED = "account-activated";
 
 //Education side
 export const ERROR_INVALID_QUESTION_ID = "invalid-question-id";
