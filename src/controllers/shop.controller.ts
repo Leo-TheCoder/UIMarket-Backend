@@ -129,12 +129,13 @@ export const updateProduct = async (req: IUserRequest, res: Response) => {
   product.productPrice = req.body.productPrice || product.productPrice;
   product.productDescription =
     req.body.productDescription || product.productDescription;
-  product.productPicture = req.body.productPicture || product.productPicture;
+  product.productPictures = req.body.productPictures || product.productPictures;
+  product.productFile = req.body.productFile || product.productFile;
   product.updatedAt = new Date();
 
-  const result = await product.save();
-  if (result) {
-    res.status(StatusCodes.OK).json({ result });
+  const updatedProduct = await product.save();
+  if (updatedProduct) {
+    res.status(StatusCodes.OK).json({ updatedProduct });
   } else {
     throw new InternalServerError(ErrorMessage.ERROR_FAILED);
   }
