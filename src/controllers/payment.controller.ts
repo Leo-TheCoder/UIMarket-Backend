@@ -14,8 +14,12 @@ import {
   paidInvoice,
 } from "./invoice.controller";
 import InvoiceModel from "../models/Invoice.model";
-import { shopTransaction, userTransaction } from "../utils/currencyTransaction";
-import { CreateOrder_PayPal, Payout_PayPal } from "../utils/paypal";
+import {
+  shopTransaction,
+  shopWithdrawTransaction,
+  userTransaction,
+} from "../utils/currencyTransaction";
+import { Capture_PayPal, CreateOrder_PayPal, Payout_PayPal } from "../utils/paypal";
 import { Product, Invoice } from "../types/object-type";
 
 const PAYPAL_API_CLIENT = process.env.PAYPAL_API_CLIENT!;
@@ -86,13 +90,12 @@ export const cancelPayment = (req: IUserRequest, res: Response) => {
   res.status(StatusCodes.OK).send("Cancel Payment!");
 };
 
-export const payoutOrder = async (req: IUserRequest, res: Response) => {
-  const user = req.user;
+export const withdrawPayment = async (req: IUserRequest, res: Response) => {
   const { amountValue } = req.body;
 
   //get email or paypal id from db
-  const { shopId } = user!;
-  const shop = await ShopModel.findById(shopId, "shopPayPal");
+  const { shopId } = req.user!;
+  const shop = await ShopModel.findById(shopId);
   if (!shop) {
     throw new UnauthenticatedErorr(ErrorMessage.ERROR_INVALID_SHOP_ID);
   }
@@ -100,15 +103,19 @@ export const payoutOrder = async (req: IUserRequest, res: Response) => {
     throw new UnauthenticatedErorr(ErrorMessage.ERROR_PAYPAL_INVALID);
   }
   const receiver = shop.shopPayPal.paypalEmail;
-
+  
   try {
-    //const access_token = await getAccessToken();
-    const response = await Payout_PayPal(amountValue, receiver)
+    //update coin
+    const response = await Payout_PayPal(amountValue, receiver);
+    const transaction = await shopWithdrawTransaction(
+      shop,
+      `Withdraw from system $${amountValue}`,
+      -amountValue //minus value
+    ).catch((err) => console.log(err));
 
-    //update point
-    
     res.status(StatusCodes.OK).json({
-      response: response?.data
+      response: response?.data,
+      transaction,
     });
   } catch (error) {
     console.log(error);
@@ -222,8 +229,12 @@ export const chargeCoin = async (req: IUserRequest, res: Response) => {
 };
 
 export const captureOrder = async (req: IUserRequest, res: Response) => {
-  const { token } = req.query;
+  const { token } = req.query as {token: string};
   const { userId } = req.user!;
+
+  if(!token) {
+    throw new BadRequestError(ErrorMessage.ERROR_FORBIDDEN);
+  }
 
   if (!req.query.invoiceId) {
     throw new BadRequestError(ErrorMessage.ERROR_MISSING_BODY);
@@ -236,16 +247,7 @@ export const captureOrder = async (req: IUserRequest, res: Response) => {
   }
 
   try {
-    const response = await axios.post(
-      `${process.env.PAYPAL_API}/v2/checkout/orders/${token}/capture`,
-      {},
-      {
-        auth: {
-          username: PAYPAL_API_CLIENT,
-          password: PAYPAL_API_SECRET,
-        },
-      }
-    );
+    const response = await Capture_PayPal(token);
 
     //Record user coin
     const transaction = await userTransaction(
@@ -258,7 +260,7 @@ export const captureOrder = async (req: IUserRequest, res: Response) => {
     await paidInvoice(invoiceId, transaction._id);
 
     res.status(StatusCodes.OK).json({
-      data: response.data,
+      data: response?.data,
       invoiceId,
     });
   } catch (error) {
@@ -271,8 +273,7 @@ export const captureOrder = async (req: IUserRequest, res: Response) => {
       product.shop,
       invoiceId,
       `Payment from ${invoiceId}`,
-      product.productPrice,
-      0
+      product.productPrice
     ).catch((err) => {
       console.log(err);
     });

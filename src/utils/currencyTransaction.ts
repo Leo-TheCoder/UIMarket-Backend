@@ -128,10 +128,9 @@ export const userTransaction = async (
 
 export const shopTransaction = async (
   shopId: string,
-  invoiceId: string,
+  invoiceId: string | null,
   reason: string,
   changeAmount: number,
-  withdraw: number,
 ) => {
   //Checking shopId
   const shop = await ShopModel.findOne({ _id: shopId, shopStatus: 1 });
@@ -142,50 +141,58 @@ export const shopTransaction = async (
   const currentAmount = shop.shopBalance;
   const balanceAmount = currentAmount + changeAmount;
 
-  //Case widthrawl
-  if (withdraw == 1) {
-    if (balanceAmount < 0) {
-      throw new BadRequestError(ErrorMessage.ERROR_INVALID_AMOUNT);
-    } else {
-      //Update shop wallet
-      shop.shopBalance = balanceAmount;
-      const newBalance = await shop.save();
+ //Checking invoice ID
+ const invoice = await InvoiceModel.findById(invoiceId);
+ if (!invoice) {
+   throw new BadRequestError(ErrorMessage.ERROR_INVALID_INVOICE_ID);
+ }
 
-      if (!newBalance) {
-        throw new InternalServerError(ErrorMessage.ERROR_FAILED);
-      } else {
-        const transaction = await ShopTransactionModel.create({
-          shopId: shopId,
-          reason: reason,
-          currentAmount: currentAmount,
-          changeAmount: changeAmount,
-          balanceAmount: balanceAmount,
-        });
-
-        return transaction;
-      }
-    }
-  } else {
-    //Checking invoice ID
-    const invoice = await InvoiceModel.findById(invoiceId);
-    if (!invoice) {
-      throw new BadRequestError(ErrorMessage.ERROR_INVALID_INVOICE_ID);
-    }
-    //Update shop wallet
-    shop.shopBalance = balanceAmount;
-    const newBalance = await shop.save();
-    if (!newBalance) {
-      throw new InternalServerError(ErrorMessage.ERROR_FAILED);
-    } else {
-      const transaction = await ShopTransactionModel.create({
-        shopId: shopId,
-        invoiceId: invoiceId,
-        reason: reason,
-        currentAmount: currentAmount,
-        changeAmount: changeAmount,
-        balanceAmount: balanceAmount,
-      });
-      return transaction;
-    }
-  }
+ //Update shop wallet
+ shop.shopBalance = balanceAmount;
+ const newBalance = await shop.save();
+ if (!newBalance) {
+   throw new InternalServerError(ErrorMessage.ERROR_FAILED);
+ } else {
+   const transaction = await ShopTransactionModel.create({
+     shopId: shopId,
+     invoiceId: invoiceId,
+     reason: reason,
+     currentAmount: currentAmount,
+     changeAmount: changeAmount,
+     balanceAmount: balanceAmount,
+   });
+   return transaction;
+ }
 };
+
+export const shopWithdrawTransaction = async(
+  shopFullDocument: any,
+  reason: string,
+  changeAmount: number
+) => {
+  const shop = shopFullDocument;
+
+  const currentAmount = shop.shopBalance;
+  const balanceAmount = currentAmount + changeAmount;
+
+  if (balanceAmount < 0) {
+    throw new BadRequestError(ErrorMessage.ERROR_INVALID_AMOUNT);
+  } 
+   //Update shop wallet
+   shop.shopBalance = balanceAmount;
+   const newBalance = await shop.save();
+
+   if (!newBalance) {
+     throw new InternalServerError(ErrorMessage.ERROR_FAILED);
+   } 
+
+   const transaction = await ShopTransactionModel.create({
+     shopId: shop._id,
+     reason: reason,
+     currentAmount: currentAmount,
+     changeAmount: changeAmount,
+     balanceAmount: balanceAmount,
+   });
+
+   return transaction;
+}

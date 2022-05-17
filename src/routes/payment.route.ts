@@ -3,7 +3,7 @@ import {
   createOrder,
   captureOrder,
   cancelPayment,
-  payoutOrder,
+  withdrawPayment,
   returnAfterLoginPaypal,
   authorizationEndpoint,
   chargeCoin,
@@ -14,14 +14,14 @@ import { compulsoryAuth, optionalAuth } from "../middlewares/authentication";
 const router = express.Router();
 
 //GET Method
-router.get("/capture-order", optionalAuth, captureOrder);
+router.get("/capture-order", compulsoryAuth, captureOrder);
 router.get("/cancel-payment", cancelPayment);
 router.get("/after-login", compulsoryAuth, returnAfterLoginPaypal);
 router.get("/authorization-endpoint", compulsoryAuth, authorizationEndpoint);
 
 //POST Method
 router.post("/create-order", compulsoryAuth, createOrder);
-router.post("/payout", payoutOrder);
+router.post("/withdraw", compulsoryAuth ,withdrawPayment);
 router.post("/charge-coin", chargeCoin);
 router.post("/refund", refundPayment);
 
