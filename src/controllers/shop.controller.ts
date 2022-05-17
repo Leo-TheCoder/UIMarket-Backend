@@ -1,12 +1,18 @@
+//Library
 import { StatusCodes } from "http-status-codes";
 import { Request, Response } from "express";
 import { IUserRequest } from "../types/express";
-import Shop from "../models/Shop.model";
 import * as Constants from "../constants";
+
+//Model
 import ShopModel from "../models/Shop.model";
 import ProductModel from "../models/Product.model";
 import CategoryModel from "../models/Category.model";
 import UserModel from "../models/User.model";
+import InvoiceModel from "../models/Invoice.model";
+
+//Error
+import * as ErrorMessage from "../errors/error_message";
 import {
   BadRequestError,
   ForbiddenError,
@@ -15,8 +21,6 @@ import {
   NotFoundError,
   UnauthenticatedError,
 } from "../errors";
-import * as ErrorMessage from "../errors/error_message";
-import InvoiceModel from "../models/Invoice.model";
 
 interface IQuery {
   page?: string;
@@ -26,7 +30,7 @@ interface IQuery {
 
 export const createShop = async (req: IUserRequest, res: Response) => {
   const { userId } = req.user!;
-  const shop = await Shop.findOne({ userId: userId }).lean();
+  const shop = await ShopModel.findOne({ userId: userId }).lean();
 
   if (shop) {
     if (shop.shopStatus == 0) {
@@ -129,12 +133,13 @@ export const updateProduct = async (req: IUserRequest, res: Response) => {
   product.productPrice = req.body.productPrice || product.productPrice;
   product.productDescription =
     req.body.productDescription || product.productDescription;
-  product.productPicture = req.body.productPicture || product.productPicture;
+  product.productPictures = req.body.productPictures || product.productPictures;
+  product.productFile = req.body.productFile || product.productFile;
   product.updatedAt = new Date();
 
-  const result = await product.save();
-  if (result) {
-    res.status(StatusCodes.OK).json({ result });
+  const updatedProduct = await product.save();
+  if (updatedProduct) {
+    res.status(StatusCodes.OK).json({ updatedProduct });
   } else {
     throw new InternalServerError(ErrorMessage.ERROR_FAILED);
   }

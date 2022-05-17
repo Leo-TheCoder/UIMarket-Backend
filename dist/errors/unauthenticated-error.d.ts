@@ -1,5 +1,6 @@
 import CustomError from "./custom-error";
-declare class UnauthenticateErorr extends CustomError {
+declare class UnauthenticatedErorr extends CustomError {
     constructor(message: string);
 }
-export default UnauthenticateErorr;
+export default UnauthenticatedErorr;
+//# sourceMappingURL=unauthenticated-error.d.ts.map

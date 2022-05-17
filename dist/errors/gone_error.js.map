@@ -1,0 +1,1 @@
+{"version":3,"file":"gone_error.js","sourceRoot":"","sources":["../../src/errors/gone_error.ts"],"names":[],"mappings":";;;;;AAAA,kEAAyC;AACzC,yDAAgD;AAEhD,MAAM,SAAU,SAAQ,sBAAW;IACjC,YAAY,OAAe;QACzB,KAAK,CAAC,OAAO,CAAC,CAAC;QACf,IAAI,CAAC,UAAU,GAAG,+BAAW,CAAC,IAAI,CAAC;IACrC,CAAC;CACF;AAED,kBAAe,SAAS,CAAC"}

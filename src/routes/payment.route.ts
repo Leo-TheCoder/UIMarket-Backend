@@ -9,12 +9,12 @@ import {
   chargeCoin,
   refundPayment,
 } from "../controllers/payment.controller";
-import { compulsoryAuth } from "../middlewares/authentication";
+import { compulsoryAuth, optionalAuth } from "../middlewares/authentication";
 
 const router = express.Router();
 
 //GET Method
-router.get("/capture-order", captureOrder);
+router.get("/capture-order", optionalAuth, captureOrder);
 router.get("/cancel-payment", cancelPayment);
 router.get("/after-login", compulsoryAuth, returnAfterLoginPaypal);
 router.get("/authorization-endpoint", compulsoryAuth, authorizationEndpoint);

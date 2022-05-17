@@ -6,6 +6,8 @@ import CategoryModel from "../models/Category.model";
 import { NotFoundError } from "../errors";
 import ShopModel from "../models/Shop.model";
 import * as ErrorMessage from "../errors/error_message";
+import { getShopById } from "./shop.controller";
+import { IUserRequest } from "../types/express";
 
 enum SortTypes {
   MoneyAsc = "money-asc",
@@ -105,7 +107,7 @@ export const getAllProducts = async (req: Request, res: Response) => {
       productStatus: 1,
       ...filterObj,
     },
-    projectionProductList
+    projectionProductList,
   )
     .sort(sortObj)
     .skip((page - 1) * limit)
@@ -201,8 +203,19 @@ const findById = async (req: Request, res: Response) => {
       _id: req.params.productId,
       productStatus: 1,
     },
-    { $inc: { allTimeView: 1 } }
-  );
+    { $inc: { allTimeView: 1 } },
+  )
+    .populate({ path: "shopId", select: "shopEmail" })
+    .lean();
+
+  //Add customer email of shop
+  const customerEmail = await ShopModel.findById(product.shopId._id)
+    .select({ userId: 1 })
+    .populate({
+      path: "userId",
+      select: "customerEmail -_id",
+    });
+  product.shopId.customerEmail = customerEmail.userId.customerEmail;
 
   if (!product) {
     throw new NotFoundError(ErrorMessage.ERROR_INVALID_PRODUCT_ID);

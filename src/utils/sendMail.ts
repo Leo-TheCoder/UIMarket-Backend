@@ -14,11 +14,10 @@ const transporter = nodemailer.createTransport({
 });
 
 const sendVerifyEmail = (to: string, userId: string, verifyCode: string) => {
-  const url = `${process.env.DOMAIN_NAME}/api/v1/verify?userId=${userId}&verifyCode=${verifyCode}`;
+  const url = `${process.env.FE_DOMAIN_NAME}/verify?userId=${userId}&verifyCode=${verifyCode}`;
   transporter.sendMail(
     {
       messageId: uuidv4(),
-      sender: "DeeX UI Market",
       from: "<no-reply> deex.uimarket@gmail.com",
       to: to,
       subject: `Verify Account`,
@@ -35,11 +34,10 @@ const sendForgetPasswordEmail = (
   userId: string,
   verifyCode: string
 ) => {
-  const url = `${process.env.FE_DOMAIN_NAME}/resetforgotpassword?userId=${userId}&verifyCode=${verifyCode}`;
+  const url = `${process.env.FE_DOMAIN_NAME}/resetforgetpassword?userId=${userId}&verifyCode=${verifyCode}`;
   transporter.sendMail(
     {
       messageId: uuidv4(),
-      sender: "DeeX UI Market",
       from: "<no-reply> deex.uimarket@gmail.com",
       to: to,
       subject: `Forget Password`,
@@ -55,7 +53,6 @@ const sendResetPasswordConfirmEmail = (to: string) => {
   transporter.sendMail(
     {
       messageId: uuidv4(),
-      sender: "DeeX UI Market",
       from: "<no-reply> deex.uimarket@gmail.com",
       to: to,
       subject: `Your Password has been reset`,
@@ -96,13 +93,13 @@ export const sendMailTest = async (to: string, content: string) => {
       to: to,
       subject: `This is templete mail`,
       html: htmlToSend,
-      attachments: imageFiles.map(image => {
+      attachments: imageFiles.map((image) => {
         return {
           filename: image,
           path: `./src/public/images/${image}`,
-          cid: image
-        }
-      })
+          cid: image,
+        };
+      }),
     },
     (err) => {
       if (err) console.log(err.message);

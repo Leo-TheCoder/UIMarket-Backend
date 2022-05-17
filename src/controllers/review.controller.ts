@@ -100,7 +100,7 @@ export const getProductReviews = async (req: Request, res: Response) => {
     .skip((page - 1) * limit)
     .limit(limit)
     .select({ invoice: 0 })
-    .populate({ path: "user", select: "customerName" })
+    .populate({ path: "user", select: "customerName customerAvatar" })
     .sort({ createdAt: -1 })
     .lean();
 

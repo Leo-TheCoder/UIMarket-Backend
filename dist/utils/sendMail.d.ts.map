@@ -1,0 +1,1 @@
+{"version":3,"file":"sendMail.d.ts","sourceRoot":"","sources":["../../src/utils/sendMail.ts"],"names":[],"mappings":"AAWA,QAAA,MAAM,eAAe,OAAQ,MAAM,UAAU,MAAM,cAAc,MAAM,SAatE,CAAC;AAEF,QAAA,MAAM,uBAAuB,OACvB,MAAM,UACF,MAAM,cACF,MAAM,SAcnB,CAAC;AAEF,QAAA,MAAM,6BAA6B,OAAQ,MAAM,SAYhD,CAAC;AAEF,OAAO,EACL,eAAe,EACf,uBAAuB,EACvB,6BAA6B,GAC9B,CAAC"}

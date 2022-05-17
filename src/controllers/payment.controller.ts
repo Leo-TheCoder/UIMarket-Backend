@@ -13,6 +13,10 @@ import {
   createOrder as createInvoice,
   paidInvoice,
 } from "./invoice.controller";
+import InvoiceModel from "../models/Invoice.model";
+import { shopTransaction, userTransaction } from "../utils/currencyTransaction";
+import { CreateOrder_PayPal } from "../utils/paypal";
+import { Product, Invoice } from "../types/object-type";
 
 const PAYPAL_API_CLIENT = process.env.PAYPAL_API_CLIENT!;
 const PAYPAL_API_SECRET = process.env.PAYPAL_API_SECRET!;
@@ -40,81 +44,17 @@ const getAccessToken = async () => {
   return access_token;
 };
 
-type Product = {
-  shop: string;
-  product: string;
-  productPrice: number;
-  productName: string;
-  isReview: number;
-};
-
-type Invoice = {
-  productList: Array<Product>;
-  userId: string;
-  invoiceTotal: number;
-  invoiceStatus: string;
-};
-
 export const createOrder = async (req: IUserRequest, res: Response) => {
   const invoice = (await createInvoice(req)) as Invoice;
 
   const productList = invoice.productList as Array<Product>;
 
-  const items_detail = productList.map((product) => {
-    return {
-      name: product.productName,
-      unit_amount: {
-        currency_code: "USD",
-        value: product.productPrice,
-      },
-      quantity: "1",
-      description: "Deex Product",
-    };
-  });
-
   try {
-    const order = {
-      intent: "CAPTURE",
-      purchase_units: [
-        {
-          description: "This is your product order",
-          amount: {
-            currency_code: "USD",
-            value: invoice.invoiceTotal,
-            breakdown: {
-              item_total: {
-                currency_code: "USD",
-                value: invoice.invoiceTotal,
-              },
-            },
-          },
-          items: items_detail,
-        },
-      ],
-      application_context: {
-        brand_name: "DeeX Market",
-        landing_page: "NO_PREFERENCE",
-        user_action: "PAY_NOW",
-        shipping_preference: "NO_SHIPPING",
-        return_url: `${DOMAIN_NAME}/api/v1/payment/capture-order`,
-        cancel_url: `${DOMAIN_NAME}/api/v1/payment/cancel-payment`,
-      },
-    };
-
-    const access_token = await getAccessToken();
-
-    // make a request
-    const response = await axios.post(
-      `${process.env.PAYPAL_API}/v2/checkout/orders`,
-      order,
-      {
-        headers: {
-          Authorization: `Bearer ${access_token}`,
-        },
-      }
-    );
-
-    res.json(response.data);
+    const response = await CreateOrder_PayPal(productList, invoice, 0);
+    res.json({
+      paypal_response: response?.data,
+      invoiceId: invoice._id,
+    });
   } catch (error) {
     console.log(error);
     throw new InternalServerError(ErrorMessage.ERROR_FAILED);
@@ -308,7 +248,18 @@ export const chargeCoin = async (req: IUserRequest, res: Response) => {
 };
 
 export const captureOrder = async (req: IUserRequest, res: Response) => {
-  const { token, amount } = req.query;
+  const { token } = req.query;
+  const { userId } = req.user!;
+
+  if (!req.query.invoiceId) {
+    throw new BadRequestError(ErrorMessage.ERROR_MISSING_BODY);
+  }
+  const invoiceId = req.query.invoiceId as string;
+
+  const invoice = (await InvoiceModel.findById(invoiceId).lean()) as Invoice;
+  if (!invoice) {
+    throw new BadRequestError(ErrorMessage.ERROR_INVALID_INVOICE_ID);
+  }
 
   try {
     const response = await axios.post(
@@ -322,15 +273,34 @@ export const captureOrder = async (req: IUserRequest, res: Response) => {
       }
     );
 
-    //Update point
-    //...
+    //Record user coin
+    const transaction = await userTransaction(
+      userId,
+      invoiceId,
+      -invoice.invoiceTotal, //minus number
+      `Pay for invoice: #${invoiceId}`
+    );
+    //Update invoice status
+    await paidInvoice(invoiceId, transaction._id);
 
     res.status(StatusCodes.OK).json({
       data: response.data,
-      amount,
+      invoiceId,
     });
   } catch (error) {
     console.log(error);
     throw new InternalServerError(ErrorMessage.ERROR_FAILED);
   }
+
+  invoice.productList.forEach((product) => {
+    shopTransaction(
+      product.shop,
+      invoiceId,
+      `Payment from ${invoiceId}`,
+      product.productPrice,
+      0
+    ).catch((err) => {
+      console.log(err);
+    });
+  });
 };
