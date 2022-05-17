@@ -56,7 +56,7 @@ const UserSchema = new mongoose.Schema(
     customerStatus: {
       type: Number,
       default: 0,
-      enum: [0, 1],
+      enum: [-1, 0, 1],
     },
     customerBio: {
       type: String,

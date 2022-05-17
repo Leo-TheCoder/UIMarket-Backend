@@ -1,12 +1,18 @@
+//Library
 import { StatusCodes } from "http-status-codes";
 import { Request, Response } from "express";
 import { IUserRequest } from "../types/express";
-import Shop from "../models/Shop.model";
 import * as Constants from "../constants";
+
+//Model
 import ShopModel from "../models/Shop.model";
 import ProductModel from "../models/Product.model";
 import CategoryModel from "../models/Category.model";
 import UserModel from "../models/User.model";
+import InvoiceModel from "../models/Invoice.model";
+
+//Error
+import * as ErrorMessage from "../errors/error_message";
 import {
   BadRequestError,
   ForbiddenError,
@@ -15,8 +21,6 @@ import {
   NotFoundError,
   UnauthenticatedError,
 } from "../errors";
-import * as ErrorMessage from "../errors/error_message";
-import InvoiceModel from "../models/Invoice.model";
 
 interface IQuery {
   page?: string;
@@ -26,7 +30,7 @@ interface IQuery {
 
 export const createShop = async (req: IUserRequest, res: Response) => {
   const { userId } = req.user!;
-  const shop = await Shop.findOne({ userId: userId }).lean();
+  const shop = await ShopModel.findOne({ userId: userId }).lean();
 
   if (shop) {
     if (shop.shopStatus == 0) {
@@ -169,6 +173,7 @@ export const updateShop = async (req: IUserRequest, res: Response) => {
   shop.shopDescription = req.body.shopDescription || shop.shopDescription;
   shop.shopPhone = req.body.shopPhone || shop.shopPhone;
   shop.shopEmail = req.body.shopEmail || shop.shopEmail;
+  shop.shopPayPal = req.body.shopPayPal || shop.shopPayPal;
   shop.updatedAt = new Date();
 
   const result = await shop.save();

@@ -1,16 +1,23 @@
 import mongoose from "mongoose";
 
-const CoinTransactionSchema = new mongoose.Schema(
+const ShopTransactionSchema = new mongoose.Schema(
   {
-    toAccount: {
+    shopId: {
       type: mongoose.Types.ObjectId,
-      ref: "Customer",
-      required: [true, "Please provide user id"],
+      ref: "Shop",
+      required: [true, "Please provide shop id"],
+    },
+    invoiceId: {
+      type: mongoose.Types.ObjectId,
+      ref: "Invoice",
+      required: false,
+    },
+    reason: {
+      type: String,
     },
     currentAmount: {
       type: Number,
       required: true,
-      min: 0,
     },
     changeAmount: {
       type: Number,
@@ -19,7 +26,6 @@ const CoinTransactionSchema = new mongoose.Schema(
     balanceAmount: {
       type: Number,
       required: true,
-      min: 0,
     },
     transactionStatus: {
       type: Number,
@@ -30,4 +36,4 @@ const CoinTransactionSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
-export default mongoose.model("Coin Transaction", CoinTransactionSchema);
+export default mongoose.model("Shop Transaction", ShopTransactionSchema);

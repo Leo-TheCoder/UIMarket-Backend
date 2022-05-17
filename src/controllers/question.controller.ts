@@ -1,4 +1,18 @@
+//Library
 import { StatusCodes } from "http-status-codes";
+import { Request, Response } from "express";
+import { IUserRequest } from "../types/express";
+import * as Constants from "../constants";
+import { getStatusVote } from "../utils/statusVote";
+import { pointRollBack, pointTransaction } from "../utils/currencyTransaction";
+
+//Model
+import Question from "../models/Question.model";
+import QuestionTagModel from "../models/QuestionTag.model";
+import AnswerModel from "../models/Answer.model";
+
+//Error
+import * as ErrorMessage from "../errors/error_message";
 import {
   BadRequestError,
   ForbiddenError,
@@ -6,20 +20,13 @@ import {
   InternalServerError,
   NotFoundError,
 } from "../errors";
-import { Request, Response } from "express";
-import { IUserRequest } from "../types/express";
-import Question from "../models/Question.model";
-import QuestionTagModel from "../models/QuestionTag.model";
-import * as Constants from "../constants";
-import AnswerModel from "../models/Answer.model";
-import { getStatusVote } from "../utils/statusVote";
-import { pointRollBack, pointTransaction } from "../utils/currencyTransaction";
-import * as ErrorMessage from "../errors/error_message";
+
 interface IQuery {
   page?: string;
   limit?: string;
   selectWith?: string;
   tag?: string;
+  title?: string;
 }
 
 //get _id of tags in list (create tags if they don't exist)
@@ -87,7 +94,11 @@ const createQuestion = async (req: IUserRequest, res: Response) => {
 
     //Checking valid balance
     const changeAmount = req.body.questionBounty * -1;
-    const transaction = await pointTransaction(userId, changeAmount);
+    const transaction = await pointTransaction(
+      userId,
+      changeAmount,
+      "Create bounty question",
+    );
     if (transaction) {
       req.body.bountyActive = 1;
     }
@@ -118,15 +129,84 @@ const createQuestion = async (req: IUserRequest, res: Response) => {
   }
 };
 
+const searchWithTitle = async (
+  page: number,
+  limit: number,
+  title: string,
+  queryString: any,
+  projection: any,
+) => {
+  const selectOption = projection;
+
+  const totalQuestion = await Question.aggregate([
+    {
+      $search: {
+        index: "questionTitle",
+        text: {
+          path: "questionTitle",
+          query: decodeURIComponent(title),
+        },
+      },
+    },
+    { $match: queryString },
+    { $count: "total" },
+  ]);
+
+  if (totalQuestion.length < 1) {
+    return {
+      questions: [],
+      totalPages: 0,
+    };
+  }
+  const total = totalQuestion[0].total;
+
+  const totalPages =
+    total % limit === 0
+      ? Math.floor(total / limit)
+      : Math.floor(total / limit) + 1;
+
+  const questions = await Question.aggregate([
+    {
+      $search: {
+        index: "questionTitle",
+        text: {
+          path: "questionTitle",
+          query: decodeURIComponent(title),
+        },
+      },
+    },
+    { $match: queryString },
+    { $addFields: { score: { $meta: "searchScore" } } },
+    { $skip: (page - 1) * limit },
+    { $limit: limit },
+    { $project: selectOption },
+  ]);
+
+  await Question.populate(questions, {
+    path: "questionTag",
+    select: { tagName: 1 },
+  });
+  await Question.populate(questions, {
+    path: "userId",
+    select: { customerName: 1 },
+  });
+  return {
+    questions,
+    totalPages,
+  };
+};
+
 const getQuestions = async (req: Request, res: Response) => {
   const query = req.query as IQuery;
   const page = parseInt(query.page!) || Constants.defaultPageNumber;
   const limit = parseInt(query.limit!) || Constants.defaultLimit;
   const tag = query.tag;
   const selectWith = query.selectWith?.toLowerCase().trim() || "all";
+  const title = query.title;
 
   //Handle with Query Parameters
   var queryString: any = { questionStatus: 1 };
+  let projection = { questionContent: 0, __v: 0 };
 
   //Checking selectWith option
   if (selectWith === "bounty") {
@@ -142,13 +222,30 @@ const getQuestions = async (req: Request, res: Response) => {
     queryString.questionTag = { $in: tagIdList };
   }
 
+  if (title) {
+    const { questions, totalPages } = await searchWithTitle(
+      page,
+      limit,
+      title,
+      queryString,
+      projection,
+    );
+
+    return res.status(StatusCodes.OK).json({
+      totalPages,
+      page,
+      limit,
+      questions,
+    });
+  }
+
   const total = await Question.countDocuments(queryString);
   const totalPages =
     total % limit === 0
       ? Math.floor(total / limit)
       : Math.floor(total / limit) + 1;
 
-  const questions = await Question.find(queryString)
+  const questions = await Question.find(queryString, projection)
     .sort({ questionBounty: -1, totalView: -1 })
     .skip((page - 1) * limit)
     .limit(limit)
@@ -279,7 +376,11 @@ const chooseBestAnswer = async (req: IUserRequest, res: Response) => {
       pointReward = question.questionBounty;
     }
 
-    const transaction = await pointTransaction(answerOwner, pointReward);
+    const transaction = await pointTransaction(
+      answerOwner,
+      pointReward,
+      "Best answer for question",
+    );
     question.bestAnswer = answer._id;
     const resultQuestion = await question.save();
 
@@ -419,7 +520,11 @@ const rebountyQuestion = async (req: IUserRequest, res: Response) => {
   question.awardDueDate = awardDueDate.setDate(awardDueDate.getDate() + 14);
   question.updateAt = new Date();
 
-  const transaction = await pointTransaction(userId, newBounty * -1);
+  const transaction = await pointTransaction(
+    userId,
+    newBounty * -1,
+    "Rebounty for question",
+  );
   if (!transaction) {
     throw new InternalServerError(ErrorMessage.ERROR_FAILED);
   } else {

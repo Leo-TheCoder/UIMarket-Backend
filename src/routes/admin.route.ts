@@ -5,11 +5,34 @@ import {
   getAllCategory,
 } from "../controllers/productCategory.controller";
 
+import {
+  getAllUsers,
+  deactiveUser,
+  activeUser,
+  unverifyUser,
+  sendMailForTest,
+} from "../controllers/admin/users.controller";
+import { getAllShops } from "../controllers/admin/shops.controller";
+
 const router = express.Router();
 
+//===================== User =====================
 //GET Method
-// router.get("/category", getAllCategory);
+router.get("/users", getAllUsers);
 
+//POST Method
+router.post("/email", sendMailForTest);
+
+//PUT Method
+router.put("/users/:userId/deactive", deactiveUser);
+router.put("/users/:userId/active", activeUser);
+router.put("/users/:userId/unverify", unverifyUser);
+
+//===================== Shop =====================
+//GET Method
+router.get("/shops", getAllShops);
+
+//===================== Category =====================
 //POST Method
 router.post("/category", createCategory);
 

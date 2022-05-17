@@ -14,6 +14,7 @@ export const ERROR_ACCOUNT_INACTIVED = "account-inactived";
 export const ERROR_GOOGLE_INVALID = "invalid-googleid";
 export const ERROR_PAYPAL_INVALID = "invalid-paypal";
 export const ERROR_INVALID_USER_ID = "invalid-user-id";
+export const ERROR_ACCOUNT_ACTIVATED = "account-activated";
 
 //Education side
 export const ERROR_INVALID_QUESTION_ID = "invalid-question-id";
@@ -30,6 +31,10 @@ export const ERROR_INVALID_CATEGORY_ID = "invalid-category-id";
 export const ERROR_INVALID_PRODUCT_ID = "invalid-product-id";
 export const ERROR_INVALID_SHOP_ID = "invalid-shop-id";
 export const ERROR_INVALID_INVOICE_ID = "invalid-invoice-id";
+export const ERROR_INVALID_REVIEW_ID = "invalid-review-id";
 
 //Transaction
 export const ERROR_INVALID_AMOUNT = "invalid-amount";
+
+//License
+export const ERROR_LICENSE_EXISTED = "license-existed";
