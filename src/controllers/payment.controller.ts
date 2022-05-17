@@ -56,7 +56,7 @@ export const createOrder = async (req: IUserRequest, res: Response) => {
   try {
     const response = await CreateOrder_PayPal(productList, invoice, 0);
     res.json({
-      paypal_response: response?.data,
+      paypal_link: response,
       invoiceId: invoice._id,
     });
   } catch (error) {

@@ -27,7 +27,7 @@ type Product = {
 };
 
 //Checking product is valid or not
-const validProduct = async (productId: String, shopId: any) => {
+const validProduct = async (productId: string) => {
   let product = await ProductModel.findOne({
     _id: productId,
     // shopId: shopId,
@@ -57,13 +57,13 @@ export const preOrder = async (req: IUserRequest) => {
     (value: any, index: any, self: any) =>
       index ===
       self.findIndex(
-        (t: any) => t.product === value.product && t.shop === value.shop
+        (t: any) => t.product === value.product
       )
   );
 
   //Checking product and get its price
   const productPromises = productList.map((productObj, index) => {
-    return validProduct(productObj.product, productObj.shop).then(
+    return validProduct(productObj.product).then(
       (_validProduct) => {
         if (_validProduct.productPrice >= 0) {
           invoiceTotal += _validProduct.productPrice;

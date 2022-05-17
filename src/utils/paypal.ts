@@ -81,18 +81,21 @@ export const CreateOrder_PayPal = async (
   };
 
   let response;
+  let linkPayPal;
   try {
     response = await createOrderPromise();
   } catch (error: any) {
     if (error.response.data.error == "invalid_token") {
       accessToken = await refreshAccessToken();
       response = await createOrderPromise();
+      
+      linkPayPal = response.data.links[1].href;
     } else {
       console.log(error.response.data);
     }
   }
 
-  return response;
+  return linkPayPal;
 };
 
 export const Payout_PayPal = async (
