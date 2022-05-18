@@ -67,8 +67,8 @@ export const CreateOrder_PayPal = async (
       landing_page: "NO_PREFERENCE",
       user_action: "PAY_NOW",
       shipping_preference: "NO_SHIPPING",
-      return_url: `${DOMAIN_NAME}/api/v1/payment/capture-order`,
-      cancel_url: `${DOMAIN_NAME}/api/v1/payment/cancel-payment`,
+      return_url: `${FE_DOMAIN_NAME}/payment`,
+      cancel_url: `${FE_DOMAIN_NAME}`,
     },
   };
 
