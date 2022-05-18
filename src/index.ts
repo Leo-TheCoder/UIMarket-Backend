@@ -66,7 +66,7 @@ app.use("/api/v1/carts", compulsoryAuth, cartRouter);
 app.use(notFoundMiddleware);
 app.use(errorHandlerMiddleware);
 
-//Schedule Task
+//Scheduled Task
 import { resolveBounty } from "./scheduled/resolveBounty";
 
 const start = async () => {

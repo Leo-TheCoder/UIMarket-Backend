@@ -8,6 +8,7 @@ import {
   authorizationEndpoint,
   chargeCoin,
   refundPayment,
+  paymentHistory,
 } from "../controllers/payment.controller";
 import { compulsoryAuth, optionalAuth } from "../middlewares/authentication";
 
@@ -18,10 +19,11 @@ router.get("/capture-order", compulsoryAuth, captureOrder);
 router.get("/cancel-payment", cancelPayment);
 router.get("/after-login", compulsoryAuth, returnAfterLoginPaypal);
 router.get("/authorization-endpoint", compulsoryAuth, authorizationEndpoint);
+router.get("/history/", compulsoryAuth, paymentHistory);
 
 //POST Method
 router.post("/create-order", compulsoryAuth, createOrder);
-router.post("/withdraw", compulsoryAuth ,withdrawPayment);
+router.post("/withdraw", compulsoryAuth, withdrawPayment);
 router.post("/charge-coin", chargeCoin);
 router.post("/refund", refundPayment);
 
