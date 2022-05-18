@@ -12,6 +12,7 @@ import InvoiceModel from "../models/Invoice.model";
 //Error
 import { BadRequestError, NotFoundError } from "../errors";
 import * as ErrorMessage from "../errors/error_message";
+import CartModel from "../models/Cart.model";
 
 interface IQuery {
   page?: string;
@@ -55,25 +56,20 @@ export const preOrder = async (req: IUserRequest) => {
   //Remove duplicate out of array
   productList = productList.filter(
     (value: any, index: any, self: any) =>
-      index ===
-      self.findIndex(
-        (t: any) => t.product === value.product
-      )
+      index === self.findIndex((t: any) => t.product === value.product)
   );
 
   //Checking product and get its price
   const productPromises = productList.map((productObj, index) => {
-    return validProduct(productObj.product).then(
-      (_validProduct) => {
-        if (_validProduct.productPrice >= 0) {
-          invoiceTotal += _validProduct.productPrice;
+    return validProduct(productObj.product).then((_validProduct) => {
+      if (_validProduct.productPrice >= 0) {
+        invoiceTotal += _validProduct.productPrice;
 
-          productList[index].shopName = _validProduct.shopId.shopName;
-          productList[index].productName = _validProduct.productName;
-          productList[index].productPrice = _validProduct.productPrice;
-        }
+        productList[index].shopName = _validProduct.shopId.shopName;
+        productList[index].productName = _validProduct.productName;
+        productList[index].productPrice = _validProduct.productPrice;
       }
-    );
+    });
   });
   await Promise.all(productPromises);
   return { productList, invoiceTotal };
@@ -94,7 +90,11 @@ export const createOrder = async (req: IUserRequest) => {
   return invoice;
 };
 
-export const paidInvoice = async (invoiceId: any, transactionId: any) => {
+export const paidInvoice = async (
+  invoiceId: any,
+  transactionId: any,
+  userId: string
+) => {
   //Checking if has transaction Id
 
   //Checking invoice
@@ -117,6 +117,13 @@ export const paidInvoice = async (invoiceId: any, transactionId: any) => {
       { _id: product.product },
       { $inc: { totalSold: 1 } }
     ).catch((error) => {
+      console.log(error);
+    });
+
+    CartModel.findOneAndRemove({
+      userId,
+      product: product.product,
+    }).catch((error) => {
       console.log(error);
     });
   });

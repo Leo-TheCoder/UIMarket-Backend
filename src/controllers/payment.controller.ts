@@ -19,7 +19,11 @@ import {
   shopWithdrawTransaction,
   userTransaction,
 } from "../utils/currencyTransaction";
-import { Capture_PayPal, CreateOrder_PayPal, Payout_PayPal } from "../utils/paypal";
+import {
+  Capture_PayPal,
+  CreateOrder_PayPal,
+  Payout_PayPal,
+} from "../utils/paypal";
 import { Product, Invoice } from "../types/object-type";
 
 const PAYPAL_API_CLIENT = process.env.PAYPAL_API_CLIENT!;
@@ -103,7 +107,7 @@ export const withdrawPayment = async (req: IUserRequest, res: Response) => {
     throw new UnauthenticatedErorr(ErrorMessage.ERROR_PAYPAL_INVALID);
   }
   const receiver = shop.shopPayPal.paypalEmail;
-  
+
   try {
     //update coin
     const response = await Payout_PayPal(amountValue, receiver);
@@ -229,10 +233,10 @@ export const chargeCoin = async (req: IUserRequest, res: Response) => {
 };
 
 export const captureOrder = async (req: IUserRequest, res: Response) => {
-  const { token } = req.query as {token: string};
+  const { token } = req.query as { token: string };
   const { userId } = req.user!;
 
-  if(!token) {
+  if (!token) {
     throw new BadRequestError(ErrorMessage.ERROR_FORBIDDEN);
   }
 
@@ -257,7 +261,7 @@ export const captureOrder = async (req: IUserRequest, res: Response) => {
       `Pay for invoice: #${invoiceId}`
     );
     //Update invoice status
-    await paidInvoice(invoiceId, transaction._id);
+    await paidInvoice(invoiceId, transaction._id, userId);
 
     res.status(StatusCodes.OK).json({
       data: response?.data,
