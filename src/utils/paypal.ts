@@ -44,6 +44,20 @@ export const CreateOrder_PayPal = async (
       description: "Deex Product",
     };
   });
+
+  //push fee
+  const fee = (invoice.invoiceTotal * buyerFee) / 100;
+  items_detail.push({
+    name: "DeeX System Fee",
+    unit_amount: {
+      currency_code: "USD",
+      value: fee,
+    },
+    quantity: "1",
+    description: `${buyerFee}% with total invoice`
+  });
+
+  const totalAmount = invoice.invoiceTotal + fee;
   const order = {
     intent: "CAPTURE",
     purchase_units: [
@@ -51,11 +65,11 @@ export const CreateOrder_PayPal = async (
         description: "This is your product order",
         amount: {
           currency_code: "USD",
-          value: invoice.invoiceTotal,
+          value: totalAmount,
           breakdown: {
             item_total: {
               currency_code: "USD",
-              value: invoice.invoiceTotal,
+              value: totalAmount,
             },
           },
         },
@@ -89,14 +103,14 @@ export const CreateOrder_PayPal = async (
     if (error.response.data.error == "invalid_token") {
       accessToken = await refreshAccessToken();
       response = await createOrderPromise();
-      
+
       linkPayPal = response.data.links[1].href;
     } else {
       console.log(error.response.data);
     }
   }
 
-  if(!linkPayPal) {
+  if (!linkPayPal) {
     throw new Error("Something wrong with paypal");
   }
 
@@ -166,7 +180,7 @@ export const Capture_PayPal = async (token: string) => {
   try {
     response = await capturePromise();
   } catch (error: any) {
-    console.log(error.response.data)
+    console.log(error.response.data);
   }
 
   return response;

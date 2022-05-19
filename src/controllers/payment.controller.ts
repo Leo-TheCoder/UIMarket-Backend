@@ -24,6 +24,7 @@ import {
   CreateOrder_PayPal,
   Payout_PayPal,
 } from "../utils/paypal";
+import { getSystemDocument } from "./admin/system.controller";
 import { Product, Invoice } from "../types/object-type";
 
 const PAYPAL_API_CLIENT = process.env.PAYPAL_API_CLIENT!;
@@ -56,9 +57,9 @@ export const createOrder = async (req: IUserRequest, res: Response) => {
   const invoice = (await createInvoice(req)) as Invoice;
 
   const productList = invoice.productList as Array<Product>;
-
+  const buyerFee = (await getSystemDocument()).buyerFee;
   try {
-    const response = await CreateOrder_PayPal(productList, invoice, 0);
+    const response = await CreateOrder_PayPal(productList, invoice, buyerFee);
     res.json({
       paypal_link: response,
       invoiceId: invoice._id,
@@ -272,12 +273,16 @@ export const captureOrder = async (req: IUserRequest, res: Response) => {
     throw new InternalServerError(ErrorMessage.ERROR_FAILED);
   }
 
+  const sellerFee = (await getSystemDocument()).sellerFee;
+
   invoice.productList.forEach((product) => {
+    const netAmount = product.productPrice * (100 - sellerFee)/100;
+
     shopTransaction(
       product.shop,
       invoiceId,
       `Payment from ${invoiceId}`,
-      product.productPrice
+      netAmount,
     ).catch((err) => {
       console.log(err);
     });

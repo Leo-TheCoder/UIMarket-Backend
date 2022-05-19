@@ -13,6 +13,7 @@ import {
   sendMailForTest,
 } from "../controllers/admin/users.controller";
 import { getAllShops } from "../controllers/admin/shops.controller";
+import { changeSystemFee } from "../controllers/admin/system.controller";
 
 const router = express.Router();
 
@@ -36,6 +37,9 @@ router.get("/shops", getAllShops);
 //POST Method
 router.post("/category", createCategory);
 
+//===================== System =======================
+//POST Method
+router.post("/system/fee", changeSystemFee);
 //PUT Method
 //DELETE Method
 
