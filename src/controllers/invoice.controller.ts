@@ -91,21 +91,24 @@ export const createOrder = async (req: IUserRequest) => {
 };
 
 export const paidInvoice = async (
-  invoiceId: any,
+  invoice: any,
   transactionId: any,
   userId: string
 ) => {
   //Checking if has transaction Id
 
   //Checking invoice
-  const invoice = await InvoiceModel.findByIdAndUpdate(
-    invoiceId,
-    {
-      transactionId: transactionId,
-      invoiceStatus: "Paid",
-    },
-    { new: true }
-  ).lean();
+  // const invoice = await InvoiceModel.findByIdAndUpdate(
+  //   invoiceId,
+  //   {
+  //     transactionId: transactionId,
+  //     invoiceStatus: "Paid",
+  //   },
+  //   { new: true }
+  // ).lean();
+  invoice.transactionId = transactionId;
+  invoice.invoiceStatus = "Paid";
+  await invoice.save();
 
   if (!invoice) {
     throw new BadRequestError(ErrorMessage.ERROR_INVALID_INVOICE_ID);

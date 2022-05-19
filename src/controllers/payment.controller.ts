@@ -35,6 +35,7 @@ import {
 } from "../utils/paypal";
 import { getSystemDocument } from "./admin/system.controller";
 import UserTransactionModel from "../models/UserTransaction.model";
+import LicenseModel from "../models/License.model";
 
 interface IQuery {
   page?: string;
@@ -62,7 +63,7 @@ const getAccessToken = async () => {
         username: PAYPAL_API_CLIENT,
         password: PAYPAL_API_SECRET,
       },
-    },
+    }
   );
   return access_token;
 };
@@ -97,7 +98,7 @@ export const refundPayment = async (req: IUserRequest, res: Response) => {
         headers: {
           Authorization: `Bearer ${access_token}`,
         },
-      },
+      }
     );
   } catch (err) {
     console.log(err);
@@ -129,7 +130,7 @@ export const withdrawPayment = async (req: IUserRequest, res: Response) => {
     const transaction = await shopWithdrawTransaction(
       shop,
       `Withdraw from system $${amountValue}`,
-      -amountValue, //minus value
+      -amountValue //minus value
     ).catch((err) => console.log(err));
 
     res.status(StatusCodes.OK).json({
@@ -144,11 +145,11 @@ export const withdrawPayment = async (req: IUserRequest, res: Response) => {
 
 export const returnAfterLoginPaypal = async (
   req: IUserRequest,
-  res: Response,
+  res: Response
 ) => {
   const query = req.query;
   const authorization_base64 = Buffer.from(
-    `${PAYPAL_API_CLIENT}:${PAYPAL_API_SECRET}`,
+    `${PAYPAL_API_CLIENT}:${PAYPAL_API_SECRET}`
   ).toString("base64");
 
   //GET ACCESS TOKEN
@@ -163,7 +164,7 @@ export const returnAfterLoginPaypal = async (
         "Content-Type": "application/x-www-form-urlencoded",
         Authorization: `Basic ${authorization_base64}`,
       },
-    },
+    }
   );
   const { access_token } = response.data;
 
@@ -174,7 +175,7 @@ export const returnAfterLoginPaypal = async (
         "Content-Type": "application/json",
         Authorization: `Bearer ${access_token}`,
       },
-    },
+    }
   );
 
   //store paypal info into db
@@ -198,7 +199,7 @@ export const returnAfterLoginPaypal = async (
 
 export const authorizationEndpoint = async (
   req: IUserRequest,
-  res: Response,
+  res: Response
 ) => {
   const user = req.user;
   const { shopId } = user!;
@@ -241,7 +242,7 @@ export const chargeCoin = async (req: IUserRequest, res: Response) => {
       headers: {
         Authorization: `Bearer ${access_token}`,
       },
-    },
+    }
   );
 
   res.json(response.data);
@@ -260,7 +261,7 @@ export const captureOrder = async (req: IUserRequest, res: Response) => {
   }
   const invoiceId = req.query.invoiceId as string;
 
-  const invoice = (await InvoiceModel.findById(invoiceId).lean()) as Invoice;
+  const invoice = (await InvoiceModel.findById(invoiceId)) as Invoice;
   if (!invoice) {
     throw new BadRequestError(ErrorMessage.ERROR_INVALID_INVOICE_ID);
   }
@@ -276,10 +277,10 @@ export const captureOrder = async (req: IUserRequest, res: Response) => {
       userId,
       invoiceId,
       -totalAmount, //minus number
-      `Pay for invoice: #${invoiceId}`,
+      `Pay for invoice: #${invoiceId}`
     );
     //Update invoice status
-    await paidInvoice(invoiceId, transaction._id, userId);
+    await paidInvoice(invoice, transaction._id, userId);
 
     res.status(StatusCodes.OK).json({
       data: response?.data,
@@ -292,17 +293,42 @@ export const captureOrder = async (req: IUserRequest, res: Response) => {
 
   const sellerFee = (await getSystemDocument()).sellerFee;
 
-  invoice.productList.forEach((product) => {
-    const netAmount = product.productPrice * (100 - sellerFee)/100;
+  const updateInvoiceLicensePromises = invoice.productList.map(
+    (product, index) => {
+      const netAmount = (product.productPrice * (100 - sellerFee)) / 100;
 
-    shopTransaction(
-      product.shop,
-      invoiceId,
-      `Payment from ${invoiceId}`,
-      netAmount,
-    ).catch((err) => {
-      console.log(err);
-    });
+      shopTransaction(
+        product.shop,
+        invoiceId,
+        `Payment from ${invoiceId}`,
+        netAmount
+      ).catch((err) => {
+        console.log(err);
+      });
+      //Create license for user
+      const license = new LicenseModel({
+        userId,
+        invoice: invoiceId,
+        shop: product.shop,
+        product: product.product,
+        boughtTime: new Date(),
+        licenseFile: "a",
+      });
+
+      return license
+        .save()
+        .then((savedLicense: any) => {
+          invoice.productList[index].license = savedLicense._id;
+        })
+        .catch((error: any) => {
+          console.error(error);
+        });
+    }
+  );
+
+  await Promise.all(updateInvoiceLicensePromises);
+  invoice.save().catch((error: any) => {
+    console.error(error);
   });
 };
 
