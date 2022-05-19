@@ -267,12 +267,15 @@ export const captureOrder = async (req: IUserRequest, res: Response) => {
 
   try {
     const response = await Capture_PayPal(token);
+    const buyerFee = (await getSystemDocument()).buyerFee;
 
+    const fee = (invoice.invoiceTotal * buyerFee) / 100;
+    const totalAmount = invoice.invoiceTotal + fee;
     //Record user coin
     const transaction = await userTransaction(
       userId,
       invoiceId,
-      -invoice.invoiceTotal, //minus number
+      -totalAmount, //minus number
       `Pay for invoice: #${invoiceId}`,
     );
     //Update invoice status
