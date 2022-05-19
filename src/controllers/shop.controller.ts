@@ -10,6 +10,7 @@ import ProductModel from "../models/Product.model";
 import CategoryModel from "../models/Category.model";
 import UserModel from "../models/User.model";
 import InvoiceModel from "../models/Invoice.model";
+import ShopTransactionModel from "../models/ShopTransaction.model";
 
 //Error
 import * as ErrorMessage from "../errors/error_message";
@@ -382,4 +383,41 @@ export const getProductStatistic = async (req: IUserRequest, res: Response) => {
   }
 
   return res.status(StatusCodes.OK).json(productList);
+};
+
+export const paymentHistory = async (req: IUserRequest, res: Response) => {
+  //Check authen
+  const shopId = req.user?.shopId;
+  if (!shopId) {
+    throw new UnauthenticatedError(ErrorMessage.ERROR_AUTHENTICATION_INVALID);
+  }
+
+  const query = req.query as IQuery;
+  const page = parseInt(query.page!) || Constants.defaultPageNumber;
+  const limit = parseInt(query.limit!) || Constants.defaultLimit;
+
+  const total = await ShopTransactionModel.countDocuments({
+    shopId: shopId,
+  });
+
+  const totalPages =
+    total % limit === 0
+      ? Math.floor(total / limit)
+      : Math.floor(total / limit) + 1;
+
+  //Get product
+  const transactions = await ShopTransactionModel.find({
+    shopId: shopId,
+  })
+    .sort({ createdAt: -1 })
+    .skip((page - 1) * limit)
+    .limit(limit)
+    .lean();
+
+  return res.status(StatusCodes.OK).json({
+    totalPages,
+    page,
+    limit,
+    transactions,
+  });
 };

@@ -1,19 +1,28 @@
+//Library
 import axios, { AxiosResponse } from "axios";
 import { encodeBase64 } from "bcryptjs";
 import { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
 import { IUserRequest } from "../types/express";
 import { v4 as uuidv4 } from "uuid";
+import { Product, Invoice } from "../types/object-type";
+import * as Constants from "../constants";
+
+//Model
 import ShopModel from "../models/Shop.model";
+import ProductModel from "../models/Product.model";
+import InvoiceModel from "../models/Invoice.model";
+
+//Error
 import UnauthenticatedErorr from "../errors/unauthenticated-error";
 import * as ErrorMessage from "../errors/error_message";
 import { BadRequestError, InternalServerError } from "../errors";
-import ProductModel from "../models/Product.model";
+
+//Ultis
 import {
   createOrder as createInvoice,
   paidInvoice,
 } from "./invoice.controller";
-import InvoiceModel from "../models/Invoice.model";
 import {
   shopTransaction,
   shopWithdrawTransaction,
@@ -25,7 +34,12 @@ import {
   Payout_PayPal,
 } from "../utils/paypal";
 import { getSystemDocument } from "./admin/system.controller";
-import { Product, Invoice } from "../types/object-type";
+import UserTransactionModel from "../models/UserTransaction.model";
+
+interface IQuery {
+  page?: string;
+  limit?: string;
+}
 
 const PAYPAL_API_CLIENT = process.env.PAYPAL_API_CLIENT!;
 const PAYPAL_API_SECRET = process.env.PAYPAL_API_SECRET!;
@@ -48,7 +62,7 @@ const getAccessToken = async () => {
         username: PAYPAL_API_CLIENT,
         password: PAYPAL_API_SECRET,
       },
-    }
+    },
   );
   return access_token;
 };
@@ -83,7 +97,7 @@ export const refundPayment = async (req: IUserRequest, res: Response) => {
         headers: {
           Authorization: `Bearer ${access_token}`,
         },
-      }
+      },
     );
   } catch (err) {
     console.log(err);
@@ -115,7 +129,7 @@ export const withdrawPayment = async (req: IUserRequest, res: Response) => {
     const transaction = await shopWithdrawTransaction(
       shop,
       `Withdraw from system $${amountValue}`,
-      -amountValue //minus value
+      -amountValue, //minus value
     ).catch((err) => console.log(err));
 
     res.status(StatusCodes.OK).json({
@@ -130,11 +144,11 @@ export const withdrawPayment = async (req: IUserRequest, res: Response) => {
 
 export const returnAfterLoginPaypal = async (
   req: IUserRequest,
-  res: Response
+  res: Response,
 ) => {
   const query = req.query;
   const authorization_base64 = Buffer.from(
-    `${PAYPAL_API_CLIENT}:${PAYPAL_API_SECRET}`
+    `${PAYPAL_API_CLIENT}:${PAYPAL_API_SECRET}`,
   ).toString("base64");
 
   //GET ACCESS TOKEN
@@ -149,7 +163,7 @@ export const returnAfterLoginPaypal = async (
         "Content-Type": "application/x-www-form-urlencoded",
         Authorization: `Basic ${authorization_base64}`,
       },
-    }
+    },
   );
   const { access_token } = response.data;
 
@@ -160,7 +174,7 @@ export const returnAfterLoginPaypal = async (
         "Content-Type": "application/json",
         Authorization: `Bearer ${access_token}`,
       },
-    }
+    },
   );
 
   //store paypal info into db
@@ -184,7 +198,7 @@ export const returnAfterLoginPaypal = async (
 
 export const authorizationEndpoint = async (
   req: IUserRequest,
-  res: Response
+  res: Response,
 ) => {
   const user = req.user;
   const { shopId } = user!;
@@ -227,7 +241,7 @@ export const chargeCoin = async (req: IUserRequest, res: Response) => {
       headers: {
         Authorization: `Bearer ${access_token}`,
       },
-    }
+    },
   );
 
   res.json(response.data);
@@ -259,7 +273,7 @@ export const captureOrder = async (req: IUserRequest, res: Response) => {
       userId,
       invoiceId,
       -invoice.invoiceTotal, //minus number
-      `Pay for invoice: #${invoiceId}`
+      `Pay for invoice: #${invoiceId}`,
     );
     //Update invoice status
     await paidInvoice(invoiceId, transaction._id, userId);
@@ -286,5 +300,37 @@ export const captureOrder = async (req: IUserRequest, res: Response) => {
     ).catch((err) => {
       console.log(err);
     });
+  });
+};
+
+export const paymentHistory = async (req: IUserRequest, res: Response) => {
+  const { userId } = req.user!;
+  const query = req.query as IQuery;
+  const page = parseInt(query.page!) || Constants.defaultPageNumber;
+  const limit = parseInt(query.limit!) || Constants.defaultLimit;
+
+  const total = await UserTransactionModel.countDocuments({
+    userId: userId,
+  }).lean();
+
+  const totalPages =
+    total % limit === 0
+      ? Math.floor(total / limit)
+      : Math.floor(total / limit) + 1;
+
+  //Get transactions
+  const transactions = await UserTransactionModel.find({
+    userId: userId,
+  })
+    .skip((page - 1) * limit)
+    .limit(limit)
+    .sort({ createdAt: -1 })
+    .lean();
+
+  res.status(StatusCodes.OK).json({
+    totalPages,
+    page,
+    limit,
+    transactions,
   });
 };
