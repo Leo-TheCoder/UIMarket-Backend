@@ -153,34 +153,48 @@ export const purchaseHistory = async (req: IUserRequest, res: Response) => {
       invoiceStatus: "Paid",
       userId: userId,
     },
-    { "productList.shop": 0, _id: 0 }
+    { _id: 0 }
   )
     .skip((page - 1) * limit)
     .limit(limit)
     .populate({
       path: "productList.product",
-      select: "productPictures, productFile",
+      select: "productPictures productFile",
+    })
+    .populate({
+      path: "productList.shop",
+      select: "shopName",
     })
     .lean();
 
-  var products = [];
+  const products = [];
 
   for (let i = 0; i < invoices.length; i++) {
-    var productList = invoices[i].productList;
+    const productList = invoices[i].productList;
     for (let j = 0; j < productList.length; j++) {
       products.push(productList[j]);
     }
   }
 
-  products.forEach((product) => {
+  const productsToResponse = products.map((product) => {
     const productPictureList = product.product.productPictures;
-    product._id = product.product._id;
-    product.productFile = product.product.productFile;
-    product.coverPicture = productPictureList
-      ? productPictureList[0]
-      : undefined;
-    delete product.product;
+    const coverPicture =
+      productPictureList && productPictureList.length > 0
+        ? productPictureList[0]
+        : undefined;
+
+    return {
+      productId: product.product._id,
+      productFile: product.product.productFile,
+      coverPicture,
+      shop: product.shop,
+      productName: product.productName,
+      productPrice: product.productPrice,
+      isReview: product.isReview,
+    };
   });
 
-  res.status(StatusCodes.OK).json({ totalPages, page, limit, products });
+  res
+    .status(StatusCodes.OK)
+    .json({ totalPages, page, limit, products: productsToResponse });
 };
