@@ -2,6 +2,7 @@ import nodemailer from "nodemailer";
 import { v4 as uuidv4 } from "uuid";
 import { readFile } from "fs/promises";
 import path from "path";
+import Handlebars from "handlebars"
 
 const transporter = nodemailer.createTransport({
   service: "Gmail",
@@ -64,9 +65,13 @@ const sendResetPasswordConfirmEmail = (to: string) => {
 };
 
 export const sendMailTest = async (to: string, content: string) => {
-  const htmlToSend = await readFile(
-    path.join(__dirname, "../public/index.html")
+  const htmlFile = await readFile(
+    path.join(__dirname, "../public/index.html"),
+    'utf-8',
   );
+
+  const template = Handlebars.compile(htmlFile);
+  const htmlToSend = template({content});
 
   const imageFiles = [
     "image-1.png",
