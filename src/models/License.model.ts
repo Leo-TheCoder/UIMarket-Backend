@@ -11,7 +11,7 @@ const LicenseSchema = new mongoose.Schema(
     invoice: {
       type: mongoose.Types.ObjectId,
       required: [true, "Please provide invoice ID"],
-      ref: "Invoice",
+      ref: "Order",
     },
     shop: {
       type: mongoose.Types.ObjectId,

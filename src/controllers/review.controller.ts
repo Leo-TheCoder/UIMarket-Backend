@@ -54,7 +54,8 @@ export const createReview = async (req: IUserRequest, res: Response) => {
   const product = invoice.productList.findIndex(
     (x: any) => String(x.product) == req.params.productId && x.isReview == 0,
   );
-  if (!product) {
+
+  if (product < 0) {
     throw new NotFoundError(ErrorMessage.ERROR_INVALID_PRODUCT_ID);
   }
 
