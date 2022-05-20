@@ -54,7 +54,8 @@ export const createReview = async (req: IUserRequest, res: Response) => {
   const product = invoice.productList.findIndex(
     (x: any) => String(x.product) == req.params.productId && x.isReview == 0,
   );
-  if (!product) {
+
+  if (product < 0) {
     throw new NotFoundError(ErrorMessage.ERROR_INVALID_PRODUCT_ID);
   }
 
@@ -153,4 +154,9 @@ export const updateReview = async (req: IUserRequest, res: Response) => {
   const result = await review.save();
 
   res.status(StatusCodes.OK).json(result);
+};
+
+export const getReviewById = async (req: Request, res: Response) => {
+  const review = await ReviewModel.findById(req.params.reviewId).lean();
+  res.status(StatusCodes.OK).json(review);
 };
