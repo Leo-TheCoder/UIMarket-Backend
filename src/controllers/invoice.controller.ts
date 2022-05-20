@@ -156,7 +156,10 @@ export const purchaseHistory = async (req: IUserRequest, res: Response) => {
     .select("-licenseFile")
     .skip((page - 1) * limit)
     .limit(limit)
-    .populate({ path: "product", select: "productPictures productFile" })
+    .populate({
+      path: "product",
+      select: "productPictures productFile productName",
+    })
     .populate({ path: "shop", select: "shopName" })
     .populate({ path: "invoice", select: "productList" });
 

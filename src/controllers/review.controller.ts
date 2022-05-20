@@ -155,3 +155,8 @@ export const updateReview = async (req: IUserRequest, res: Response) => {
 
   res.status(StatusCodes.OK).json(result);
 };
+
+export const getReviewById = async (req: Request, res: Response) => {
+  const review = await ReviewModel.findById(req.params.reviewId).lean();
+  res.status(StatusCodes.OK).json(review);
+};
