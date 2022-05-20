@@ -8,12 +8,12 @@ import { ObjectId } from "mongodb";
 //Model
 import ProductModel from "../models/Product.model";
 import InvoiceModel from "../models/Invoice.model";
+import CartModel from "../models/Cart.model";
+import LicenseModel from "../models/License.model";
 
 //Error
 import { BadRequestError, NotFoundError } from "../errors";
 import * as ErrorMessage from "../errors/error_message";
-import CartModel from "../models/Cart.model";
-import LicenseModel from "../models/License.model";
 
 interface IQuery {
   page?: string;

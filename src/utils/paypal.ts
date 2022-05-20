@@ -31,7 +31,7 @@ const refreshAccessToken = async () => {
 export const CreateOrder_PayPal = async (
   productList: Product[],
   invoice: Invoice,
-  buyerFee: number
+  buyerFee: number,
 ) => {
   const items_detail = productList.map((product) => {
     return {
@@ -54,7 +54,7 @@ export const CreateOrder_PayPal = async (
       value: fee,
     },
     quantity: "1",
-    description: `${buyerFee}% with total invoice`
+    description: `${buyerFee}% with total invoice`,
   });
 
   const totalAmount = invoice.invoiceTotal + fee;
@@ -103,7 +103,6 @@ export const CreateOrder_PayPal = async (
     if (error.response.data.error == "invalid_token") {
       accessToken = await refreshAccessToken();
       response = await createOrderPromise();
-
       linkPayPal = response.data.links[1].href;
     } else {
       console.log(error.response.data);
@@ -119,7 +118,7 @@ export const CreateOrder_PayPal = async (
 
 export const Payout_PayPal = async (
   amountValue: number | string,
-  receiver: string
+  receiver: string,
 ) => {
   const payoutObj = {
     sender_batch_header: {
@@ -148,7 +147,7 @@ export const Payout_PayPal = async (
           username: PAYPAL_API_CLIENT!,
           password: PAYPAL_API_SECRET!,
         },
-      }
+      },
     );
   };
 
@@ -172,7 +171,7 @@ export const Capture_PayPal = async (token: string) => {
           username: PAYPAL_API_CLIENT,
           password: PAYPAL_API_SECRET,
         },
-      }
+      },
     );
   };
 

@@ -428,7 +428,7 @@ export const getProductsByName = async (req: IUserRequest, res: Response) => {
   const query = req.query as IQuery;
   const page = parseInt(query.page!) || Constants.defaultPageNumber;
   const limit = parseInt(query.limit!) || Constants.defaultLimit;
-  const {shopId} = req.user!;
+  const { shopId } = req.user!;
   const selectOption = {
     __v: 0,
     productFile: 0,
@@ -436,8 +436,8 @@ export const getProductsByName = async (req: IUserRequest, res: Response) => {
   };
   const matchOption = {
     shopId: new mongoose.Types.ObjectId(shopId),
-    deleteFlagged: 0
-  }
+    deleteFlagged: 0,
+  };
 
   const totalProducts = await ProductModel.aggregate([
     {
@@ -489,35 +489,35 @@ export const getProductsByName = async (req: IUserRequest, res: Response) => {
   const L30D = new Date(today.getTime());
   L30D.setDate(L30D.getDate() - 30);
 
-  const productPromises = products.map(product => {
-    const last30Days = {totalSold: 0,  totalRevenue: 0};
-    
+  const productPromises = products.map((product) => {
+    const last30Days = { totalSold: 0, totalRevenue: 0 };
+
     let revenue = 0;
 
     return LicenseModel.find({
       product: product._id,
-    }).then(licenses => {
-      licenses.forEach(license => {
+    }).then((licenses) => {
+      licenses.forEach((license) => {
         revenue += license.productPrice;
-      })
+      });
 
       const licenses_L30D = licenses.filter(
         (x: any) => x.createdAt <= today && x.createdAt >= L30D,
       );
 
       last30Days.totalSold = licenses_L30D.length;
-      
-      licenses.forEach(license => {
+
+      licenses.forEach((license) => {
         last30Days.totalRevenue += license.productPrice;
-      })
+      });
 
       return {
         ...product,
         allTimeRevenue: revenue,
         last30Days,
-      }
+      };
     });
-  })
+  });
 
   const productList = await Promise.all(productPromises);
 
@@ -527,4 +527,4 @@ export const getProductsByName = async (req: IUserRequest, res: Response) => {
     limit,
     products: productList,
   });
-}
+};
