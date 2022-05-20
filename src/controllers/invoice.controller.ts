@@ -13,6 +13,7 @@ import InvoiceModel from "../models/Invoice.model";
 import { BadRequestError, NotFoundError } from "../errors";
 import * as ErrorMessage from "../errors/error_message";
 import CartModel from "../models/Cart.model";
+import LicenseModel from "../models/License.model";
 
 interface IQuery {
   page?: string;
@@ -56,7 +57,7 @@ export const preOrder = async (req: IUserRequest) => {
   //Remove duplicate out of array
   productList = productList.filter(
     (value: any, index: any, self: any) =>
-      index === self.findIndex((t: any) => t.product === value.product)
+      index === self.findIndex((t: any) => t.product === value.product),
   );
 
   //Checking product and get its price
@@ -93,7 +94,7 @@ export const createOrder = async (req: IUserRequest) => {
 export const paidInvoice = async (
   invoice: any,
   transactionId: any,
-  userId: string
+  userId: string,
 ) => {
   //Checking if has transaction Id
 
@@ -118,7 +119,7 @@ export const paidInvoice = async (
   invoice.productList.forEach((product: any) => {
     ProductModel.updateOne(
       { _id: product.product },
-      { $inc: { totalSold: 1 } }
+      { $inc: { totalSold: 1 } },
     ).catch((error) => {
       console.log(error);
     });
@@ -136,12 +137,12 @@ export const paidInvoice = async (
 
 export const purchaseHistory = async (req: IUserRequest, res: Response) => {
   const { userId } = req.user!;
+  // const userId = "62693a28052feac047bce72f";
   const query = req.query as IQuery;
   const page = parseInt(query.page!) || Constants.defaultPageNumber;
   const limit = parseInt(query.limit!) || Constants.defaultLimit;
 
-  const total = await InvoiceModel.find({
-    invoiceStatus: "Paid",
+  const total = await LicenseModel.find({
     userId: userId,
   }).count();
 
@@ -150,55 +151,59 @@ export const purchaseHistory = async (req: IUserRequest, res: Response) => {
       ? Math.floor(total / limit)
       : Math.floor(total / limit) + 1;
 
-  //Get invoice
-  const invoices = await InvoiceModel.find(
-    {
-      invoiceStatus: "Paid",
-      userId: userId,
-    },
-    { _id: 0 }
-  )
+  //Get product list
+  const licenses = await LicenseModel.find({ userId: userId })
     .skip((page - 1) * limit)
     .limit(limit)
     .populate({
-      path: "productList.product",
+      path: "product",
       select: "productPictures productFile",
     })
     .populate({
-      path: "productList.shop",
+      path: "shop",
       select: "shopName",
-    })
-    .lean();
+    });
 
-  const products = [];
-
-  for (let i = 0; i < invoices.length; i++) {
-    const productList = invoices[i].productList;
-    for (let j = 0; j < productList.length; j++) {
-      products.push(productList[j]);
-    }
+  let productsToResponse = [];
+  for (let i = 0; i < licenses.length; i++) {
+    let license = licenses[i];
+    license.product.productPictures = license.product.productPictures[0];
+    productsToResponse.push(license);
   }
 
-  const productsToResponse = products.map((product) => {
-    const productPictureList = product.product.productPictures;
-    const coverPicture =
-      productPictureList && productPictureList.length > 0
-        ? productPictureList[0]
-        : undefined;
+  // const products = [];
 
-    return {
-      productId: product.product._id,
-      productFile: product.product.productFile,
-      coverPicture,
-      shop: product.shop,
-      productName: product.productName,
-      productPrice: product.productPrice,
-      isReview: product.isReview,
-      license: product.license,
-    };
+  // for (let i = 0; i < invoices.length; i++) {
+  //   const productList = invoices[i].productList;
+  //   for (let j = 0; j < productList.length; j++) {
+  //     products.push(productList[j]);
+  //   }
+  // }
+
+  // const productsToResponse = products.map((product) => {
+  //   const productPictureList = product.product.productPictures;
+  //   const coverPicture =
+  //     productPictureList && productPictureList.length > 0
+  //       ? productPictureList[0]
+  //       : undefined;
+
+  //   return {
+  //     productId: product.product._id,
+  //     productFile: product.product.productFile,
+  //     coverPicture,
+  //     shop: product.shop,
+  //     productName: product.productName,
+  //     productPrice: product.productPrice,
+  //     isReview: product.isReview,
+  //     license: product.license,
+  //   };
+  // });
+  // console.log(licenses[0]);
+
+  res.status(StatusCodes.OK).json({
+    totalPages,
+    page,
+    limit,
+    products: productsToResponse,
   });
-
-  res
-    .status(StatusCodes.OK)
-    .json({ totalPages, page, limit, products: productsToResponse });
 };
