@@ -22,6 +22,8 @@ import {
   NotFoundError,
   UnauthenticatedError,
 } from "../errors";
+import LicenseModel from "../models/License.model";
+import mongoose from "mongoose";
 
 interface IQuery {
   page?: string;
@@ -334,10 +336,10 @@ export const activeProduct = async (req: IUserRequest, res: Response) => {
 };
 
 const getRevenue = async (invoices: any, productId: any) => {
-  var revenue = 0;
+  let revenue = 0;
 
   for (let i = 0; i < invoices.length; i++) {
-    var product = invoices[i].productList.find(
+    const product = invoices[i].productList.find(
       (x: any) => String(x.product) == String(productId),
     );
     revenue += product.productPrice;
@@ -421,3 +423,108 @@ export const paymentHistory = async (req: IUserRequest, res: Response) => {
     transactions,
   });
 };
+
+export const getProductsByName = async (req: IUserRequest, res: Response) => {
+  const query = req.query as IQuery;
+  const page = parseInt(query.page!) || Constants.defaultPageNumber;
+  const limit = parseInt(query.limit!) || Constants.defaultLimit;
+  const {shopId} = req.user!;
+  const selectOption = {
+    __v: 0,
+    productFile: 0,
+    deleteFlagged: 0,
+  };
+  const matchOption = {
+    shopId: new mongoose.Types.ObjectId(shopId),
+    deleteFlagged: 0
+  }
+
+  const totalProducts = await ProductModel.aggregate([
+    {
+      $search: {
+        index: "productName",
+        text: {
+          path: "productName",
+          query: decodeURIComponent(req.params.productName),
+        },
+      },
+    },
+    { $match: matchOption },
+    { $count: "total" },
+  ]);
+
+  if (totalProducts.length < 1) {
+    return res.status(StatusCodes.OK).json({
+      totalPages: 0,
+      page,
+      limit,
+      products: [],
+    });
+  }
+  const total = totalProducts[0].total;
+
+  const totalPages =
+    total % limit === 0
+      ? Math.floor(total / limit)
+      : Math.floor(total / limit) + 1;
+
+  const products = await ProductModel.aggregate([
+    {
+      $search: {
+        index: "productName",
+        text: {
+          path: "productName",
+          query: decodeURIComponent(req.params.productName),
+        },
+      },
+    },
+    { $match: matchOption },
+    { $addFields: { score: { $meta: "searchScore" } } },
+    { $skip: (page - 1) * limit },
+    { $limit: limit },
+    { $project: selectOption },
+  ]);
+
+  const today = new Date();
+  const L30D = new Date(today.getTime());
+  L30D.setDate(L30D.getDate() - 30);
+
+  const productPromises = products.map(product => {
+    const last30Days = {totalSold: 0,  totalRevenue: 0};
+    
+    let revenue = 0;
+
+    return LicenseModel.find({
+      product: product._id,
+    }).then(licenses => {
+      licenses.forEach(license => {
+        revenue += license.productPrice;
+      })
+
+      const licenses_L30D = licenses.filter(
+        (x: any) => x.createdAt <= today && x.createdAt >= L30D,
+      );
+
+      last30Days.totalSold = licenses_L30D.length;
+      
+      licenses.forEach(license => {
+        last30Days.totalRevenue += license.productPrice;
+      })
+
+      return {
+        ...product,
+        allTimeRevenue: revenue,
+        last30Days,
+      }
+    });
+  })
+
+  const productList = await Promise.all(productPromises);
+
+  res.status(StatusCodes.OK).json({
+    totalPages,
+    page,
+    limit,
+    products: productList,
+  });
+}

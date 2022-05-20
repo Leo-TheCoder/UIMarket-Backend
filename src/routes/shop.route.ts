@@ -13,6 +13,7 @@ import {
   activeProduct,
   getProductStatistic,
   paymentHistory,
+  getProductsByName,
 } from "../controllers/shop.controller";
 
 const router = express.Router();
@@ -23,6 +24,7 @@ router.get("/product/statistic", compulsoryAuth, getProductStatistic);
 router.get("/info/:shopId", optionalAuth, getShopById);
 router.get("/search/:shopName", getShopByName);
 router.get("/payment/history", compulsoryAuth, paymentHistory);
+router.get("/product/search/:productName", compulsoryAuth, getProductsByName)
 
 //POST Method/
 router.post("/register", compulsoryAuth, createShop);
