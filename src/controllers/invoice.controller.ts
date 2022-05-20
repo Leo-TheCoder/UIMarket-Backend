@@ -194,6 +194,7 @@ export const purchaseHistory = async (req: IUserRequest, res: Response) => {
       productName: product.productName,
       productPrice: product.productPrice,
       isReview: product.isReview,
+      license: product.license,
     };
   });
 
