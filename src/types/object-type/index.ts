@@ -4,6 +4,7 @@ export type Product = {
   productPrice: number;
   productName: string;
   isReview: number;
+  license?: string;
 };
 
 export type Invoice = {
@@ -12,4 +13,5 @@ export type Invoice = {
   invoiceTotal: number;
   invoiceStatus: string;
   _id: string;
+  save: () => Promise<any>;
 };

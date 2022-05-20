@@ -17,6 +17,7 @@ import {
   deactiveShop,
   getAllShops,
 } from "../controllers/admin/shops.controller";
+import { changeSystemFee } from "../controllers/admin/system.controller";
 
 const router = express.Router();
 
@@ -44,6 +45,9 @@ router.put("/shops/:shopId/active", activeShop);
 //POST Method
 router.post("/category", createCategory);
 
+//===================== System =======================
+//POST Method
+router.post("/system/fee", changeSystemFee);
 //PUT Method
 //DELETE Method
 

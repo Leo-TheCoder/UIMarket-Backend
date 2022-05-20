@@ -12,6 +12,8 @@ import InvoiceModel from "../models/Invoice.model";
 //Error
 import { BadRequestError, NotFoundError } from "../errors";
 import * as ErrorMessage from "../errors/error_message";
+import CartModel from "../models/Cart.model";
+import LicenseModel from "../models/License.model";
 
 interface IQuery {
   page?: string;
@@ -27,7 +29,7 @@ type Product = {
 };
 
 //Checking product is valid or not
-const validProduct = async (productId: String, shopId: any) => {
+const validProduct = async (productId: string) => {
   let product = await ProductModel.findOne({
     _id: productId,
     // shopId: shopId,
@@ -55,25 +57,20 @@ export const preOrder = async (req: IUserRequest) => {
   //Remove duplicate out of array
   productList = productList.filter(
     (value: any, index: any, self: any) =>
-      index ===
-      self.findIndex(
-        (t: any) => t.product === value.product && t.shop === value.shop
-      )
+      index === self.findIndex((t: any) => t.product === value.product),
   );
 
   //Checking product and get its price
   const productPromises = productList.map((productObj, index) => {
-    return validProduct(productObj.product, productObj.shop).then(
-      (_validProduct) => {
-        if (_validProduct.productPrice >= 0) {
-          invoiceTotal += _validProduct.productPrice;
+    return validProduct(productObj.product).then((_validProduct) => {
+      if (_validProduct.productPrice >= 0) {
+        invoiceTotal += _validProduct.productPrice;
 
-          productList[index].shopName = _validProduct.shopId.shopName;
-          productList[index].productName = _validProduct.productName;
-          productList[index].productPrice = _validProduct.productPrice;
-        }
+        productList[index].shopName = _validProduct.shopId.shopName;
+        productList[index].productName = _validProduct.productName;
+        productList[index].productPrice = _validProduct.productPrice;
       }
-    );
+    });
   });
   await Promise.all(productPromises);
   return { productList, invoiceTotal };
@@ -94,18 +91,25 @@ export const createOrder = async (req: IUserRequest) => {
   return invoice;
 };
 
-export const paidInvoice = async (invoiceId: any, transactionId: any) => {
+export const paidInvoice = async (
+  invoice: any,
+  transactionId: any,
+  userId: string,
+) => {
   //Checking if has transaction Id
 
   //Checking invoice
-  const invoice = await InvoiceModel.findByIdAndUpdate(
-    invoiceId,
-    {
-      transactionId: transactionId,
-      invoiceStatus: "Paid",
-    },
-    { new: true }
-  ).lean();
+  // const invoice = await InvoiceModel.findByIdAndUpdate(
+  //   invoiceId,
+  //   {
+  //     transactionId: transactionId,
+  //     invoiceStatus: "Paid",
+  //   },
+  //   { new: true }
+  // ).lean();
+  invoice.transactionId = transactionId;
+  invoice.invoiceStatus = "Paid";
+  await invoice.save();
 
   if (!invoice) {
     throw new BadRequestError(ErrorMessage.ERROR_INVALID_INVOICE_ID);
@@ -115,8 +119,15 @@ export const paidInvoice = async (invoiceId: any, transactionId: any) => {
   invoice.productList.forEach((product: any) => {
     ProductModel.updateOne(
       { _id: product.product },
-      { $inc: { totalSold: 1 } }
+      { $inc: { totalSold: 1 } },
     ).catch((error) => {
+      console.log(error);
+    });
+
+    CartModel.findOneAndRemove({
+      userId,
+      product: product.product,
+    }).catch((error) => {
       console.log(error);
     });
   });
@@ -126,12 +137,12 @@ export const paidInvoice = async (invoiceId: any, transactionId: any) => {
 
 export const purchaseHistory = async (req: IUserRequest, res: Response) => {
   const { userId } = req.user!;
+  // const userId = "62693a28052feac047bce72f";
   const query = req.query as IQuery;
   const page = parseInt(query.page!) || Constants.defaultPageNumber;
   const limit = parseInt(query.limit!) || Constants.defaultLimit;
 
-  const total = await InvoiceModel.find({
-    invoiceStatus: "Paid",
+  const total = await LicenseModel.find({
     userId: userId,
   }).count();
 
@@ -140,40 +151,59 @@ export const purchaseHistory = async (req: IUserRequest, res: Response) => {
       ? Math.floor(total / limit)
       : Math.floor(total / limit) + 1;
 
-  //Get invoice
-  const invoices = await InvoiceModel.find(
-    {
-      invoiceStatus: "Paid",
-      userId: userId,
-    },
-    { "productList.shop": 0, _id: 0 }
-  )
+  //Get product list
+  const licenses = await LicenseModel.find({ userId: userId })
     .skip((page - 1) * limit)
     .limit(limit)
     .populate({
-      path: "productList.product",
-      select: "productPictures, productFile",
+      path: "product",
+      select: "productPictures productFile",
     })
-    .lean();
+    .populate({
+      path: "shop",
+      select: "shopName",
+    });
 
-  var products = [];
-
-  for (let i = 0; i < invoices.length; i++) {
-    var productList = invoices[i].productList;
-    for (let j = 0; j < productList.length; j++) {
-      products.push(productList[j]);
-    }
+  let productsToResponse = [];
+  for (let i = 0; i < licenses.length; i++) {
+    let license = licenses[i];
+    license.product.productPictures = license.product.productPictures[0];
+    productsToResponse.push(license);
   }
 
-  products.forEach((product) => {
-    const productPictureList = product.product.productPictures;
-    product._id = product.product._id;
-    product.productFile = product.product.productFile;
-    product.coverPicture = productPictureList
-      ? productPictureList[0]
-      : undefined;
-    delete product.product;
-  });
+  // const products = [];
 
-  res.status(StatusCodes.OK).json({ totalPages, page, limit, products });
+  // for (let i = 0; i < invoices.length; i++) {
+  //   const productList = invoices[i].productList;
+  //   for (let j = 0; j < productList.length; j++) {
+  //     products.push(productList[j]);
+  //   }
+  // }
+
+  // const productsToResponse = products.map((product) => {
+  //   const productPictureList = product.product.productPictures;
+  //   const coverPicture =
+  //     productPictureList && productPictureList.length > 0
+  //       ? productPictureList[0]
+  //       : undefined;
+
+  //   return {
+  //     productId: product.product._id,
+  //     productFile: product.product.productFile,
+  //     coverPicture,
+  //     shop: product.shop,
+  //     productName: product.productName,
+  //     productPrice: product.productPrice,
+  //     isReview: product.isReview,
+  //     license: product.license,
+  //   };
+  // });
+  // console.log(licenses[0]);
+
+  res.status(StatusCodes.OK).json({
+    totalPages,
+    page,
+    limit,
+    products: productsToResponse,
+  });
 };

@@ -31,6 +31,9 @@ const LicenseSchema = new mongoose.Schema(
       type: String,
       required: [true, "Please provide license file"],
     },
+    productPrice: {
+      type: Number,
+    }
   },
   { timestamps: true },
 );
