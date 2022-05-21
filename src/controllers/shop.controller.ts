@@ -52,7 +52,7 @@ export const createShop = async (req: IUserRequest, res: Response) => {
     const user = await UserModel.findByIdAndUpdate(
       userId,
       { shopId: newShop._id },
-      { new: true },
+      { new: true }
     );
 
     const token = user.createJWT();
@@ -340,7 +340,7 @@ const getRevenue = async (invoices: any, productId: any) => {
 
   for (let i = 0; i < invoices.length; i++) {
     const product = invoices[i].productList.find(
-      (x: any) => String(x.product) == String(productId),
+      (x: any) => String(x.product) == String(productId)
     );
     revenue += product.productPrice;
   }
@@ -374,7 +374,7 @@ export const getProductStatistic = async (req: IUserRequest, res: Response) => {
 
     // Get last 30 days sold and revenues
     var invoices_L30D = invoices.filter(
-      (x: any) => x.createdAt <= today && x.createdAt >= L30D,
+      (x: any) => x.createdAt <= today && x.createdAt >= L30D
     );
 
     last30Days.totalSold = invoices_L30D.length;
@@ -428,7 +428,7 @@ export const getProductsByName = async (req: IUserRequest, res: Response) => {
   const query = req.query as IQuery;
   const page = parseInt(query.page!) || Constants.defaultPageNumber;
   const limit = parseInt(query.limit!) || Constants.defaultLimit;
-  const {shopId} = req.user!;
+  const { shopId } = req.user!;
   const selectOption = {
     __v: 0,
     productFile: 0,
@@ -436,8 +436,8 @@ export const getProductsByName = async (req: IUserRequest, res: Response) => {
   };
   const matchOption = {
     shopId: new mongoose.Types.ObjectId(shopId),
-    deleteFlagged: 0
-  }
+    deleteFlagged: 0,
+  };
 
   const totalProducts = await ProductModel.aggregate([
     {
@@ -489,35 +489,35 @@ export const getProductsByName = async (req: IUserRequest, res: Response) => {
   const L30D = new Date(today.getTime());
   L30D.setDate(L30D.getDate() - 30);
 
-  const productPromises = products.map(product => {
-    const last30Days = {totalSold: 0,  totalRevenue: 0};
-    
+  const productPromises = products.map((product) => {
+    const last30Days = { totalSold: 0, totalRevenue: 0 };
+
     let revenue = 0;
 
     return LicenseModel.find({
       product: product._id,
-    }).then(licenses => {
-      licenses.forEach(license => {
+    }).then((licenses) => {
+      licenses.forEach((license) => {
         revenue += license.productPrice;
-      })
+      });
 
       const licenses_L30D = licenses.filter(
-        (x: any) => x.createdAt <= today && x.createdAt >= L30D,
+        (x: any) => x.createdAt <= today && x.createdAt >= L30D
       );
 
       last30Days.totalSold = licenses_L30D.length;
-      
-      licenses.forEach(license => {
+
+      licenses.forEach((license) => {
         last30Days.totalRevenue += license.productPrice;
-      })
+      });
 
       return {
         ...product,
         allTimeRevenue: revenue,
         last30Days,
-      }
+      };
     });
-  })
+  });
 
   const productList = await Promise.all(productPromises);
 
@@ -527,4 +527,61 @@ export const getProductsByName = async (req: IUserRequest, res: Response) => {
     limit,
     products: productList,
   });
-}
+};
+
+export const getProductStatisticV2 = async (
+  req: IUserRequest,
+  res: Response
+) => {
+  const { shopId } = req.user!;
+
+  const selectOption = {
+    productFile: 0,
+    deleteFlagged: 0,
+    __v: 0,
+  };
+
+  const products = await ProductModel.find({
+    shopId,
+    deleteFlagged: 0,
+  })
+    .select(selectOption)
+    .lean();
+
+  const today = new Date();
+  const L30D = new Date(today.getTime());
+  L30D.setDate(L30D.getDate() - 30);
+
+  const productPromises = products.map((product) => {
+    const last30Days = { totalSold: 0, totalRevenue: 0 };
+    let revenue = 0;
+
+    return LicenseModel.find({
+      product: product._id,
+    }).then((licenses) => {
+      licenses.forEach((license) => {
+        revenue += license.productPrice;
+      });
+
+      const licenses_L30D = licenses.filter(
+        (x: any) => x.createdAt <= today && x.createdAt >= L30D
+      );
+
+      last30Days.totalSold = licenses_L30D.length;
+
+      licenses.forEach((license) => {
+        last30Days.totalRevenue += license.productPrice;
+      });
+
+      return {
+        ...product,
+        allTimeRevenue: revenue,
+        last30Days,
+      };
+    });
+  });
+
+  const productList = await Promise.all(productPromises);
+
+  res.status(StatusCodes.OK).json(productList);
+};
