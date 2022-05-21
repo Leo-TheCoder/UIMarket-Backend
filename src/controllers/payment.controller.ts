@@ -313,6 +313,7 @@ export const captureOrder = async (req: IUserRequest, res: Response) => {
         product: product.product,
         boughtTime: new Date(),
         licenseFile: "a",
+        productPrice: product.productPrice,
       });
 
       return license
