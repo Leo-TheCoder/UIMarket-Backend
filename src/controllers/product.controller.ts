@@ -266,7 +266,7 @@ const findByName = async (req: Request, res: Response) => {
       ? Math.floor(total / limit)
       : Math.floor(total / limit) + 1;
 
-  const products = await ProductModel.aggregate([
+  const searchProductQueryAggregate: any[] = [
     {
       $search: {
         index: "productName",
@@ -280,7 +280,6 @@ const findByName = async (req: Request, res: Response) => {
     { $addFields: { score: { $meta: "searchScore" } } },
     { $skip: (page - 1) * limit },
     { $limit: limit },
-    // { $sort: sortObj}
     { $project: projectionProductList },
     {
       $lookup: {
@@ -300,7 +299,14 @@ const findByName = async (req: Request, res: Response) => {
         as: "shop",
       },
     },
-  ]);
+  ];
+
+  //adding sort property to query
+  if(Object.keys(sortObj).length > 0) {
+    searchProductQueryAggregate.push({$sort: sortObj})
+  }
+
+  const products = await ProductModel.aggregate(searchProductQueryAggregate);
 
   const productsResult = products.map((product) => {
     //get first item in array

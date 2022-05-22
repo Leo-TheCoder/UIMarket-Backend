@@ -340,7 +340,7 @@ const getRevenue = async (invoices: any, productId: any) => {
 
   for (let i = 0; i < invoices.length; i++) {
     const product = invoices[i].productList.find(
-      (x: any) => String(x.product) == String(productId)
+      (x: any) => String(x.product) == String(productId),
     );
     revenue += product.productPrice;
   }
@@ -358,14 +358,14 @@ export const getProductStatistic = async (req: IUserRequest, res: Response) => {
   let L30D = new Date(today.getTime());
   L30D.setDate(L30D.getDate() - 30);
 
-  var productList = [];
+  let productList = [];
 
   for (let i = 0; i < products.length; i++) {
-    var last30Days = { totalSold: 0, totalRevenue: 0 };
-    var product = products[i]._doc;
+    let last30Days = { totalSold: 0, totalRevenue: 0 };
+    let product = products[i]._doc;
 
     //Get list of invoice which have current product
-    var invoices = await InvoiceModel.find({
+    let invoices = await InvoiceModel.find({
       productList: { $elemMatch: { product: products[i]._id } },
     }).select({ productList: 1, _id: 0, createdAt: 1 });
 
@@ -373,8 +373,8 @@ export const getProductStatistic = async (req: IUserRequest, res: Response) => {
     product.allTimeRevenue = await getRevenue(invoices, products[i]._id);
 
     // Get last 30 days sold and revenues
-    var invoices_L30D = invoices.filter(
-      (x: any) => x.createdAt <= today && x.createdAt >= L30D
+    let invoices_L30D = invoices.filter(
+      (x: any) => x.createdAt <= today && x.createdAt >= L30D,
     );
 
     last30Days.totalSold = invoices_L30D.length;
@@ -502,7 +502,7 @@ export const getProductsByName = async (req: IUserRequest, res: Response) => {
       });
 
       const licenses_L30D = licenses.filter(
-        (x: any) => x.createdAt <= today && x.createdAt >= L30D
+        (x: any) => x.createdAt <= today && x.createdAt >= L30D,
       );
 
       last30Days.totalSold = licenses_L30D.length;

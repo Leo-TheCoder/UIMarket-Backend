@@ -173,7 +173,7 @@ export const unverifyUser = async (req: IUserRequest, res: Response) => {
 
 export const sendMailForTest = async (req: IUserRequest, res: Response) => {
   const { email } = req.body;
-  sendMailTest(email, "Hello from server");
+  sendMailTest(email, email);
   res.status(StatusCodes.OK).json({
     msg: "Email has sent",
   });

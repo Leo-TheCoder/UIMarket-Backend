@@ -66,6 +66,10 @@ const UserSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+    isAdmin: {
+      type: Boolean,
+      default: false,
+    }
   },
   {
     timestamps: true,
@@ -84,6 +88,7 @@ UserSchema.methods.createJWT = function () {
       shopId: this.shopId,
       name: this.customerName,
       isActive: this.customerStatus === 1,
+      isAdmin: this.isAdmin,
     },
     process.env.JWT_SECRET!,
     {

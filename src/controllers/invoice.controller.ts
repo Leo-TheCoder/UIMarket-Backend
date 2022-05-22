@@ -8,12 +8,12 @@ import { ObjectId } from "mongodb";
 //Model
 import ProductModel from "../models/Product.model";
 import InvoiceModel from "../models/Invoice.model";
+import CartModel from "../models/Cart.model";
+import LicenseModel from "../models/License.model";
 
 //Error
 import { BadRequestError, NotFoundError } from "../errors";
 import * as ErrorMessage from "../errors/error_message";
-import CartModel from "../models/Cart.model";
-import LicenseModel from "../models/License.model";
 
 interface IQuery {
   page?: string;
@@ -153,21 +153,30 @@ export const purchaseHistory = async (req: IUserRequest, res: Response) => {
 
   //Get product list
   const licenses = await LicenseModel.find({ userId: userId })
+    .select("-licenseFile")
     .skip((page - 1) * limit)
     .limit(limit)
     .populate({
       path: "product",
-      select: "productPictures productFile",
+      select: "productPictures productFile productName",
     })
-    .populate({
-      path: "shop",
-      select: "shopName",
-    });
+    .populate({ path: "shop", select: "shopName" })
+    .populate({ path: "invoice", select: "productList" });
 
   let productsToResponse = [];
   for (let i = 0; i < licenses.length; i++) {
-    let license = licenses[i];
+    let license = licenses[i]._doc;
+
+    let isReview = license.invoice.productList.findIndex(
+      (x: any) => String(x.product) == String(license.product._id),
+    );
+
     license.product.productPictures = license.product.productPictures[0];
+    license.isReview = license.invoice.productList[isReview].isReview;
+    license.invoiceId = license.invoice._id;
+
+    delete license.invoice;
+
     productsToResponse.push(license);
   }
 

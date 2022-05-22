@@ -2,6 +2,9 @@ import { Request, Response } from "express";
 import * as Constants from "../../constants";
 import { StatusCodes } from "http-status-codes";
 import ShopModel from "../../models/Shop.model";
+import { IUserRequest } from "../../types/express";
+import { BadRequestError } from "../../errors";
+import * as ErrorMessage from "../../errors/error_message";
 
 interface IQuery {
   page?: string;
@@ -80,3 +83,41 @@ export const getAllShops = async (req: Request, res: Response) => {
     shops,
   });
 };
+
+export const deactiveShop = async (req: IUserRequest, res: Response) => {
+  const {shopId} = req.params;
+  const shop = await ShopModel.findById(shopId, {
+    shopStatus: 1,
+  });
+
+  if (!shop) {
+    throw new BadRequestError(ErrorMessage.ERROR_INVALID_USER_ID);
+  }
+
+  //Deactivate shop
+  shop.shopStatus = 0;
+  await shop.save();
+
+  return res.status(StatusCodes.OK).json({
+    shop,
+  });
+}
+
+export const activeShop = async (req: IUserRequest, res: Response) => {
+  const {shopId} = req.params;
+  const shop = await ShopModel.findById(shopId, {
+    shopStatus: 0,
+  });
+
+  if (!shop) {
+    throw new BadRequestError(ErrorMessage.ERROR_INVALID_USER_ID);
+  }
+
+  //Activate shop
+  shop.shopStatus = 1;
+  await shop.save();
+
+  return res.status(StatusCodes.OK).json({
+    shop,
+  });
+}
