@@ -70,7 +70,6 @@ app.use(errorHandlerMiddleware);
 
 //Scheduled Task
 import { resolveBounty } from "./scheduled/resolveBounty";
-import { downloadURL } from "./utils/s3";
 
 const start = async () => {
   try {
