@@ -30,6 +30,7 @@ import invoiceRouter from "./routes/invoice.route";
 import reviewRouter from "./routes/review.route";
 import licenseRouter from "./routes/license.route";
 import cartRouter from "./routes/cart.route";
+import reportRouter from "./routes/report.route";
 
 //Middleware
 import errorHandlerMiddleware from "./middlewares/handle-errors";
@@ -62,6 +63,7 @@ app.use("/api/v1/invoices", compulsoryAuth, invoiceRouter);
 app.use("/api/v1/reviews", reviewRouter);
 app.use("/api/v1/licenses", licenseRouter);
 app.use("/api/v1/carts", compulsoryAuth, cartRouter);
+app.use("/api/v1/reports", compulsoryAuth, reportRouter);
 
 app.use(notFoundMiddleware);
 app.use(errorHandlerMiddleware);

@@ -5,5 +5,6 @@ export interface IPayloadUser extends jwt.JwtPayload {
     shopId: string;
     name: string;
     isActive: boolean;
+    isAdmin: boolean;
 }
 
