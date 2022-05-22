@@ -1,1 +1,1 @@
-{"version":3,"file":"custom-error.js","sourceRoot":"","sources":["../../src/errors/custom-error.ts"],"names":[],"mappings":";;AAAA,MAAM,WAAY,SAAQ,KAAK;IAE3B,YAAY,OAAe;QACvB,KAAK,CAAC,OAAO,CAAC,CAAC;IACnB,CAAC;CACJ;AAED,kBAAe,WAAW,CAAC"}
+{"version":3,"file":"custom-error.js","sourceRoot":"","sources":["../../src/errors/custom-error.ts"],"names":[],"mappings":";;AACA,MAAM,WAAY,SAAQ,KAAK;IAE7B,YAAY,OAAe;QACzB,KAAK,CAAC,OAAO,CAAC,CAAC;IACjB,CAAC;CACF;AAED,kBAAe,WAAW,CAAC"}

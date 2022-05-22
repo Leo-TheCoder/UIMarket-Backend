@@ -1,12 +1,19 @@
+//Library
 import { StatusCodes } from "http-status-codes";
 import { Request, Response } from "express";
 import { IUserRequest } from "../types/express";
-import Shop from "../models/Shop.model";
 import * as Constants from "../constants";
+
+//Model
 import ShopModel from "../models/Shop.model";
 import ProductModel from "../models/Product.model";
 import CategoryModel from "../models/Category.model";
 import UserModel from "../models/User.model";
+import InvoiceModel from "../models/Invoice.model";
+import ShopTransactionModel from "../models/ShopTransaction.model";
+
+//Error
+import * as ErrorMessage from "../errors/error_message";
 import {
   BadRequestError,
   ForbiddenError,
@@ -15,8 +22,8 @@ import {
   NotFoundError,
   UnauthenticatedError,
 } from "../errors";
-import * as ErrorMessage from "../errors/error_message";
-import InvoiceModel from "../models/Invoice.model";
+import LicenseModel from "../models/License.model";
+import mongoose from "mongoose";
 
 interface IQuery {
   page?: string;
@@ -26,7 +33,7 @@ interface IQuery {
 
 export const createShop = async (req: IUserRequest, res: Response) => {
   const { userId } = req.user!;
-  const shop = await Shop.findOne({ userId: userId }).lean();
+  const shop = await ShopModel.findOne({ userId: userId }).lean();
 
   if (shop) {
     if (shop.shopStatus == 0) {
@@ -129,12 +136,13 @@ export const updateProduct = async (req: IUserRequest, res: Response) => {
   product.productPrice = req.body.productPrice || product.productPrice;
   product.productDescription =
     req.body.productDescription || product.productDescription;
-  product.productPicture = req.body.productPicture || product.productPicture;
+  product.productPictures = req.body.productPictures || product.productPictures;
+  product.productFile = req.body.productFile || product.productFile;
   product.updatedAt = new Date();
 
-  const result = await product.save();
-  if (result) {
-    res.status(StatusCodes.OK).json({ result });
+  const updatedProduct = await product.save();
+  if (updatedProduct) {
+    res.status(StatusCodes.OK).json({ updatedProduct });
   } else {
     throw new InternalServerError(ErrorMessage.ERROR_FAILED);
   }
@@ -168,6 +176,7 @@ export const updateShop = async (req: IUserRequest, res: Response) => {
   shop.shopDescription = req.body.shopDescription || shop.shopDescription;
   shop.shopPhone = req.body.shopPhone || shop.shopPhone;
   shop.shopEmail = req.body.shopEmail || shop.shopEmail;
+  shop.shopPayPal = req.body.shopPayPal || shop.shopPayPal;
   shop.updatedAt = new Date();
 
   const result = await shop.save();
@@ -327,10 +336,10 @@ export const activeProduct = async (req: IUserRequest, res: Response) => {
 };
 
 const getRevenue = async (invoices: any, productId: any) => {
-  var revenue = 0;
+  let revenue = 0;
 
   for (let i = 0; i < invoices.length; i++) {
-    var product = invoices[i].productList.find(
+    const product = invoices[i].productList.find(
       (x: any) => String(x.product) == String(productId),
     );
     revenue += product.productPrice;
@@ -349,14 +358,14 @@ export const getProductStatistic = async (req: IUserRequest, res: Response) => {
   let L30D = new Date(today.getTime());
   L30D.setDate(L30D.getDate() - 30);
 
-  var productList = [];
+  let productList = [];
 
   for (let i = 0; i < products.length; i++) {
-    var last30Days = { totalSold: 0, totalRevenue: 0 };
-    var product = products[i]._doc;
+    let last30Days = { totalSold: 0, totalRevenue: 0 };
+    let product = products[i]._doc;
 
     //Get list of invoice which have current product
-    var invoices = await InvoiceModel.find({
+    let invoices = await InvoiceModel.find({
       productList: { $elemMatch: { product: products[i]._id } },
     }).select({ productList: 1, _id: 0, createdAt: 1 });
 
@@ -364,7 +373,7 @@ export const getProductStatistic = async (req: IUserRequest, res: Response) => {
     product.allTimeRevenue = await getRevenue(invoices, products[i]._id);
 
     // Get last 30 days sold and revenues
-    var invoices_L30D = invoices.filter(
+    let invoices_L30D = invoices.filter(
       (x: any) => x.createdAt <= today && x.createdAt >= L30D,
     );
 
@@ -376,4 +385,146 @@ export const getProductStatistic = async (req: IUserRequest, res: Response) => {
   }
 
   return res.status(StatusCodes.OK).json(productList);
+};
+
+export const paymentHistory = async (req: IUserRequest, res: Response) => {
+  //Check authen
+  const shopId = req.user?.shopId;
+  if (!shopId) {
+    throw new UnauthenticatedError(ErrorMessage.ERROR_AUTHENTICATION_INVALID);
+  }
+
+  const query = req.query as IQuery;
+  const page = parseInt(query.page!) || Constants.defaultPageNumber;
+  const limit = parseInt(query.limit!) || Constants.defaultLimit;
+
+  const total = await ShopTransactionModel.countDocuments({
+    shopId: shopId,
+  });
+
+  const totalPages =
+    total % limit === 0
+      ? Math.floor(total / limit)
+      : Math.floor(total / limit) + 1;
+
+  //Get product
+  const transactions = await ShopTransactionModel.find({
+    shopId: shopId,
+  })
+    .sort({ createdAt: -1 })
+    .skip((page - 1) * limit)
+    .limit(limit)
+    .lean();
+
+  return res.status(StatusCodes.OK).json({
+    totalPages,
+    page,
+    limit,
+    transactions,
+  });
+};
+
+export const getProductsByName = async (req: IUserRequest, res: Response) => {
+  const query = req.query as IQuery;
+  const page = parseInt(query.page!) || Constants.defaultPageNumber;
+  const limit = parseInt(query.limit!) || Constants.defaultLimit;
+  const { shopId } = req.user!;
+  const selectOption = {
+    __v: 0,
+    productFile: 0,
+    deleteFlagged: 0,
+  };
+  const matchOption = {
+    shopId: new mongoose.Types.ObjectId(shopId),
+    deleteFlagged: 0,
+  };
+
+  const totalProducts = await ProductModel.aggregate([
+    {
+      $search: {
+        index: "productName",
+        text: {
+          path: "productName",
+          query: decodeURIComponent(req.params.productName),
+        },
+      },
+    },
+    { $match: matchOption },
+    { $count: "total" },
+  ]);
+
+  if (totalProducts.length < 1) {
+    return res.status(StatusCodes.OK).json({
+      totalPages: 0,
+      page,
+      limit,
+      products: [],
+    });
+  }
+  const total = totalProducts[0].total;
+
+  const totalPages =
+    total % limit === 0
+      ? Math.floor(total / limit)
+      : Math.floor(total / limit) + 1;
+
+  const products = await ProductModel.aggregate([
+    {
+      $search: {
+        index: "productName",
+        text: {
+          path: "productName",
+          query: decodeURIComponent(req.params.productName),
+        },
+      },
+    },
+    { $match: matchOption },
+    { $addFields: { score: { $meta: "searchScore" } } },
+    { $skip: (page - 1) * limit },
+    { $limit: limit },
+    { $project: selectOption },
+  ]);
+
+  const today = new Date();
+  const L30D = new Date(today.getTime());
+  L30D.setDate(L30D.getDate() - 30);
+
+  const productPromises = products.map((product) => {
+    const last30Days = { totalSold: 0, totalRevenue: 0 };
+
+    let revenue = 0;
+
+    return LicenseModel.find({
+      product: product._id,
+    }).then((licenses) => {
+      licenses.forEach((license) => {
+        revenue += license.productPrice;
+      });
+
+      const licenses_L30D = licenses.filter(
+        (x: any) => x.createdAt <= today && x.createdAt >= L30D,
+      );
+
+      last30Days.totalSold = licenses_L30D.length;
+
+      licenses.forEach((license) => {
+        last30Days.totalRevenue += license.productPrice;
+      });
+
+      return {
+        ...product,
+        allTimeRevenue: revenue,
+        last30Days,
+      };
+    });
+  });
+
+  const productList = await Promise.all(productPromises);
+
+  res.status(StatusCodes.OK).json({
+    totalPages,
+    page,
+    limit,
+    products: productList,
+  });
 };

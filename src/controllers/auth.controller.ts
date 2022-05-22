@@ -10,9 +10,9 @@ import {
 } from "../utils/sendMail";
 import UserModel from "../models/User.model";
 import * as ErrorMessage from "../errors/error_message";
-import {OAuth2Client} from "google-auth-library"
+import { OAuth2Client } from "google-auth-library";
 
-const CLIENT_ID = process.env.GOOGLE_CLIENT_ID!;
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID!;
 
 const register = async (req: Request, res: Response) => {
   const user = await User.create({
@@ -93,8 +93,20 @@ const verifyEmailCode = async (req: Request, res: Response) => {
   const user = await User.findById(userId);
   if (user.verifyToken(verifyCode)) {
     user.customerStatus = 1;
+
+    //create JWT for authentication
+    const token = user.createJWT();
+    const refreshToken = await user.createRefreshToken();
     await user.save();
-    return res.status(StatusCodes.OK).json({ msg: "Verify successfully!" });
+
+    const userObj = Object.assign({}, user._doc);
+    delete userObj.customerPassword;
+    delete userObj.authenToken;
+    delete userObj.refreshToken;
+
+    return res
+      .status(StatusCodes.OK)
+      .json({ user: userObj, token, refreshToken });
   }
 
   throw new UnauthenticatedError(ErrorMessage.ERROR_FAILED);
@@ -185,58 +197,53 @@ export {
   resetPassword,
 };
 
-// export const googleLogin = async (req: Request, res: Response) => {
-//   const { customerName, googleId, customerEmail, customerAvatar } = req.body;
-
-//   if (!customerName || !googleId || !customerEmail) {
-//     throw new BadRequestError(ErrorMessage.ERROR_MISSING_BODY);
-//   }
-
-//   let user = await UserModel.findOne({ customerEmail });
-//   if (!user) {
-//     user = new UserModel();
-//     await user.createAccountWithGoogleID(
-//       customerName,
-//       googleId,
-//       customerEmail,
-//       customerAvatar,
-//     );
-//   } else {
-//     if (user.doesAccountCreatedWithGoogle()) {
-//       //Compare this googleId with googleId in db
-//       if (!user.verifyGoogleID(googleId)) {
-//         throw new UnauthenticatedError(ErrorMessage.ERROR_GOOGLE_INVALID);
-//       }
-//     } else {
-//       await user.updateAccountWithGoogle(googleId, customerAvatar);
-//     }
-//   }
-
-//   const accessToken = user.createJWT();
-//   const refressToken = await user.createRefreshToken();
-//   const userObj = JSON.parse(JSON.stringify(user));
-//   delete userObj.customerPassword;
-//   delete userObj.authenToken;
-//   delete userObj.refreshToken;
-
-//   res.status(StatusCodes.OK).json({ user: userObj, accessToken, refressToken });
-// };
-
 export const googleLogin = async (req: Request, res: Response) => {
-  const client = new OAuth2Client(CLIENT_ID);
+  const client = new OAuth2Client(GOOGLE_CLIENT_ID);
   const token = req.body.tokenId;
-  if(!token) {
-    throw new BadRequestError(ErrorMessage.ERROR_GOOGLE_INVALID)
+  if (!token) {
+    throw new BadRequestError(ErrorMessage.ERROR_GOOGLE_INVALID);
   }
   const ticket = await client.verifyIdToken({
     idToken: token,
-    audience: CLIENT_ID, // Specify the CLIENT_ID of the app that accesses the backend
+    audience: GOOGLE_CLIENT_ID, // Specify the CLIENT_ID of the app that accesses the backend
     // Or, if multiple clients access the backend:
     //[CLIENT_ID_1, CLIENT_ID_2, CLIENT_ID_3]
   });
   const payload = ticket.getPayload()!;
-  const userid = payload["sub"];
   // If request specified a G Suite domain:
   // const domain = payload['hd'];
-  res.json(userid);
+
+  const customerEmail = payload.email;
+  const customerName = payload.name;
+  const googleId = payload.sub;
+  const customerAvatar = payload.picture;
+
+  let user = await UserModel.findOne({ customerEmail });
+  if (!user) {
+    user = new UserModel();
+    await user.createAccountWithGoogleID(
+      customerName,
+      googleId,
+      customerEmail,
+      customerAvatar,
+    );
+  } else {
+    if (user.doesAccountCreatedWithGoogle()) {
+      //Compare this googleId with googleId in db
+      if (!user.verifyGoogleID(googleId)) {
+        throw new UnauthenticatedError(ErrorMessage.ERROR_GOOGLE_INVALID);
+      }
+    } else {
+      await user.updateAccountWithGoogle(googleId, customerAvatar);
+    }
+  }
+
+  const accessToken = user.createJWT();
+  const refressToken = await user.createRefreshToken();
+  const userObj = JSON.parse(JSON.stringify(user));
+  delete userObj.customerPassword;
+  delete userObj.authenToken;
+  delete userObj.refreshToken;
+
+  res.status(StatusCodes.OK).json({ user: userObj, accessToken, refressToken });
 };

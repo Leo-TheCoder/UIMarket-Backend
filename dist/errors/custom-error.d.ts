@@ -3,3 +3,4 @@ declare class CustomError extends Error {
     constructor(message: string);
 }
 export default CustomError;
+//# sourceMappingURL=custom-error.d.ts.map

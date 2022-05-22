@@ -1,5 +1,5 @@
 import jwt from "jsonwebtoken";
-import { UnauthenticatedError } from "../errors";
+import { ForbiddenError, UnauthenticatedError } from "../errors";
 import { Response, NextFunction } from "express";
 import { IUserRequest } from "../types/express";
 import { IPayloadUser } from "../types/jwt-payload";
@@ -24,6 +24,7 @@ const compulsoryAuth = (
       shopId: payload.shopId,
       name: payload.name,
       isActive: payload.isActive,
+      isAdmin: payload.isAdmin,
     };
     next();
   } catch (error) {
@@ -47,6 +48,7 @@ const optionalAuth = (req: IUserRequest, res: Response, next: NextFunction) => {
       shopId: payload.shopId,
       name: payload.name,
       isActive: payload.isActive,
+      isAdmin: payload.isAdmin,
     };
     next();
   } catch (error) {
@@ -54,5 +56,14 @@ const optionalAuth = (req: IUserRequest, res: Response, next: NextFunction) => {
     next();
   }
 };
+
+export const adminAuth = (req: IUserRequest, res: Response, next: NextFunction) => {
+  if(req.user?.isAdmin) {
+    next();
+  }
+  else {
+    throw new ForbiddenError(ErrorMessage.ERROR_AUTHENTICATION_INVALID)
+  }
+}
 
 export { compulsoryAuth, optionalAuth };

@@ -1,20 +1,24 @@
+//Library
 import { StatusCodes } from "http-status-codes";
+import { Request, Response } from "express";
+import { IUserRequest } from "../types/express";
+import { ObjectId } from "mongodb";
+import * as Constants from "../constants";
+import { getStatusVote } from "../utils/statusVote";
+
+//Model
+import Question from "../models/Question.model";
+import Answer from "../models/Answer.model";
+
+//Error
+import * as ErrorMessage from "../errors/error_message";
 import {
   BadRequestError,
-  CustomError,
   ForbiddenError,
   GoneError,
   InternalServerError,
   NotFoundError,
 } from "../errors";
-import { Request, Response } from "express";
-import { IUserRequest } from "../types/express";
-import Question from "../models/Question.model";
-import Answer from "../models/Answer.model";
-import * as Constants from "../constants";
-import { ObjectId } from "mongodb";
-import { getStatusVote } from "../utils/statusVote";
-import * as ErrorMessage from "../errors/error_message";
 
 interface IQuery {
   page?: string;

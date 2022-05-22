@@ -4,6 +4,7 @@ import "express-async-errors";
 import express, { Request, Response, Application } from "express";
 import cors from "cors";
 import connectDB from "./db/connect";
+import cron from "node-cron";
 
 //Create server app instance
 const app: Application = express();
@@ -28,6 +29,8 @@ import tokenRouter from "./routes/token.route";
 import invoiceRouter from "./routes/invoice.route";
 import reviewRouter from "./routes/review.route";
 import licenseRouter from "./routes/license.route";
+import cartRouter from "./routes/cart.route";
+import reportRouter from "./routes/report.route";
 
 //Middleware
 import errorHandlerMiddleware from "./middlewares/handle-errors";
@@ -57,17 +60,28 @@ app.use("/api/v1/payment", paymentRouter);
 app.use("/api/v1/category", productCategoryRouter);
 app.use("/api/v1/token", tokenRouter);
 app.use("/api/v1/invoices", compulsoryAuth, invoiceRouter);
-app.use("/api/v1/reviews", compulsoryAuth, reviewRouter);
+app.use("/api/v1/reviews", reviewRouter);
 app.use("/api/v1/licenses", licenseRouter);
+app.use("/api/v1/carts", compulsoryAuth, cartRouter);
+app.use("/api/v1/reports", compulsoryAuth, reportRouter);
 
 app.use(notFoundMiddleware);
 app.use(errorHandlerMiddleware);
+
+//Scheduled Task
+import { resolveBounty } from "./scheduled/resolveBounty";
 
 const start = async () => {
   try {
     await connectDB(process.env.MONGO_URI!);
     app.listen(PORT, (): void => {
       console.log(`Server is listening on port ${PORT}...`);
+    });
+
+    //Scheduled Tasks
+    //Resolve bounty run everyday at every hour
+    cron.schedule("1 * * * *", async () => {
+      await resolveBounty();
     });
   } catch (error) {
     console.log(error);
