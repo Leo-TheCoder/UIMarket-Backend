@@ -57,7 +57,7 @@ export const preOrder = async (req: IUserRequest) => {
   //Remove duplicate out of array
   productList = productList.filter(
     (value: any, index: any, self: any) =>
-      index === self.findIndex((t: any) => t.product === value.product),
+      index === self.findIndex((t: any) => t.product === value.product)
   );
 
   //Checking product and get its price
@@ -94,7 +94,7 @@ export const createOrder = async (req: IUserRequest) => {
 export const paidInvoice = async (
   invoice: any,
   transactionId: any,
-  userId: string,
+  userId: string
 ) => {
   //Checking if has transaction Id
 
@@ -119,7 +119,7 @@ export const paidInvoice = async (
   invoice.productList.forEach((product: any) => {
     ProductModel.updateOne(
       { _id: product.product },
-      { $inc: { totalSold: 1 } },
+      { $inc: { totalSold: 1 } }
     ).catch((error) => {
       console.log(error);
     });
@@ -168,7 +168,7 @@ export const purchaseHistory = async (req: IUserRequest, res: Response) => {
     let license = licenses[i]._doc;
 
     let isReview = license.invoice.productList.findIndex(
-      (x: any) => String(x.product) == String(license.product._id),
+      (x: any) => String(x.product) == String(license.product._id)
     );
 
     license.product.productPictures = license.product.productPictures[0];
@@ -215,4 +215,84 @@ export const purchaseHistory = async (req: IUserRequest, res: Response) => {
     limit,
     products: productsToResponse,
   });
+};
+
+export const searchPurchaseHistory = async (
+  req: IUserRequest,
+  res: Response
+) => {
+  const { userId } = req.user!;
+  // const userId = "62693a28052feac047bce72f";
+  const query = req.query as IQuery;
+  const page = parseInt(query.page!) || Constants.defaultPageNumber;
+  const limit = parseInt(query.limit!) || Constants.defaultLimit;
+
+  const projectionObject = {
+    licenseFile: 0,
+  };
+
+  const searchedProductIds = await ProductModel.aggregate([
+    {
+      $search: {
+        index: "productName",
+        text: {
+          path: "productName",
+          query: decodeURIComponent(req.params.productName),
+        },
+      },
+    },
+    {
+      $project: { _id: 1 },
+    },
+  ]);
+
+  const productIds = searchedProductIds.map((product) => product._id);
+
+  const filterObject = {
+    userId,
+    product: { $in: productIds },
+  };
+
+  const total = await LicenseModel.count(filterObject);
+
+  const totalPages =
+    total % limit === 0
+      ? Math.floor(total / limit)
+      : Math.floor(total / limit) + 1;
+
+  const purchaseList = await LicenseModel.find(filterObject)
+    .skip((page - 1) * limit)
+    .limit(limit)
+    .select(projectionObject)
+    .populate({
+      path: "product",
+      select: "productPictures productFile productName",
+    })
+    .populate({ path: "shop", select: "shopName" })
+    .populate({ path: "invoice", select: "productList" })
+    .lean();
+
+  const productsToSend = purchaseList.map((license) => {
+    const productReviewIndex = license.invoice.productList.findIndex(
+      (x: any) => String(x.product) == String(license.product._id)
+    );
+
+    const resObj = {
+      ...JSON.parse(JSON.stringify(license)),
+      isReview: license.invoice.productList[productReviewIndex].isReview,
+      invoiceId: license.invoice._id
+    }
+
+    const pictures = license.product.productPictures;
+    resObj.product.productPictures = pictures
+      ? pictures[0]
+      : undefined;
+
+    delete resObj.invoice;
+    return resObj;
+  });
+
+  return res
+    .status(StatusCodes.OK)
+    .json({ totalPages, page, limit, products: productsToSend });
 };

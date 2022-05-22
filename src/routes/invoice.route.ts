@@ -3,12 +3,14 @@ import {
   createOrder,
   preOrder,
   purchaseHistory,
+  searchPurchaseHistory,
 } from "../controllers/invoice.controller";
 
 const router = express.Router();
 
 //GET
 router.get("/history", purchaseHistory);
+router.get("/history/:productName", searchPurchaseHistory);
 
 //POST Method
 router.post("/", createOrder);
