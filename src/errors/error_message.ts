@@ -33,6 +33,10 @@ export const ERROR_INVALID_SHOP_ID = "invalid-shop-id";
 export const ERROR_INVALID_INVOICE_ID = "invalid-invoice-id";
 export const ERROR_INVALID_REVIEW_ID = "invalid-review-id";
 
+//Refund
+export const ERROR_INVALID_REQUEST_REFUND = "invalid-request-refund";
+export const ERROR_EXPIRED_REFUND_TIME = "expired-refund-time";
+
 //Transaction
 export const ERROR_INVALID_AMOUNT = "invalid-amount";
 

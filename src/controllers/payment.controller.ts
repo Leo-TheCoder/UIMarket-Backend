@@ -12,11 +12,14 @@ import * as Constants from "../constants";
 import ShopModel from "../models/Shop.model";
 import ProductModel from "../models/Product.model";
 import InvoiceModel from "../models/Invoice.model";
+import RefundModel from "../models/Refund.model";
+import UserTransactionModel from "../models/UserTransaction.model";
+import LicenseModel from "../models/License.model";
 
 //Error
 import UnauthenticatedErorr from "../errors/unauthenticated-error";
 import * as ErrorMessage from "../errors/error_message";
-import { BadRequestError, InternalServerError } from "../errors";
+import { BadRequestError, InternalServerError, NotFoundError } from "../errors";
 
 //Ultis
 import {
@@ -34,8 +37,6 @@ import {
   Payout_PayPal,
 } from "../utils/paypal";
 import { getSystemDocument } from "./admin/system.controller";
-import UserTransactionModel from "../models/UserTransaction.model";
-import LicenseModel from "../models/License.model";
 
 interface IQuery {
   page?: string;
@@ -365,34 +366,47 @@ export const paymentHistory = async (req: IUserRequest, res: Response) => {
   });
 };
 
-// export const paymentHistory = async (req: IUserRequest, res: Response) => {
-//   const { userId } = req.user!;
-//   const query = req.query as IQuery;
-//   const page = parseInt(query.page!) || Constants.defaultPageNumber;
-//   const limit = parseInt(query.limit!) || Constants.defaultLimit;
+export const createRequestRefund = async (req: IUserRequest, res: Response) => {
+  const { userId } = req.user!;
+  const { invoiceId, productId } = req.body;
+  if (!invoiceId || !productId) {
+    throw new BadRequestError(ErrorMessage.ERROR_MISSING_BODY);
+  }
+  //Checking existed
+  const refund = await RefundModel.findOne({
+    userId: userId,
+    invoiceId: invoiceId,
+    productId: productId,
+  }).lean();
+  if (refund) {
+    throw new BadRequestError(ErrorMessage.ERROR_AUTHENTICATION_DUPLICATE);
+  }
 
-//   const total = await UserTransactionModel.countDocuments({
-//     userId: userId,
-//   }).lean();
+  //Checking history
+  const history = await LicenseModel.findOne({
+    userId: userId,
+    invoice: invoiceId,
+    product: productId,
+  }).lean();
+  if (!history) {
+    throw new NotFoundError(ErrorMessage.ERROR_INVALID_REQUEST_REFUND);
+  }
 
-//   const totalPages =
-//     total % limit === 0
-//       ? Math.floor(total / limit)
-//       : Math.floor(total / limit) + 1;
+  //Checking bought time
+  const { boughtTime } = history;
+  let diff = Math.abs(boughtTime.getTime() - new Date().getTime());
+  let diffDays = Math.ceil(diff / (1000 * 3600 * 24));
 
-//   //Get transactions
-//   const transactions = await UserTransactionModel.find({
-//     userId: userId,
-//   })
-//     .skip((page - 1) * limit)
-//     .limit(limit)
-//     .sort({ createdAt: -1 })
-//     .lean();
+  if (diffDays > Constants.acceptRefund) {
+    throw new BadRequestError(ErrorMessage.ERROR_EXPIRED_REFUND_TIME);
+  }
 
-//   res.status(StatusCodes.OK).json({
-//     totalPages,
-//     page,
-//     limit,
-//     transactions,
-//   });
-// };
+  //Create refund request
+  const request = await RefundModel.create({
+    userId: userId,
+    shopId: history.shop,
+    ...req.body,
+  });
+
+  res.status(StatusCodes.CREATED).json(request);
+};

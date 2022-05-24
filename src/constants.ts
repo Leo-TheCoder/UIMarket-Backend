@@ -1,30 +1,20 @@
 //Pagination
-const defaultLimit = 10;
-const defaultPageNumber = 1;
+export const defaultLimit = 10;
+export const defaultPageNumber = 1;
 
 //Model
-const defaultMinLength = 20;
-const defaultLimitComments = 5;
+export const defaultMinLength = 20;
+export const defaultLimitComments = 5;
 
 //Bounty constant
-const minBountyDueDate = 1;
-const maxBountyDueDate = 30;
-const minBounty = 150;
-const maxBounty = 5000;
+export const minBountyDueDate = 1;
+export const maxBountyDueDate = 30;
+export const minBounty = 150;
+export const maxBounty = 5000;
 
 //Question
-const bestAnswerAward = 10;
-const upvoteAward = 2;
+export const bestAnswerAward = 10;
+export const upvoteAward = 2;
 
-export {
-  defaultLimit,
-  defaultPageNumber,
-  defaultMinLength,
-  minBountyDueDate,
-  maxBountyDueDate,
-  minBounty,
-  maxBounty,
-  bestAnswerAward,
-  upvoteAward,
-  defaultLimitComments,
-};
+//Refund
+export const acceptRefund = 3;

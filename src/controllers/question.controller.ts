@@ -78,8 +78,8 @@ const createQuestion = async (req: IUserRequest, res: Response) => {
     const dueDate = new Date(req.body.bountyDueDate);
 
     //Checking valid due date
-    var diff = Math.abs(dueDate.getTime() - new Date().getTime());
-    var diffDays = Math.ceil(diff / (1000 * 3600 * 24));
+    let diff = Math.abs(dueDate.getTime() - new Date().getTime());
+    let diffDays = Math.ceil(diff / (1000 * 3600 * 24));
 
     if (
       diffDays < Constants.minBountyDueDate ||
@@ -205,7 +205,7 @@ const getQuestions = async (req: Request, res: Response) => {
   const title = query.title;
 
   //Handle with Query Parameters
-  var queryString: any = { questionStatus: 1 };
+  let queryString: any = { questionStatus: 1 };
   let projection = { questionContent: 0, __v: 0 };
 
   //Checking selectWith option
@@ -502,8 +502,8 @@ const rebountyQuestion = async (req: IUserRequest, res: Response) => {
     throw new BadRequestError("New due date must larger than old one");
   }
 
-  var diff = Math.abs(newDueDate.getTime() - new Date().getTime());
-  var diffDays = Math.ceil(diff / (1000 * 3600 * 24));
+  let diff = Math.abs(newDueDate.getTime() - new Date().getTime());
+  let diffDays = Math.ceil(diff / (1000 * 3600 * 24));
 
   if (
     diffDays < Constants.minBountyDueDate ||
