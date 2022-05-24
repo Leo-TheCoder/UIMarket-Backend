@@ -2,7 +2,7 @@ import { StatusCodes } from "http-status-codes";
 import { Request, Response } from "express";
 import { BadRequestError, CustomError } from "../errors";
 import * as Constants from "../constants";
-import { generateUploadURL } from "../utils/s3";
+import { generateUploadURL, downloadURL } from "../utils/s3";
 import fs from "fs";
 import ultil from "util";
 import * as ErrorMessage from "../errors/error_message";
@@ -51,7 +51,7 @@ interface IQuery {
 }
 
 //FE Solution
-const uploadURL = async (req: Request, res: Response) => {
+export const uploadURL = async (req: Request, res: Response) => {
   const query = req.query as IQuery;
   const folder = query.folder;
   const isPrivate = query.isPrivate === "true" || false;
@@ -69,7 +69,17 @@ const uploadURL = async (req: Request, res: Response) => {
   }
 };
 
-export {
-  uploadURL,
-  // uploadAvatar
+export const generatedownloadURL = async (req: Request, res: Response) => {
+  const query = req.query as IQuery;
+  const folder = query.folder;
+  const isPrivate = query.isPrivate === "true" || false;
+
+  if (!folder || !query.isPrivate) {
+    throw new BadRequestError(ErrorMessage.ERROR_MISSING_BODY);
+  }
+  const url = await downloadURL(folder, isPrivate);
+
+  if (url) {
+    res.status(StatusCodes.OK).send({ url });
+  }
 };

@@ -12,6 +12,11 @@ import InvoiceModel from "../models/Invoice.model";
 import * as ErrorMessage from "../errors/error_message";
 import { BadRequestError, InternalServerError, NotFoundError } from "../errors";
 
+interface IQuery {
+  page?: string;
+  limit?: string;
+}
+
 export const createLicense = async (req: Request, res: Response) => {
   //Checking body
   if (!req.body.invoice || !req.body.product || !req.body.licenseFile) {
@@ -55,4 +60,41 @@ export const createLicense = async (req: Request, res: Response) => {
   } else {
     throw new InternalServerError(ErrorMessage.ERROR_FAILED);
   }
+};
+
+export const getLicenseList = async (req: IUserRequest, res: Response) => {
+  const { userId } = req.user!;
+  const query = req.query as IQuery;
+  const page = parseInt(query.page!) || Constants.defaultPageNumber;
+  const limit = parseInt(query.limit!) || Constants.defaultLimit;
+
+  //Get total product
+  const total = await LicenseModel.countDocuments({ userId: userId });
+  const totalPages =
+    total % limit === 0
+      ? Math.floor(total / limit)
+      : Math.floor(total / limit) + 1;
+
+  //Get product
+  const licenses = await LicenseModel.find({ userId: userId })
+    .skip((page - 1) * limit)
+    .limit(limit)
+    .populate({ path: "product", select: "productName" })
+    .populate({ path: "userId", select: "customerName customerEmail" })
+    .lean();
+
+  res.status(StatusCodes.OK).json({ totalPages, page, limit, licenses });
+};
+
+export const getLicenseById = async (req: IUserRequest, res: Response) => {
+  const { userId } = req.user!;
+  const license = await LicenseModel.find({
+    userId: userId,
+    _id: req.params.licenseId,
+  })
+    .populate({ path: "product", select: "productName" })
+    .populate({ path: "userId", select: "customerName customerEmail" })
+    .lean();
+
+  res.status(StatusCodes.OK).json(license);
 };

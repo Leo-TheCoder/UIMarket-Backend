@@ -34,6 +34,10 @@ const OrderSchema = new mongoose.Schema(
           default: 0,
           enum: [0, 1],
         },
+        license: {
+          type: mongoose.Types.ObjectId,
+          ref: "License",
+        },
         _id: false,
       },
     ],

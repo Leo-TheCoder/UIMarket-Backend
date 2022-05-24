@@ -107,7 +107,7 @@ export const getAllProducts = async (req: Request, res: Response) => {
       productStatus: 1,
       ...filterObj,
     },
-    projectionProductList,
+    projectionProductList
   )
     .sort(sortObj)
     .skip((page - 1) * limit)
@@ -120,9 +120,10 @@ export const getAllProducts = async (req: Request, res: Response) => {
     //get first item in array
     const productPictureList = product.productPictures;
     //get first picture
-    product.coverPicture = productPictureList
-      ? productPictureList[0]
-      : undefined;
+    product.coverPicture =
+      productPictureList && productPictureList.length > 0
+        ? productPictureList[0]
+        : undefined;
     delete product.productPictures;
     return product;
   });
@@ -182,9 +183,10 @@ const findByCategory = async (req: Request, res: Response) => {
     //get first item in array
     const productPictureList = product.productPictures;
     //get first picture
-    product.coverPicture = productPictureList
-      ? productPictureList[0]
-      : undefined;
+    product.coverPicture =
+      productPictureList && productPictureList.length > 0
+        ? productPictureList[0]
+        : undefined;
     delete product.productPictures;
     return product;
   });
@@ -203,7 +205,7 @@ const findById = async (req: Request, res: Response) => {
       _id: req.params.productId,
       productStatus: 1,
     },
-    { $inc: { allTimeView: 1 } },
+    { $inc: { allTimeView: 1 } }
   )
     .populate({ path: "shopId", select: "shopEmail" })
     .lean();
@@ -310,9 +312,10 @@ const findByName = async (req: Request, res: Response) => {
     //get first item in array
     const productPictureList = product.productPictures;
     //get first picture
-    product.coverPicture = productPictureList
-      ? productPictureList[0]
-      : undefined;
+    product.coverPicture =
+      productPictureList && productPictureList.length > 0
+        ? productPictureList[0]
+        : undefined;
     delete product.productPictures;
     product.productCategory = product.productCategory[0];
     product.shop = product.shop[0];
@@ -373,9 +376,10 @@ const getProductsByShop = async (req: Request, res: Response) => {
     //get first item in array
     const productPictureList = product.productPictures;
     //get first picture
-    product.coverPicture = productPictureList
-      ? productPictureList[0]
-      : undefined;
+    product.coverPicture =
+      productPictureList && productPictureList.length > 0
+        ? productPictureList[0]
+        : undefined;
     delete product.productPictures;
     return product;
   });

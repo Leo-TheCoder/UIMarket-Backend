@@ -54,7 +54,8 @@ export const createReview = async (req: IUserRequest, res: Response) => {
   const product = invoice.productList.findIndex(
     (x: any) => String(x.product) == req.params.productId && x.isReview == 0,
   );
-  if (!product) {
+
+  if (product < 0) {
     throw new NotFoundError(ErrorMessage.ERROR_INVALID_PRODUCT_ID);
   }
 
@@ -153,4 +154,39 @@ export const updateReview = async (req: IUserRequest, res: Response) => {
   const result = await review.save();
 
   res.status(StatusCodes.OK).json(result);
+};
+
+export const getReviewById = async (req: Request, res: Response) => {
+  const review = await ReviewModel.findById(req.params.reviewId).lean();
+  res.status(StatusCodes.OK).json(review);
+};
+
+export const getUserReview = async (req: IUserRequest, res: Response) => {
+  const { userId } = req.user!;
+  const query = req.query as IQuery;
+  const page = parseInt(query.page!) || Constants.defaultPageNumber;
+  const limit = parseInt(query.limit!) || Constants.defaultLimit;
+
+  const total = await ReviewModel.countDocuments({ user: userId });
+
+  const totalPages =
+    total % limit === 0
+      ? Math.floor(total / limit)
+      : Math.floor(total / limit) + 1;
+
+  const reviews = await ReviewModel.find({ user: userId })
+    .skip((page - 1) * limit)
+    .limit(limit)
+    .select({ invoice: 0 })
+    .populate({ path: "user", select: "customerName customerAvatar" })
+    .populate({ path: "product", select: "productName" })
+    .sort({ createdAt: -1 })
+    .lean();
+
+  return res.status(StatusCodes.OK).json({
+    totalPages,
+    page,
+    limit,
+    reviews,
+  });
 };
