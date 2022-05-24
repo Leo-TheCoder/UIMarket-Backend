@@ -47,7 +47,7 @@ const s3 = new aws.S3({
 // }
 
 //FE Solution
-async function generateUploadURL(folder: String, isPrivate: boolean) {
+export const generateUploadURL = async (folder: String, isPrivate: boolean) => {
   const rawBytes = await randomBytes(16);
   const fileName = rawBytes.toString("hex");
   let bucket;
@@ -66,9 +66,24 @@ async function generateUploadURL(folder: String, isPrivate: boolean) {
 
   const uploadURL = await s3.getSignedUrlPromise("putObject", params);
   return uploadURL;
-}
+};
 
-export {
-  generateUploadURL,
-  //  uploadFile
+export const downloadURL = async (folder: String, isPrivate: boolean) => {
+  let bucket;
+  if (isPrivate == true) {
+    bucket = prdbucketName;
+  } else {
+    bucket = bucketName;
+  }
+
+  const params = {
+    Bucket: bucket,
+    Key: folder,
+    Expires: 3600,
+    ResponseContentDisposition: `attachment;`,
+    // ResponseContentDisposition: `attachment; filename="${fileName}"`,
+  };
+  const url = s3.getSignedUrl("getObject", params);
+
+  return url;
 };
