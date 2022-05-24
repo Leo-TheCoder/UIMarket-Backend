@@ -9,6 +9,7 @@ import {
   chargeCoin,
   refundPayment,
   paymentHistory,
+  createRequestRefund,
 } from "../controllers/payment.controller";
 import { compulsoryAuth, optionalAuth } from "../middlewares/authentication";
 
@@ -26,6 +27,7 @@ router.post("/create-order", compulsoryAuth, createOrder);
 router.post("/withdraw", compulsoryAuth, withdrawPayment);
 router.post("/charge-coin", chargeCoin);
 router.post("/refund", refundPayment);
+router.post("/request/refund", compulsoryAuth, createRequestRefund);
 
 //PUT Method
 //DELETE Method
