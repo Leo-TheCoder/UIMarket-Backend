@@ -30,7 +30,7 @@ const ShopTransactionSchema = new mongoose.Schema(
     },
     transactionStatus: {
       type: Number,
-      default: TransactionStatus.COMPLETED,
+      default: TransactionStatus.PENDING,
       enum: [TransactionStatus.PENDING, TransactionStatus.COMPLETED],
     },
   },
