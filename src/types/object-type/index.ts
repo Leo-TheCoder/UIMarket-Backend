@@ -1,3 +1,5 @@
+import { TransactionStatus } from "../enum";
+
 export type Product = {
   shop: string;
   product: string;
@@ -15,3 +17,10 @@ export type Invoice = {
   _id: string;
   save: () => Promise<any>;
 };
+
+export type ShopTransaction = {
+  _id: string;
+  reason: string;
+  changeAmount: number;
+  transactionStatus: TransactionStatus;
+}

@@ -3,7 +3,8 @@ import { StatusCodes } from "http-status-codes";
 import { Request, Response } from "express";
 import { IUserRequest } from "../types/express";
 import * as Constants from "../constants";
-import { ObjectId } from "mongodb";
+import { TransactionStatus } from "../types/enum";
+import { ShopTransaction } from "../types/object-type";
 
 //Model
 import ProductModel from "../models/Product.model";
@@ -14,6 +15,7 @@ import LicenseModel from "../models/License.model";
 //Error
 import { BadRequestError, NotFoundError } from "../errors";
 import * as ErrorMessage from "../errors/error_message";
+import ShopTransactionModel from "../models/ShopTransaction.model";
 
 interface IQuery {
   page?: string;
@@ -280,13 +282,11 @@ export const searchPurchaseHistory = async (
     const resObj = {
       ...JSON.parse(JSON.stringify(license)),
       isReview: license.invoice.productList[productReviewIndex].isReview,
-      invoiceId: license.invoice._id
-    }
+      invoiceId: license.invoice._id,
+    };
 
     const pictures = license.product.productPictures;
-    resObj.product.productPictures = pictures
-      ? pictures[0]
-      : undefined;
+    resObj.product.productPictures = pictures ? pictures[0] : undefined;
 
     delete resObj.invoice;
     return resObj;
@@ -295,4 +295,54 @@ export const searchPurchaseHistory = async (
   return res
     .status(StatusCodes.OK)
     .json({ totalPages, page, limit, products: productsToSend });
+};
+
+export const getShopTransaction = async (req: IUserRequest, res: Response) => {
+  const { shopId } = req.user!;
+
+  const query = req.query as IQuery;
+  const page = parseInt(query.page!) || Constants.defaultPageNumber;
+  const limit = parseInt(query.limit!) || Constants.defaultLimit;
+
+  const filterObject = {
+    shopId,
+  };
+  const projectionObject = {
+    _id: 1,
+    reason: 1,
+    changeAmount: 1,
+    transactionStatus: 1,
+  };
+
+  const total = await ShopTransactionModel.count(filterObject);
+
+  const totalPages =
+    total % limit === 0
+      ? Math.floor(total / limit)
+      : Math.floor(total / limit) + 1;
+
+  const transactions = (await ShopTransactionModel.find(filterObject)
+    .sort({ createdAt: -1 })
+    .skip((page - 1) * limit)
+    .limit(limit)
+    .select(projectionObject)
+    .lean()) as ShopTransaction[];
+
+  const transactionsToSend = transactions.map((transaction) => {
+    const status =
+      transaction.transactionStatus === TransactionStatus.COMPLETED
+        ? "COMPLETED"
+        : "PENDING";
+    return {
+      ...transaction,
+      transactionStatus: status,
+    };
+  });
+
+  return res.status(StatusCodes.OK).json({
+    totalPages,
+    page,
+    limit,
+    transactions: transactionsToSend,
+  });
 };
