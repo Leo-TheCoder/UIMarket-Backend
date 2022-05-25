@@ -1,5 +1,5 @@
 import ShopTransactionModel from '../models/ShopTransaction.model';
-import { TransactionStatus as TransactionStatusEnum } from '../types/enum';
+import { TransactionStatusEnum } from '../types/enum';
 import { getSystemDocument } from "../controllers/admin/system.controller";
 
 export const resolveShopPayment = async () => {

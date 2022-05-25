@@ -3,7 +3,7 @@ import { StatusCodes } from "http-status-codes";
 import { Request, Response } from "express";
 import { IUserRequest } from "../types/express";
 import * as Constants from "../constants";
-import { TransactionStatus } from "../types/enum";
+import { TransactionStatusEnum } from "../types/enum";
 import { ShopTransaction } from "../types/object-type";
 
 //Model
@@ -309,9 +309,12 @@ export const getShopTransaction = async (req: IUserRequest, res: Response) => {
   };
   const projectionObject = {
     _id: 1,
-    reason: 1,
+    productId: 1,
+    action: 1,
     changeAmount: 1,
     transactionStatus: 1,
+    updatedAt: 1,
+    createdAt: 1,
   };
 
   const total = await ShopTransactionModel.count(filterObject);
@@ -329,10 +332,22 @@ export const getShopTransaction = async (req: IUserRequest, res: Response) => {
     .lean()) as ShopTransaction[];
 
   const transactionsToSend = transactions.map((transaction) => {
-    const status =
-      transaction.transactionStatus === TransactionStatus.COMPLETED
-        ? "COMPLETED"
-        : "PENDING";
+    let status: string;
+    switch (transaction.transactionStatus) {
+      case TransactionStatusEnum.COMPLETED:
+        status = "COMPLETED";
+        break;
+      case TransactionStatusEnum.PENDING:
+        status = "PENDING";
+        break;
+      case TransactionStatusEnum.REFUNDED:
+        status = "REFUNDED";
+        break;
+      default:
+        status = "COMPLETED";
+        break;
+    }
+
     return {
       ...transaction,
       transactionStatus: status,

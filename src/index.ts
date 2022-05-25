@@ -65,6 +65,10 @@ app.use("/api/v1/licenses", licenseRouter);
 app.use("/api/v1/carts", compulsoryAuth, cartRouter);
 app.use("/api/v1/reports", compulsoryAuth, reportRouter);
 
+//tool
+import {resetTransaction} from "./controllers/dev.test";
+app.get("/resetTransaction", resetTransaction);
+
 app.use(notFoundMiddleware);
 app.use(errorHandlerMiddleware);
 

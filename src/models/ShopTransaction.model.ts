@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { TransactionStatus } from "../types/enum";
+import { TransactionStatusEnum, TransactionActionEnum } from "../types/enum";
 
 const ShopTransactionSchema = new mongoose.Schema(
   {
@@ -13,8 +13,14 @@ const ShopTransactionSchema = new mongoose.Schema(
       ref: "Invoice",
       required: false,
     },
-    reason: {
+    productId: {
+      type: mongoose.Types.ObjectId,
+      ref: "Product",
+      required: false,
+    },
+    action: {
       type: String,
+      enum: [TransactionActionEnum.RECEIVE, TransactionActionEnum.WITHDRAW],
     },
     currentAmount: {
       type: Number,
@@ -30,8 +36,12 @@ const ShopTransactionSchema = new mongoose.Schema(
     },
     transactionStatus: {
       type: Number,
-      default: TransactionStatus.PENDING,
-      enum: [TransactionStatus.PENDING, TransactionStatus.COMPLETED],
+      default: TransactionStatusEnum.PENDING,
+      enum: [
+        TransactionStatusEnum.REFUNDED,
+        TransactionStatusEnum.PENDING,
+        TransactionStatusEnum.COMPLETED,
+      ],
     },
   },
   { timestamps: true }

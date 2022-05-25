@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { TransactionStatus } from "../types/enum";
+import { TransactionStatusEnum } from "../types/enum";
 
 const UserTransactionSchema = new mongoose.Schema(
   {
@@ -22,8 +22,12 @@ const UserTransactionSchema = new mongoose.Schema(
     },
     transactionStatus: {
       type: Number,
-      default: TransactionStatus.COMPLETED,
-      enum: [TransactionStatus.PENDING, TransactionStatus.COMPLETED],
+      default: TransactionStatusEnum.COMPLETED,
+      enum: [
+        TransactionStatusEnum.REFUNDED,
+        TransactionStatusEnum.PENDING,
+        TransactionStatusEnum.COMPLETED,
+      ],
     },
   },
   { timestamps: true }

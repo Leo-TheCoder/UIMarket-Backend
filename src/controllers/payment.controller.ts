@@ -37,6 +37,7 @@ import {
   Payout_PayPal,
 } from "../utils/paypal";
 import { getSystemDocument } from "./admin/system.controller";
+import { TransactionActionEnum } from "../types/enum";
 
 interface IQuery {
   page?: string;
@@ -130,7 +131,6 @@ export const withdrawPayment = async (req: IUserRequest, res: Response) => {
     const response = await Payout_PayPal(amountValue, receiver);
     const transaction = await shopWithdrawTransaction(
       shop,
-      `Withdraw from system $${amountValue}`,
       -amountValue, //minus value
     ).catch((err) => console.log(err));
 
@@ -301,7 +301,8 @@ export const captureOrder = async (req: IUserRequest, res: Response) => {
       shopTransaction(
         product.shop,
         invoiceId,
-        `Payment from ${invoiceId}`,
+        product.product,
+        TransactionActionEnum.RECEIVE,
         netAmount,
       ).catch((err) => {
         console.log(err);
