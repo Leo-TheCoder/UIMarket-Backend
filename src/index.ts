@@ -86,9 +86,9 @@ const start = async () => {
     });
 
     //Resolve shop payment run everyday at 00:01
-    cron.schedule("1 0 * * *", async() => {
+    cron.schedule("1 0 * * *", async () => {
       await resolveShopPayment();
-    }, )
+    });
   } catch (error) {
     console.log(error);
   }
