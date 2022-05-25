@@ -197,7 +197,7 @@ export const getShopById = async (req: IUserRequest, res: Response) => {
     selectOption.taxCode = 0;
   }
 
-  const shop = await ShopModel.find({
+  const shop = await ShopModel.findOne({
     _id: req.params.shopId,
     shopStatus: 1,
   })
