@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import {acceptRefund as ACCEPT_REFUND} from '../constants';
 
 const SystemSchema = new mongoose.Schema(
   {
@@ -10,6 +11,10 @@ const SystemSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    periodToConfirmPayment: {
+      type: Number,
+      default: ACCEPT_REFUND,
+    } 
   },
   {
     timestamps: true,

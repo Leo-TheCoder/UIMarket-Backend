@@ -70,6 +70,7 @@ app.use(errorHandlerMiddleware);
 
 //Scheduled Task
 import { resolveBounty } from "./scheduled/resolveBounty";
+import { resolveShopPayment } from "./scheduled/commitTransaction";
 
 const start = async () => {
   try {
@@ -83,6 +84,11 @@ const start = async () => {
     cron.schedule("1 * * * *", async () => {
       await resolveBounty();
     });
+
+    //Resolve shop payment run everyday at 00:01
+    cron.schedule("1 0 * * *", async() => {
+      await resolveShopPayment();
+    }, )
   } catch (error) {
     console.log(error);
   }
