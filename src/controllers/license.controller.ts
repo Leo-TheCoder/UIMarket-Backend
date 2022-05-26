@@ -97,5 +97,9 @@ export const getLicenseById = async (req: IUserRequest, res: Response) => {
     .populate({ path: "shop", select: "shopName"})
     .lean();
 
+  if(!license) {
+    throw new NotFoundError(ErrorMessage.ERROR_INVALID_LICENSE_ID);
+  }
+  
   res.status(StatusCodes.OK).json(license);
 };
