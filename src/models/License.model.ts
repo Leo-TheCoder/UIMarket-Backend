@@ -5,6 +5,7 @@ const LicenseSchema = new mongoose.Schema(
   {
     userId: {
       type: mongoose.Types.ObjectId,
+      ref: "Customer",
       required: [true, "Please provide user ID"],
       immutable: true,
     },
