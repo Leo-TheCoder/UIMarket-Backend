@@ -275,7 +275,7 @@ export const searchPurchaseHistory = async (
       select: "productPictures productFile productName",
     })
     .populate({ path: "shop", select: "shopName" })
-    .populate({ path: "invoice", select: "productList" })
+    .populate({ path: "invoice", select: "productList isRefunded" })
     .lean();
 
   const productsToSend = purchaseList.map((license) => {
