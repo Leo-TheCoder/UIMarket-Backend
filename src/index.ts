@@ -75,6 +75,7 @@ app.use(errorHandlerMiddleware);
 //Scheduled Task
 import { resolveBounty } from "./scheduled/resolveBounty";
 import { resolveShopPayment } from "./scheduled/commitTransaction";
+import { clearInvoiceModel } from "./scheduled/clearPendingInvoices";
 
 const start = async () => {
   try {
@@ -93,6 +94,10 @@ const start = async () => {
     cron.schedule("1 0 * * *", async () => {
       await resolveShopPayment();
     });
+
+    cron.schedule("1 0 * * *", async () => {
+      await clearInvoiceModel();
+    })
   } catch (error) {
     console.log(error);
   }

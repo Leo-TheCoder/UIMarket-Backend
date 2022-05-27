@@ -57,6 +57,10 @@ const OrderSchema = new mongoose.Schema(
     },
     transactionPaypalId: {
       type: String,
+    },
+    isRefunded: {
+      type: Boolean,
+      default: false,
     }
   },
   { timestamps: true },

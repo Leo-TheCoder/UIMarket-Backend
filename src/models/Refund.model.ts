@@ -10,12 +10,20 @@ const RefundSchema = new mongoose.Schema(
       required: [true, "Please provide user ID"],
       immutable: true,
     },
-    licenseId: {
+    invoiceId: {
       type: mongoose.Types.ObjectId,
-      ref: "License",
-      required: [true, "Please provide license ID"],
+      ref: "Order",
+      required: [true, "Please provide Invoice ID"],
       immutable: true,
     },
+    licenseIds: [
+      {
+        type: mongoose.Types.ObjectId,
+        ref: "License",
+        required: [true, "Please provide license ID"],
+        immutable: true,
+      },
+    ],
     refundReason: {
       type: String,
       required: [true, "Please provide reason"],
@@ -40,5 +48,5 @@ const RefundSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-RefundSchema.index({ licenseId: 1 }, { unique: true });
+RefundSchema.index({ invoiceId:1 }, { unique: true });
 export default mongoose.model("Refund", RefundSchema);

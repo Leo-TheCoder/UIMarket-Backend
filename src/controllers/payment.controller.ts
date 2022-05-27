@@ -30,6 +30,7 @@ import {
   shopTransaction,
   shopWithdrawTransaction,
   userTransaction,
+  refundTransaction,
 } from "../utils/currencyTransaction";
 import {
   Capture_PayPal,
@@ -39,6 +40,7 @@ import {
 } from "../utils/paypal";
 import { getSystemDocument } from "./admin/system.controller";
 import {
+  LicesneStatusEnum,
   RefundStatusEnum,
   TransactionActionEnum,
   TransactionStatusEnum,
@@ -90,35 +92,6 @@ export const createOrder = async (req: IUserRequest, res: Response) => {
     console.log(error);
     throw new InternalServerError(ErrorMessage.ERROR_FAILED);
   }
-};
-
-//Error
-export const refundPayment = async (req: IUserRequest, res: Response) => {
-  const access_token = await getAccessToken();
-  const { token } = req.body;
-  let response: any = {};
-  try {
-    response = await axios.post(
-      `${process.env.PAYPAL_API}/v2/payments/captures/${token}/refund`,
-      {
-        amount: {
-          value: 10,
-          currency_code: "USD",
-        },
-        invoice_id: "123",
-        note_to_payer: "Hello"
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${access_token}`,
-          Accept: `application/json`,
-        },
-      }
-    );
-  } catch (err) {
-    console.log(err);
-  }
-  res.json(response.data);
 };
 
 export const cancelPayment = (req: IUserRequest, res: Response) => {
@@ -310,7 +283,8 @@ export const captureOrder = async (req: IUserRequest, res: Response) => {
 
   const updateInvoiceLicensePromises = invoice.productList.map(
     (product, index) => {
-      const netAmount = (product.productPrice * (100 - sellerFee)) / 100;
+      let netAmount = (product.productPrice * (100 - sellerFee)) / 100;
+      netAmount = Math.round(netAmount * 100) / 100;
 
       shopTransaction(
         product.shop,
@@ -383,21 +357,25 @@ export const paymentHistory = async (req: IUserRequest, res: Response) => {
 
 export const createRequestRefund = async (req: IUserRequest, res: Response) => {
   const { userId } = req.user!;
-  const { licenseId, refundReason, refundEvidences } = req.body;
-  if (!licenseId || !refundReason || !refundEvidences) {
+  const { licenseIds, refundReason, refundEvidences, invoiceId } = req.body;
+  if (!licenseIds || !refundReason || !refundEvidences || !invoiceId) {
     throw new BadRequestError(ErrorMessage.ERROR_MISSING_BODY);
   }
+
+  if (licenseIds.length < 1) {
+    throw new BadRequestError(ErrorMessage.ERROR_MISSING_BODY);
+  }
+
   //Checking existed
   const refund = await RefundModel.findOne({
-    licenseId: licenseId,
-    userId: userId,
+    invoiceId,
   }).lean();
   if (refund) {
     throw new BadRequestError(ErrorMessage.ERROR_AUTHENTICATION_DUPLICATE);
   }
 
   //Checking history
-  const history = await LicenseModel.findById(licenseId).lean();
+  const history = await LicenseModel.findById(licenseIds[0]).lean();
   if (!history) {
     throw new NotFoundError(ErrorMessage.ERROR_INVALID_REQUEST_REFUND);
   }
@@ -433,33 +411,36 @@ export const refund = async (req: IUserRequest, res: Response) => {
     throw new BadRequestError(ErrorMessage.ERROR_MISSING_BODY);
   }
 
-  const refundDoc = (await RefundModel.findById(refundId).populate({
-    path: "licenseId",
-    select: "invoice shop product productPrice",
-    populate: {
-      path: "product invoice",
-      select: "productName transactionPaypalId",
-    },
-  })) as {
+  const refundDoc = (await RefundModel.findById(refundId)
+    .populate({
+      path: "licenseIds",
+      select: "shop product productPrice",
+      populate: {
+        path: "product",
+        select: "productName",
+      },
+    })
+    .populate({ path: "invoiceId", select: "transactionPaypalId" })) as {
     _id: string;
     userId: string;
-    licenseId: {
+    licenseIds: [
+      {
+        _id: string;
+        shop: string;
+        product: {
+          _id: string;
+          productName: string;
+        };
+        productPrice: number;
+      }
+    ];
+    invoiceId: {
       _id: string;
-      invoice: {
-        _id: string;
-        transactionPaypalId: string;
-      };
-      shop: string;
-      product: {
-        _id: string;
-        productName: string;
-      };
-      productPrice: number;
+      transactionPaypalId: string;
     };
     refundReason: string;
     refundEvidences: string[];
     refundStatus: RefundStatusEnum;
-    paypalEmail: string;
     save: () => Promise<any>;
   };
 
@@ -467,37 +448,71 @@ export const refund = async (req: IUserRequest, res: Response) => {
     throw new BadRequestError(ErrorMessage.ERROR_INVALID_REQUEST_REFUND);
   }
 
-  const transactionPaypalId = refundDoc.licenseId.invoice.transactionPaypalId;
+  const transactionPaypalId = refundDoc.invoiceId.transactionPaypalId;
 
   if (action === RefundAction.ACCEPT) {
-    let amount = refundDoc.licenseId.productPrice;
+    let refundAmount = 0;
+    refundDoc.licenseIds.forEach((license) => {
+      refundAmount += license.productPrice;
+    });
     const buyerFee = (await getSystemDocument()).buyerFee;
-    amount = amount * (1 + buyerFee)/ 100
-    const response = await Refund_PayPal(
-      transactionPaypalId,
-      buyerFee,
-      refundDoc.licenseId.invoice._id,
-      `Refund accepted from product: ${refundDoc.licenseId.product._id}`
-    );
-    // ShopTransactionModel.findOneAndUpdate(
-    //   {
-    //     invoiceId: refundDoc.licenseId.invoice._id,
-    //     productId: refundDoc.licenseId.product._id,
-    //   },
-    //   {
-    //     transactionStatus: TransactionStatusEnum.REFUNDED,
-    //   }
-    // );
+    refundAmount = (refundAmount * (1 + buyerFee)) / 100;
+    refundAmount = Math.round(refundAmount * 100) / 100;
 
-    //userTransaction(refundDoc.userId, refundDoc.invoiceId,  )
+    await Refund_PayPal(
+      transactionPaypalId,
+      refundAmount,
+      refundDoc.invoiceId._id,
+      `Refund accepted from invoice: ${refundDoc.invoiceId._id}`
+    );
+
+    const productIds = refundDoc.licenseIds.map(
+      (license) => license.product._id
+    );
+    await refundTransaction(
+      refundDoc.userId,
+      refundDoc.invoiceId._id,
+      productIds,
+      refundAmount
+    );
+
+    //license status update
+    const licenseIds = refundDoc.licenseIds.map((license) => license._id);
+    LicenseModel.updateMany(
+      {
+        _id: { $in: licenseIds },
+      },
+      {
+        licenseStatus: LicesneStatusEnum.DEACTIVE,
+      }
+    );
+
+    //invoice refund status update
+    InvoiceModel.updateOne(
+      {
+        _id: refundDoc.invoiceId._id,
+      },
+      {
+        isRefunded: true,
+      }
+    );
+
+    refundDoc.refundStatus = RefundStatusEnum.RESOLVED;
+    await refundDoc.save();
   } else {
     refundDoc.refundStatus = RefundStatusEnum.DECLINED;
     await refundDoc.save();
   }
 
-  res.status(StatusCodes.OK).json();
+  res.status(StatusCodes.OK).json({
+    msg: "Refund successfully!",
+  });
 };
 
+//=========================TESTING==============================
+//==============================================================
+//==============================================================
+//==============================================================
 export const testPaypal = async (req: IUserRequest, res: Response) => {
   const access_token = await getAccessToken();
 
@@ -577,4 +592,32 @@ export const testCapturePaypal = async (req: IUserRequest, res: Response) => {
   );
 
   res.json({ data });
+};
+
+export const refundPayment = async (req: IUserRequest, res: Response) => {
+  const access_token = await getAccessToken();
+  const { token } = req.body;
+  let response: any = {};
+  try {
+    response = await axios.post(
+      `${process.env.PAYPAL_API}/v2/payments/captures/${token}/refund`,
+      {
+        amount: {
+          value: 10,
+          currency_code: "USD",
+        },
+        invoice_id: "123",
+        note_to_payer: "Hello",
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${access_token}`,
+          Accept: `application/json`,
+        },
+      }
+    );
+  } catch (err) {
+    console.log(err);
+  }
+  res.json(response.data);
 };

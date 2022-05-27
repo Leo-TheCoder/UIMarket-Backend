@@ -20,6 +20,8 @@ import ShopTransactionModel from "../models/ShopTransaction.model";
 interface IQuery {
   page?: string;
   limit?: string;
+  filter?: FilterTypes;
+  sort?: SortTypes;
 }
 
 type Product = {
@@ -97,7 +99,7 @@ export const paidInvoice = async (
   invoice: any,
   transactionId: any,
   userId: string,
-  transasctionPaypalId: string,
+  transasctionPaypalId: string
 ) => {
   //Checking if has transaction Id
 
@@ -299,6 +301,38 @@ export const searchPurchaseHistory = async (
     .json({ totalPages, page, limit, products: productsToSend });
 };
 
+enum FilterTypes {
+  COMPLETED = "completed",
+  PENDING = "pending",
+  REFUNDED = "refunded",
+}
+enum SortTypes {
+  NEWEST = "newest",
+  OLDEST = "oldest",
+}
+const filterObjMongoose = (filter?: FilterTypes) => {
+  switch (filter) {
+    case FilterTypes.COMPLETED:
+      return { transactionStatus: TransactionStatusEnum.COMPLETED };
+    case FilterTypes.PENDING:
+      return { transactionStatus: TransactionStatusEnum.PENDING };
+    case FilterTypes.REFUNDED:
+      return { transactionStatus: TransactionStatusEnum.REFUNDED };
+    default:
+      return {};
+  }
+};
+const sortObjMongoose = (sort?: SortTypes) => {
+  switch (sort) {
+    case SortTypes.OLDEST:
+      return { createdAt: 1 };
+    case SortTypes.NEWEST:
+      return { createdAt: -1 };
+    default:
+      return { createdAt: -1 };
+  }
+};
+
 export const getShopTransaction = async (req: IUserRequest, res: Response) => {
   const { shopId } = req.user!;
 
@@ -306,8 +340,14 @@ export const getShopTransaction = async (req: IUserRequest, res: Response) => {
   const page = parseInt(query.page!) || Constants.defaultPageNumber;
   const limit = parseInt(query.limit!) || Constants.defaultLimit;
 
+  const filter = query.filter;
+  const filterObj = filterObjMongoose(filter);
+  const sort = query.sort;
+  const sortObj = sortObjMongoose(sort);
+
   const filterObject = {
     shopId,
+    ...filterObj
   };
   const projectionObject = {
     _id: 1,
@@ -327,7 +367,7 @@ export const getShopTransaction = async (req: IUserRequest, res: Response) => {
       : Math.floor(total / limit) + 1;
 
   const transactions = (await ShopTransactionModel.find(filterObject)
-    .sort({ createdAt: -1 })
+    .sort(sortObj)
     .skip((page - 1) * limit)
     .limit(limit)
     .select(projectionObject)
@@ -363,3 +403,16 @@ export const getShopTransaction = async (req: IUserRequest, res: Response) => {
     transactions: transactionsToSend,
   });
 };
+
+export const getInvoiceById = async (req: IUserRequest, res: Response) => {
+  const {invoiceId} = req.params;
+  const {userId} = req.user!;
+
+  const invoice = await InvoiceModel.findById(invoiceId);
+
+  if(!invoice || invoice.userId != userId) {
+    throw new NotFoundError(ErrorMessage.ERROR_INVALID_INVOICE_ID);
+  }
+
+  res.status(StatusCodes.OK).json({invoice})
+}
