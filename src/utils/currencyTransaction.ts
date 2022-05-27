@@ -13,7 +13,7 @@ import InvoiceModel from "../models/Invoice.model";
 import * as ErrorMessage from "../errors/error_message";
 
 //Enum
-import { TransactionActionEnum } from "../types/enum";
+import { TransactionActionEnum, TransactionStatusEnum } from "../types/enum";
 
 export const pointTransaction = async (
   userId: string,
@@ -103,6 +103,7 @@ export const userTransaction = async (
   invoiceId: string,
   changeAmount: number,
   reason: string,
+  status: TransactionStatusEnum,
 ) => {
   //Checking userId and shopId
   const userPromise = UserModel.findOne({ _id: userId, customerStatus: 1 }).lean();
@@ -120,6 +121,7 @@ export const userTransaction = async (
     invoiceId: invoiceId,
     reason: reason,
     changeAmount: changeAmount,
+    transactionStatus: status,
   });
 
   if (!transaction) {
@@ -196,6 +198,7 @@ export const shopWithdrawTransaction = async(
      currentAmount: currentAmount,
      changeAmount: changeAmount,
      balanceAmount: balanceAmount,
+     transactionStatus: TransactionStatusEnum.COMPLETED,
    });
 
    return transaction;

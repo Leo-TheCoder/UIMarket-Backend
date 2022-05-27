@@ -55,6 +55,9 @@ const OrderSchema = new mongoose.Schema(
       default: "Waiting",
       enum: ["Waiting", "Paid"],
     },
+    transactionPaypalId: {
+      type: String,
+    }
   },
   { timestamps: true },
 );

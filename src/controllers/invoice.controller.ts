@@ -96,7 +96,8 @@ export const createOrder = async (req: IUserRequest) => {
 export const paidInvoice = async (
   invoice: any,
   transactionId: any,
-  userId: string
+  userId: string,
+  transasctionPaypalId: string,
 ) => {
   //Checking if has transaction Id
 
@@ -111,6 +112,7 @@ export const paidInvoice = async (
   // ).lean();
   invoice.transactionId = transactionId;
   invoice.invoiceStatus = "Paid";
+  invoice.transactionPaypalId = transasctionPaypalId;
   await invoice.save();
 
   if (!invoice) {

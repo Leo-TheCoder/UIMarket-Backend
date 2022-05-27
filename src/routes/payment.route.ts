@@ -10,6 +10,9 @@ import {
   refundPayment,
   paymentHistory,
   createRequestRefund,
+  testPaypal,
+  testCapturePaypal,
+  refund
 } from "../controllers/payment.controller";
 import { compulsoryAuth, optionalAuth } from "../middlewares/authentication";
 
@@ -26,9 +29,12 @@ router.get("/history/", compulsoryAuth, paymentHistory);
 router.post("/create-order", compulsoryAuth, createOrder);
 router.post("/withdraw", compulsoryAuth, withdrawPayment);
 router.post("/charge-coin", chargeCoin);
-router.post("/refund", refundPayment);
+router.post("/refund", refund);
 router.post("/request/refund", compulsoryAuth, createRequestRefund);
 
+router.get("/test/order", testPaypal);
+router.get("/test/capture", testCapturePaypal);
+router.post("/test/refund", refundPayment);
 //PUT Method
 //DELETE Method
 
