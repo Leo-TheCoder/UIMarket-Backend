@@ -18,4 +18,5 @@ export enum RefundStatusEnum {
 export enum LicesneStatusEnum {
     ACTIVE = "ACTIVE",
     DEACTIVE = "DEACTIVE",
+    REFUNDING = "REFUNDING",
 }

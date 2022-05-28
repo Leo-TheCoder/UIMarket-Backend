@@ -3,7 +3,7 @@ import { StatusCodes } from "http-status-codes";
 import { Request, Response } from "express";
 import { IUserRequest } from "../types/express";
 import * as Constants from "../constants";
-import { TransactionStatusEnum } from "../types/enum";
+import { LicesneStatusEnum, TransactionStatusEnum } from "../types/enum";
 import { ShopTransaction } from "../types/object-type";
 
 //Model
@@ -148,9 +148,12 @@ export const purchaseHistory = async (req: IUserRequest, res: Response) => {
   const page = parseInt(query.page!) || Constants.defaultPageNumber;
   const limit = parseInt(query.limit!) || Constants.defaultLimit;
 
-  const total = await LicenseModel.find({
-    userId: userId,
-  }).count();
+  const filterObj = {
+    userId,
+    licenseStatus: LicesneStatusEnum.ACTIVE,
+  }
+
+  const total = await LicenseModel.find(filterObj).count();
 
   const totalPages =
     total % limit === 0
@@ -158,7 +161,7 @@ export const purchaseHistory = async (req: IUserRequest, res: Response) => {
       : Math.floor(total / limit) + 1;
 
   //Get product list
-  const licenses = await LicenseModel.find({ userId: userId })
+  const licenses = await LicenseModel.find(filterObj)
     .select("-licenseFile")
     .skip((page - 1) * limit)
     .limit(limit)
@@ -257,6 +260,7 @@ export const searchPurchaseHistory = async (
   const filterObject = {
     userId,
     product: { $in: productIds },
+    licenseStatus: LicesneStatusEnum.ACTIVE,
   };
 
   const total = await LicenseModel.count(filterObject);

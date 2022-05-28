@@ -221,9 +221,9 @@ const findById = async (req: Request, res: Response) => {
 
   if (!product) {
     throw new NotFoundError(ErrorMessage.ERROR_INVALID_PRODUCT_ID);
-  } else {
-    res.status(StatusCodes.OK).json({ product });
   }
+  
+  return res.status(StatusCodes.OK).json({ product });
 };
 
 const findByName = async (req: Request, res: Response) => {

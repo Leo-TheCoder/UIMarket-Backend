@@ -19,7 +19,12 @@ import LicenseModel from "../models/License.model";
 //Error
 import UnauthenticatedErorr from "../errors/unauthenticated-error";
 import * as ErrorMessage from "../errors/error_message";
-import { BadRequestError, CustomError, InternalServerError, NotFoundError } from "../errors";
+import {
+  BadRequestError,
+  CustomError,
+  InternalServerError,
+  NotFoundError,
+} from "../errors";
 
 //Ultis
 import {
@@ -46,6 +51,12 @@ import {
   TransactionStatusEnum,
 } from "../types/enum";
 import ShopTransactionModel from "../models/ShopTransaction.model";
+import { error } from "console";
+import {
+  updateInvoiceAndLicensesAfterDeclineRefund,
+  updateInvoiceAndLicensesAfterRefund,
+  updateInvoiceAndLicensesBeforeRefund,
+} from "../utils/statusInvoice";
 
 interface IQuery {
   page?: string;
@@ -394,6 +405,7 @@ export const createRequestRefund = async (req: IUserRequest, res: Response) => {
     userId: userId,
     ...req.body,
   });
+  updateInvoiceAndLicensesBeforeRefund(licenseIds, invoiceId);
 
   res.status(StatusCodes.CREATED).json(request);
 };
@@ -449,6 +461,8 @@ export const refund = async (req: IUserRequest, res: Response) => {
   }
 
   const transactionPaypalId = refundDoc.invoiceId.transactionPaypalId;
+  const licenseIds = refundDoc.licenseIds.map((license) => license._id);
+  const productIds = refundDoc.licenseIds.map((license) => license.product._id);
 
   if (action === RefundAction.ACCEPT) {
     let refundAmount = 0;
@@ -467,53 +481,27 @@ export const refund = async (req: IUserRequest, res: Response) => {
     );
 
     //Refund failed
-    if(response?.data.status != "COMPLETED") {
+    if (response?.data.status != "COMPLETED") {
       throw new InternalServerError(ErrorMessage.ERROR_FAILED);
     }
 
-    const productIds = refundDoc.licenseIds.map(
-      (license) => license.product._id
-    );
     refundTransaction(
       refundDoc.userId,
       refundDoc.invoiceId._id,
       productIds,
       refundAmount
-    ).catch(error => {
+    ).catch((error) => {
       console.error("Update refund transaction: FAILED!");
-      throw new InternalServerError(ErrorMessage.ERROR_FAILED); 
-    });
-
-    //license status update
-    const licenseIds = refundDoc.licenseIds.map((license) => license._id);
-    LicenseModel.updateMany(
-      {
-        _id: { $in: licenseIds },
-      },
-      {
-        licenseStatus: LicesneStatusEnum.DEACTIVE,
-      }
-    ).catch(error => {
-      console.error("Update refund licenses: FAILED!");
-      throw new InternalServerError(ErrorMessage.ERROR_FAILED);
-    })
-
-    //invoice refund status update
-    InvoiceModel.updateOne(
-      {
-        _id: refundDoc.invoiceId._id,
-      },
-      {
-        isRefunded: true,
-      }
-    ).catch(error => {
-      console.error("Update refund invoice status: FAILED!");
       throw new InternalServerError(ErrorMessage.ERROR_FAILED);
     });
+
+    updateInvoiceAndLicensesAfterRefund(licenseIds, refundDoc.invoiceId._id);
 
     refundDoc.refundStatus = RefundStatusEnum.RESOLVED;
     await refundDoc.save();
   } else {
+    updateInvoiceAndLicensesAfterDeclineRefund(licenseIds, refundDoc.invoiceId._id);
+
     refundDoc.refundStatus = RefundStatusEnum.DECLINED;
     await refundDoc.save();
   }

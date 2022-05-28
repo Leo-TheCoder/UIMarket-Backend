@@ -35,7 +35,7 @@ import reportRouter from "./routes/report.route";
 //Middleware
 import errorHandlerMiddleware from "./middlewares/handle-errors";
 import notFoundMiddleware from "./middlewares/not-found";
-import { compulsoryAuth } from "./middlewares/authentication";
+import { compulsoryAuth, optionalAuth } from "./middlewares/authentication";
 
 app.use(cors());
 app.use(express.json());
@@ -54,7 +54,7 @@ app.use("/api/v1/profile", profileRouter);
 app.use("/api/v1/file", compulsoryAuth, fileRouter);
 app.use("/api/v1/shop", shopRouter);
 app.use("/api/v1/admin", adminRouter);
-app.use("/api/v1/products", productRouter);
+app.use("/api/v1/products", optionalAuth, productRouter);
 app.use("/api/v1/verify", verifyRouter);
 app.use("/api/v1/payment", paymentRouter);
 app.use("/api/v1/category", productCategoryRouter);
