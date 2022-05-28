@@ -167,7 +167,7 @@ export const purchaseHistory = async (req: IUserRequest, res: Response) => {
       select: "productPictures productFile productName",
     })
     .populate({ path: "shop", select: "shopName" })
-    .populate({ path: "invoice", select: "productList" });
+    .populate({ path: "invoice", select: "productList isRefunded" });
 
   let productsToResponse = [];
   for (let i = 0; i < licenses.length; i++) {
