@@ -8,6 +8,8 @@ import ShopModel from "../models/Shop.model";
 import * as ErrorMessage from "../errors/error_message";
 import { getShopById } from "./shop.controller";
 import { IUserRequest } from "../types/express";
+import LicenseModel from "../models/License.model";
+import { LicesneStatusEnum } from "../types/enum";
 
 enum SortTypes {
   MoneyAsc = "money-asc",
@@ -199,7 +201,9 @@ const findByCategory = async (req: Request, res: Response) => {
   });
 };
 
-const findById = async (req: Request, res: Response) => {
+const findById = async (req: IUserRequest, res: Response) => {
+  const userId = req.user?.userId;
+
   const product = await ProductModel.findByIdAndUpdate(
     {
       _id: req.params.productId,
@@ -210,6 +214,10 @@ const findById = async (req: Request, res: Response) => {
     .populate({ path: "shopId", select: "shopEmail" })
     .lean();
 
+  if (!product) {
+    throw new NotFoundError(ErrorMessage.ERROR_INVALID_PRODUCT_ID);
+  }
+
   //Add customer email of shop
   const customerEmail = await ShopModel.findById(product.shopId._id)
     .select({ userId: 1 })
@@ -219,11 +227,20 @@ const findById = async (req: Request, res: Response) => {
     });
   product.shopId.customerEmail = customerEmail.userId.customerEmail;
 
-  if (!product) {
-    throw new NotFoundError(ErrorMessage.ERROR_INVALID_PRODUCT_ID);
+  let isBought = false;
+  if (userId) {
+    const licenseCount = await LicenseModel.count({
+      product: product._id,
+      userId,
+      licenseStatus: {
+        $in: [LicesneStatusEnum.ACTIVE, LicesneStatusEnum.REFUNDING],
+      },
+    });
+
+    isBought = licenseCount > 0;
   }
-  
-  return res.status(StatusCodes.OK).json({ product });
+
+  return res.status(StatusCodes.OK).json({ product, isBought });
 };
 
 const findByName = async (req: Request, res: Response) => {
@@ -302,8 +319,8 @@ const findByName = async (req: Request, res: Response) => {
   ];
 
   //adding sort property to query
-  if(Object.keys(sortObj).length > 0) {
-    searchProductQueryAggregate.push({$sort: sortObj})
+  if (Object.keys(sortObj).length > 0) {
+    searchProductQueryAggregate.push({ $sort: sortObj });
   }
 
   const products = await ProductModel.aggregate(searchProductQueryAggregate);
