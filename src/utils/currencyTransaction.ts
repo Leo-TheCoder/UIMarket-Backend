@@ -210,7 +210,7 @@ export const refundTransaction = async (
   productIds: string[],
   amount: number,
 ) => {
-  await ShopModel.updateMany({
+  const shopTransactionResult = await ShopTransactionModel.updateMany({
     invoiceId,
     productId: {$in: productIds}
   }, {

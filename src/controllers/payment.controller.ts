@@ -19,7 +19,7 @@ import LicenseModel from "../models/License.model";
 //Error
 import UnauthenticatedErorr from "../errors/unauthenticated-error";
 import * as ErrorMessage from "../errors/error_message";
-import { BadRequestError, InternalServerError, NotFoundError } from "../errors";
+import { BadRequestError, CustomError, InternalServerError, NotFoundError } from "../errors";
 
 //Ultis
 import {
@@ -456,25 +456,33 @@ export const refund = async (req: IUserRequest, res: Response) => {
       refundAmount += license.productPrice;
     });
     const buyerFee = (await getSystemDocument()).buyerFee;
-    refundAmount = (refundAmount * (1 + buyerFee)) / 100;
+    refundAmount = (refundAmount * (100 + buyerFee)) / 100;
     refundAmount = Math.round(refundAmount * 100) / 100;
 
-    await Refund_PayPal(
+    const response = await Refund_PayPal(
       transactionPaypalId,
       refundAmount,
       refundDoc.invoiceId._id,
       `Refund accepted from invoice: ${refundDoc.invoiceId._id}`
     );
 
+    //Refund failed
+    if(response?.data.status != "COMPLETED") {
+      throw new InternalServerError(ErrorMessage.ERROR_FAILED);
+    }
+
     const productIds = refundDoc.licenseIds.map(
       (license) => license.product._id
     );
-    await refundTransaction(
+    refundTransaction(
       refundDoc.userId,
       refundDoc.invoiceId._id,
       productIds,
       refundAmount
-    );
+    ).catch(error => {
+      console.error("Update refund transaction: FAILED!");
+      throw new InternalServerError(ErrorMessage.ERROR_FAILED); 
+    });
 
     //license status update
     const licenseIds = refundDoc.licenseIds.map((license) => license._id);
@@ -485,7 +493,10 @@ export const refund = async (req: IUserRequest, res: Response) => {
       {
         licenseStatus: LicesneStatusEnum.DEACTIVE,
       }
-    );
+    ).catch(error => {
+      console.error("Update refund licenses: FAILED!");
+      throw new InternalServerError(ErrorMessage.ERROR_FAILED);
+    })
 
     //invoice refund status update
     InvoiceModel.updateOne(
@@ -495,7 +506,10 @@ export const refund = async (req: IUserRequest, res: Response) => {
       {
         isRefunded: true,
       }
-    );
+    ).catch(error => {
+      console.error("Update refund invoice status: FAILED!");
+      throw new InternalServerError(ErrorMessage.ERROR_FAILED);
+    });
 
     refundDoc.refundStatus = RefundStatusEnum.RESOLVED;
     await refundDoc.save();
