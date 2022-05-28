@@ -188,12 +188,11 @@ export const updateShop = async (req: IUserRequest, res: Response) => {
 };
 
 export const getShopById = async (req: IUserRequest, res: Response) => {
-  var selectOption: any = { __v: 0 };
+  const selectOption: any = { __v: 0 };
 
   if (!req.user?.shopId || req.user.shopId != req.params.shopId) {
     selectOption.shopIDCard = 0;
     selectOption.shopBalance = 0;
-    selectOption.userId = 0;
     selectOption.taxCode = 0;
   }
 
@@ -202,6 +201,7 @@ export const getShopById = async (req: IUserRequest, res: Response) => {
     shopStatus: 1,
   })
     .select(selectOption)
+    .populate({path: "userId", select: "customerAvatar"})
     .lean();
 
   if (!shop) {
