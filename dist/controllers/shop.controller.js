@@ -18,33 +18,29 @@ var __importStar = (this && this.__importStar) || function (mod) {
     __setModuleDefault(result, mod);
     return result;
 };
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getProductStatistic = exports.activeProduct = exports.deactiveProduct = exports.getShopByName = exports.getShopById = exports.updateShop = exports.getAllProduct = exports.updateProduct = exports.deleteProduct = exports.uploadProduct = exports.createShop = void 0;
+exports.getProductStatisticV2 = exports.getProductsByName = exports.paymentHistory = exports.getProductStatistic = exports.activeProduct = exports.deactiveProduct = exports.getShopByName = exports.getShopById = exports.updateShop = exports.getAllProduct = exports.updateProduct = exports.deleteProduct = exports.uploadProduct = exports.createShop = void 0;
+//Library
 const http_status_codes_1 = require("http-status-codes");
-const Shop_model_1 = __importDefault(require("../models/Shop.model"));
 const Constants = __importStar(require("../constants"));
-const Shop_model_2 = __importDefault(require("../models/Shop.model"));
+//Model
+const Shop_model_1 = __importDefault(require("../models/Shop.model"));
 const Product_model_1 = __importDefault(require("../models/Product.model"));
 const Category_model_1 = __importDefault(require("../models/Category.model"));
 const User_model_1 = __importDefault(require("../models/User.model"));
-const errors_1 = require("../errors");
-const ErrorMessage = __importStar(require("../errors/error_message"));
 const Invoice_model_1 = __importDefault(require("../models/Invoice.model"));
-const createShop = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+const ShopTransaction_model_1 = __importDefault(require("../models/ShopTransaction.model"));
+//Error
+const ErrorMessage = __importStar(require("../errors/error_message"));
+const errors_1 = require("../errors");
+const License_model_1 = __importDefault(require("../models/License.model"));
+const mongoose_1 = __importDefault(require("mongoose"));
+const createShop = async (req, res) => {
     const { userId } = req.user;
-    const shop = yield Shop_model_1.default.findOne({ userId: userId }).lean();
+    const shop = await Shop_model_1.default.findOne({ userId: userId }).lean();
     if (shop) {
         if (shop.shopStatus == 0) {
             throw new errors_1.GoneError(ErrorMessage.ERROR_GONE);
@@ -53,18 +49,21 @@ const createShop = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
             throw new errors_1.ForbiddenError(ErrorMessage.ERROR_FORBIDDEN);
         }
     }
-    const newShop = yield Shop_model_2.default.create(Object.assign(Object.assign({}, req.body), { userId: userId }));
+    const newShop = await Shop_model_1.default.create({
+        ...req.body,
+        userId: userId,
+    });
     if (newShop) {
-        const user = yield User_model_1.default.findByIdAndUpdate(userId, { shopId: newShop._id }, { new: true });
+        const user = await User_model_1.default.findByIdAndUpdate(userId, { shopId: newShop._id }, { new: true });
         const token = user.createJWT();
         res.status(http_status_codes_1.StatusCodes.CREATED).json({ newShop, token });
     }
     else {
         throw new errors_1.InternalServerError(ErrorMessage.ERROR_FAILED);
     }
-});
+};
 exports.createShop = createShop;
-const uploadProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+const uploadProduct = async (req, res) => {
     const { shopId } = req.user;
     if (!shopId) {
         throw new errors_1.UnauthenticatedError(ErrorMessage.ERROR_AUTHENTICATION_INVALID);
@@ -73,24 +72,24 @@ const uploadProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* 
     if (!productCategory) {
         throw new errors_1.BadRequestError(ErrorMessage.ERROR_MISSING_BODY);
     }
-    const category = yield Category_model_1.default.findById(productCategory);
+    const category = await Category_model_1.default.findById(productCategory);
     if (!category) {
         throw new errors_1.NotFoundError(ErrorMessage.ERROR_INVALID_CATEGORY_ID);
     }
-    const product = yield Product_model_1.default.create(Object.assign(Object.assign({}, req.body), { shopId: shopId }));
+    const product = await Product_model_1.default.create({ ...req.body, shopId: shopId });
     if (product) {
         category.totalProduct += 1;
-        yield category.save();
+        await category.save();
         res.status(http_status_codes_1.StatusCodes.CREATED).json({ product });
     }
     else {
         throw new errors_1.InternalServerError(ErrorMessage.ERROR_FAILED);
     }
-});
+};
 exports.uploadProduct = uploadProduct;
-const deleteProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+const deleteProduct = async (req, res) => {
     const { shopId } = req.user;
-    const product = yield Product_model_1.default.findOne({ _id: req.params.productId });
+    const product = await Product_model_1.default.findOne({ _id: req.params.productId });
     if (!shopId) {
         throw new errors_1.UnauthenticatedError(ErrorMessage.ERROR_AUTHENTICATION_INVALID);
     }
@@ -106,18 +105,18 @@ const deleteProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* 
     product.productStatus = 0;
     product.deleteFlagged = 1;
     product.updatedAt = new Date();
-    const result = yield product.save();
+    const result = await product.save();
     if (result) {
         res.status(http_status_codes_1.StatusCodes.OK).json({ result });
     }
     else {
         throw new errors_1.InternalServerError(ErrorMessage.ERROR_FAILED);
     }
-});
+};
 exports.deleteProduct = deleteProduct;
-const updateProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+const updateProduct = async (req, res) => {
     const { shopId } = req.user;
-    const product = yield Product_model_1.default.findOne({
+    const product = await Product_model_1.default.findOne({
         _id: req.params.productId,
         productStatus: 1,
     });
@@ -134,59 +133,60 @@ const updateProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* 
     product.productPrice = req.body.productPrice || product.productPrice;
     product.productDescription =
         req.body.productDescription || product.productDescription;
-    product.productPicture = req.body.productPicture || product.productPicture;
+    product.productPictures = req.body.productPictures || product.productPictures;
+    product.productFile = req.body.productFile || product.productFile;
     product.updatedAt = new Date();
-    const result = yield product.save();
-    if (result) {
-        res.status(http_status_codes_1.StatusCodes.OK).json({ result });
+    const updatedProduct = await product.save();
+    if (updatedProduct) {
+        res.status(http_status_codes_1.StatusCodes.OK).json({ updatedProduct });
     }
     else {
         throw new errors_1.InternalServerError(ErrorMessage.ERROR_FAILED);
     }
-});
+};
 exports.updateProduct = updateProduct;
-const getAllProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+const getAllProduct = async (req, res) => {
     const { shopId } = req.user;
     if (!shopId) {
         throw new errors_1.UnauthenticatedError(ErrorMessage.ERROR_AUTHENTICATION_INVALID);
     }
-    const products = yield Product_model_1.default
+    const products = await Product_model_1.default
         //
         .find({ shopId: shopId })
         .populate({ path: "productCategory", select: ["categoryName"] })
         .lean();
     res.status(http_status_codes_1.StatusCodes.OK).json({ products });
-});
+};
 exports.getAllProduct = getAllProduct;
-const updateShop = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+const updateShop = async (req, res) => {
     const { shopId } = req.user;
     if (!shopId) {
         throw new errors_1.UnauthenticatedError(ErrorMessage.ERROR_AUTHENTICATION_INVALID);
     }
-    const shop = yield Shop_model_2.default.findOne({ _id: shopId, shopStatus: 1 });
+    const shop = await Shop_model_1.default.findOne({ _id: shopId, shopStatus: 1 });
     shop.shopDescription = req.body.shopDescription || shop.shopDescription;
     shop.shopPhone = req.body.shopPhone || shop.shopPhone;
     shop.shopEmail = req.body.shopEmail || shop.shopEmail;
+    shop.shopPayPal = req.body.shopPayPal || shop.shopPayPal;
     shop.updatedAt = new Date();
-    const result = yield shop.save();
+    const result = await shop.save();
     if (result) {
         res.status(http_status_codes_1.StatusCodes.OK).json({ result });
     }
     else {
         throw new errors_1.InternalServerError(ErrorMessage.ERROR_FAILED);
     }
-});
+};
 exports.updateShop = updateShop;
-const getShopById = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
+const getShopById = async (req, res) => {
     var selectOption = { __v: 0 };
-    if (!((_a = req.user) === null || _a === void 0 ? void 0 : _a.shopId) || req.user.shopId != req.params.shopId) {
+    if (!req.user?.shopId || req.user.shopId != req.params.shopId) {
         selectOption.shopIDCard = 0;
         selectOption.shopBalance = 0;
         selectOption.userId = 0;
         selectOption.taxCode = 0;
     }
-    const shop = yield Shop_model_2.default.find({
+    const shop = await Shop_model_1.default.find({
         _id: req.params.shopId,
         shopStatus: 1,
     })
@@ -198,9 +198,9 @@ const getShopById = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
     else {
         res.status(http_status_codes_1.StatusCodes.OK).json({ shop });
     }
-});
+};
 exports.getShopById = getShopById;
-const getShopByName = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+const getShopByName = async (req, res) => {
     const query = req.query;
     const page = parseInt(query.page) || Constants.defaultPageNumber;
     const limit = parseInt(query.limit) || Constants.defaultLimit;
@@ -211,7 +211,7 @@ const getShopByName = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         userId: 0,
         taxCode: 0,
     };
-    const totalShop = yield Shop_model_2.default.aggregate([
+    const totalShop = await Shop_model_1.default.aggregate([
         {
             $search: {
                 index: "shopName",
@@ -236,7 +236,7 @@ const getShopByName = (req, res) => __awaiter(void 0, void 0, void 0, function* 
     const totalPages = total % limit === 0
         ? Math.floor(total / limit)
         : Math.floor(total / limit) + 1;
-    const shops = yield Shop_model_2.default.aggregate([
+    const shops = await Shop_model_1.default.aggregate([
         {
             $search: {
                 index: "shopName",
@@ -258,11 +258,11 @@ const getShopByName = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         limit,
         shops,
     });
-});
+};
 exports.getShopByName = getShopByName;
-const deactiveProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+const deactiveProduct = async (req, res) => {
     const { shopId } = req.user;
-    const product = yield Product_model_1.default.findOne({
+    const product = await Product_model_1.default.findOne({
         _id: req.params.productId,
         deleteFlagged: 0,
     });
@@ -280,18 +280,18 @@ const deactiveProduct = (req, res) => __awaiter(void 0, void 0, void 0, function
     }
     product.productStatus = 0;
     product.updatedAt = new Date();
-    const result = yield product.save();
+    const result = await product.save();
     if (result) {
         res.status(http_status_codes_1.StatusCodes.OK).json({ result });
     }
     else {
         throw new errors_1.InternalServerError(ErrorMessage.ERROR_FAILED);
     }
-});
+};
 exports.deactiveProduct = deactiveProduct;
-const activeProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+const activeProduct = async (req, res) => {
     const { shopId } = req.user;
-    const product = yield Product_model_1.default.findOne({
+    const product = await Product_model_1.default.findOne({
         _id: req.params.productId,
         deleteFlagged: 0,
     });
@@ -309,50 +309,210 @@ const activeProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* 
     }
     product.productStatus = 1;
     product.updatedAt = new Date();
-    const result = yield product.save();
+    const result = await product.save();
     if (result) {
         res.status(http_status_codes_1.StatusCodes.OK).json({ result });
     }
     else {
         throw new errors_1.InternalServerError(ErrorMessage.ERROR_FAILED);
     }
-});
+};
 exports.activeProduct = activeProduct;
-const getRevenue = (invoices, productId) => __awaiter(void 0, void 0, void 0, function* () {
-    var revenue = 0;
+const getRevenue = async (invoices, productId) => {
+    let revenue = 0;
     for (let i = 0; i < invoices.length; i++) {
-        var product = invoices[i].productList.find((x) => String(x.product) == String(productId));
+        const product = invoices[i].productList.find((x) => String(x.product) == String(productId));
         revenue += product.productPrice;
     }
     return revenue;
-});
-const getProductStatistic = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+};
+const getProductStatistic = async (req, res) => {
     //Get list of products
-    const products = yield Product_model_1.default.find({
+    const products = await Product_model_1.default.find({
         shopId: req.user.shopId,
         deleteFlagged: 0,
     }).select({ productFile: 0, deleteFlagged: 0, __v: 0 });
     const today = new Date();
     let L30D = new Date(today.getTime());
     L30D.setDate(L30D.getDate() - 30);
-    var productList = [];
+    let productList = [];
     for (let i = 0; i < products.length; i++) {
-        var last30Days = { totalSold: 0, totalRevenue: 0 };
-        var product = products[i]._doc;
+        let last30Days = { totalSold: 0, totalRevenue: 0 };
+        let product = products[i]._doc;
         //Get list of invoice which have current product
-        var invoices = yield Invoice_model_1.default.find({
+        let invoices = await Invoice_model_1.default.find({
             productList: { $elemMatch: { product: products[i]._id } },
         }).select({ productList: 1, _id: 0, createdAt: 1 });
         //Get all time revenue
-        product.allTimeRevenue = yield getRevenue(invoices, products[i]._id);
+        product.allTimeRevenue = await getRevenue(invoices, products[i]._id);
         // Get last 30 days sold and revenues
-        var invoices_L30D = invoices.filter((x) => x.createdAt <= today && x.createdAt >= L30D);
+        let invoices_L30D = invoices.filter((x) => x.createdAt <= today && x.createdAt >= L30D);
         last30Days.totalSold = invoices_L30D.length;
-        last30Days.totalRevenue = yield getRevenue(invoices_L30D, products[i]._id);
+        last30Days.totalRevenue = await getRevenue(invoices_L30D, products[i]._id);
         product.last30Days = last30Days;
         productList.push(product);
     }
     return res.status(http_status_codes_1.StatusCodes.OK).json(productList);
-});
+};
 exports.getProductStatistic = getProductStatistic;
+const paymentHistory = async (req, res) => {
+    //Check authen
+    const shopId = req.user?.shopId;
+    if (!shopId) {
+        throw new errors_1.UnauthenticatedError(ErrorMessage.ERROR_AUTHENTICATION_INVALID);
+    }
+    const query = req.query;
+    const page = parseInt(query.page) || Constants.defaultPageNumber;
+    const limit = parseInt(query.limit) || Constants.defaultLimit;
+    const total = await ShopTransaction_model_1.default.countDocuments({
+        shopId: shopId,
+    });
+    const totalPages = total % limit === 0
+        ? Math.floor(total / limit)
+        : Math.floor(total / limit) + 1;
+    //Get product
+    const transactions = await ShopTransaction_model_1.default.find({
+        shopId: shopId,
+    })
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .lean();
+    return res.status(http_status_codes_1.StatusCodes.OK).json({
+        totalPages,
+        page,
+        limit,
+        transactions,
+    });
+};
+exports.paymentHistory = paymentHistory;
+const getProductsByName = async (req, res) => {
+    const query = req.query;
+    const page = parseInt(query.page) || Constants.defaultPageNumber;
+    const limit = parseInt(query.limit) || Constants.defaultLimit;
+    const { shopId } = req.user;
+    const selectOption = {
+        __v: 0,
+        productFile: 0,
+        deleteFlagged: 0,
+    };
+    const matchOption = {
+        shopId: new mongoose_1.default.Types.ObjectId(shopId),
+        deleteFlagged: 0,
+    };
+    const totalProducts = await Product_model_1.default.aggregate([
+        {
+            $search: {
+                index: "productName",
+                text: {
+                    path: "productName",
+                    query: decodeURIComponent(req.params.productName),
+                },
+            },
+        },
+        { $match: matchOption },
+        { $count: "total" },
+    ]);
+    if (totalProducts.length < 1) {
+        return res.status(http_status_codes_1.StatusCodes.OK).json({
+            totalPages: 0,
+            page,
+            limit,
+            products: [],
+        });
+    }
+    const total = totalProducts[0].total;
+    const totalPages = total % limit === 0
+        ? Math.floor(total / limit)
+        : Math.floor(total / limit) + 1;
+    const products = await Product_model_1.default.aggregate([
+        {
+            $search: {
+                index: "productName",
+                text: {
+                    path: "productName",
+                    query: decodeURIComponent(req.params.productName),
+                },
+            },
+        },
+        { $match: matchOption },
+        { $addFields: { score: { $meta: "searchScore" } } },
+        { $skip: (page - 1) * limit },
+        { $limit: limit },
+        { $project: selectOption },
+    ]);
+    const today = new Date();
+    const L30D = new Date(today.getTime());
+    L30D.setDate(L30D.getDate() - 30);
+    const productPromises = products.map((product) => {
+        const last30Days = { totalSold: 0, totalRevenue: 0 };
+        let revenue = 0;
+        return License_model_1.default.find({
+            product: product._id,
+        }).then((licenses) => {
+            licenses.forEach((license) => {
+                revenue += license.productPrice;
+            });
+            const licenses_L30D = licenses.filter((x) => x.createdAt <= today && x.createdAt >= L30D);
+            last30Days.totalSold = licenses_L30D.length;
+            licenses.forEach((license) => {
+                last30Days.totalRevenue += license.productPrice;
+            });
+            return {
+                ...product,
+                allTimeRevenue: revenue,
+                last30Days,
+            };
+        });
+    });
+    const productList = await Promise.all(productPromises);
+    res.status(http_status_codes_1.StatusCodes.OK).json({
+        totalPages,
+        page,
+        limit,
+        products: productList,
+    });
+};
+exports.getProductsByName = getProductsByName;
+const getProductStatisticV2 = async (req, res) => {
+    const { shopId } = req.user;
+    const selectOption = {
+        productFile: 0,
+        deleteFlagged: 0,
+        __v: 0,
+    };
+    const products = await Product_model_1.default.find({
+        shopId,
+        deleteFlagged: 0,
+    })
+        .select(selectOption)
+        .lean();
+    const today = new Date();
+    const L30D = new Date(today.getTime());
+    L30D.setDate(L30D.getDate() - 30);
+    const productPromises = products.map((product) => {
+        const last30Days = { totalSold: 0, totalRevenue: 0 };
+        let revenue = 0;
+        return License_model_1.default.find({
+            product: product._id,
+        }).then((licenses) => {
+            licenses.forEach((license) => {
+                revenue += license.productPrice;
+            });
+            const licenses_L30D = licenses.filter((x) => x.createdAt <= today && x.createdAt >= L30D);
+            last30Days.totalSold = licenses_L30D.length;
+            licenses.forEach((license) => {
+                last30Days.totalRevenue += license.productPrice;
+            });
+            return {
+                ...product,
+                allTimeRevenue: revenue,
+                last30Days,
+            };
+        });
+    });
+    const productList = await Promise.all(productPromises);
+    res.status(http_status_codes_1.StatusCodes.OK).json(productList);
+};
+exports.getProductStatisticV2 = getProductStatisticV2;
 //# sourceMappingURL=shop.controller.js.map

@@ -18,35 +18,39 @@ var __importStar = (this && this.__importStar) || function (mod) {
     __setModuleDefault(result, mod);
     return result;
 };
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.uploadURL = void 0;
+exports.generatedownloadURL = exports.uploadURL = void 0;
 const http_status_codes_1 = require("http-status-codes");
 const errors_1 = require("../errors");
 const s3_1 = require("../utils/s3");
 const ErrorMessage = __importStar(require("../errors/error_message"));
 //FE Solution
-const uploadURL = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+const uploadURL = async (req, res) => {
     const query = req.query;
     const folder = query.folder;
     const isPrivate = query.isPrivate === "true" || false;
-    if (!folder || !isPrivate) {
+    if (!folder || !query.isPrivate) {
         throw new errors_1.BadRequestError(ErrorMessage.ERROR_MISSING_BODY);
     }
-    const url = yield (0, s3_1.generateUploadURL)(folder, isPrivate).catch((err) => {
+    const url = await (0, s3_1.generateUploadURL)(folder, isPrivate).catch((err) => {
         throw new errors_1.CustomError(err.msg);
     });
     if (url) {
         res.status(http_status_codes_1.StatusCodes.OK).send({ url });
     }
-});
+};
 exports.uploadURL = uploadURL;
+const generatedownloadURL = async (req, res) => {
+    const query = req.query;
+    const folder = query.folder;
+    const isPrivate = query.isPrivate === "true" || false;
+    if (!folder || !query.isPrivate) {
+        throw new errors_1.BadRequestError(ErrorMessage.ERROR_MISSING_BODY);
+    }
+    const url = await (0, s3_1.downloadURL)(folder, isPrivate);
+    if (url) {
+        res.status(http_status_codes_1.StatusCodes.OK).send({ url });
+    }
+};
+exports.generatedownloadURL = generatedownloadURL;
 //# sourceMappingURL=file.controller.js.map

@@ -18,15 +18,6 @@ var __importStar = (this && this.__importStar) || function (mod) {
     __setModuleDefault(result, mod);
     return result;
 };
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -39,7 +30,7 @@ const http_status_codes_1 = require("http-status-codes");
 const unauthenticated_error_1 = __importDefault(require("../errors/unauthenticated-error"));
 const errors_1 = require("../errors");
 const ErrorMessage = __importStar(require("../errors/error_message"));
-const getProfileActivity = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+const getProfileActivity = async (req, res) => {
     const { userId } = req.params;
     //Promise fetch questions of user
     const questionsPromise = Question_model_1.default.find({ userId }, { totalUpvote: 1, questionTitle: 1, totalDownvote: 1, questionBounty: 1 }).populate({
@@ -53,7 +44,7 @@ const getProfileActivity = (req, res) => __awaiter(void 0, void 0, void 0, funct
         select: "questionTitle",
     });
     //Get result from promises
-    const [questions, answers] = yield Promise.all([
+    const [questions, answers] = await Promise.all([
         questionsPromise,
         answersPromise,
     ]);
@@ -98,11 +89,14 @@ const getProfileActivity = (req, res) => __awaiter(void 0, void 0, void 0, funct
     //Convert Object tagStats to array (more convenient for FE)
     const tagStatsArray = [];
     Object.keys(tagStats).forEach((key) => {
-        tagStatsArray.push(Object.assign({ tagName: key }, tagStats[key]));
+        tagStatsArray.push({
+            tagName: key,
+            ...tagStats[key],
+        });
     });
     //Delete redundant fields
     const questionResult = questions.map((question) => {
-        const doc = Object.assign({}, question._doc);
+        const doc = { ...question._doc };
         delete doc.questionTag;
         delete doc.questionBounty;
         return doc;
@@ -129,11 +123,11 @@ const getProfileActivity = (req, res) => __awaiter(void 0, void 0, void 0, funct
         tagStats: tagStatsArray,
         questionBounty: questionBountyResult,
     });
-});
+};
 exports.getProfileActivity = getProfileActivity;
-const getProfileInfo = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+const getProfileInfo = async (req, res) => {
     const { userId } = req.params;
-    const userDoc = yield User_model_1.default.findById(userId, "-authenToken -customerPassword -createdAt -updatedAt");
+    const userDoc = await User_model_1.default.findById(userId, "-authenToken -customerPassword -createdAt -updatedAt");
     if (!userDoc) {
         throw new errors_1.NotFoundError(ErrorMessage.ERROR_INVALID_USER_ID);
     }
@@ -143,12 +137,12 @@ const getProfileInfo = (req, res) => __awaiter(void 0, void 0, void 0, function*
         delete user.customerStatus;
     }
     res.status(http_status_codes_1.StatusCodes.OK).json({ user });
-});
+};
 exports.getProfileInfo = getProfileInfo;
-const updateProfile = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+const updateProfile = async (req, res) => {
     const user = req.user;
     const { customerName, customerDOB, customerAvatar, customerPhone, customerBio, } = req.body;
-    const updatedUser = yield User_model_1.default.findByIdAndUpdate(user.userId, {
+    const updatedUser = await User_model_1.default.findByIdAndUpdate(user.userId, {
         customerName,
         customerDOB,
         customerAvatar,
@@ -167,6 +161,6 @@ const updateProfile = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         updatedUser: doc,
     };
     res.status(http_status_codes_1.StatusCodes.OK).json(result);
-});
+};
 exports.updateProfile = updateProfile;
 //# sourceMappingURL=profile.controller.js.map

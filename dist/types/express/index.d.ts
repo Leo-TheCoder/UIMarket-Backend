@@ -5,6 +5,7 @@ interface IUserRequest extends Request {
         shopId: string;
         name: string;
         isActive: boolean;
+        isAdmin: boolean;
     };
 }
 export { IUserRequest };

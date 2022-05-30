@@ -18,15 +18,6 @@ var __importStar = (this && this.__importStar) || function (mod) {
     __setModuleDefault(result, mod);
     return result;
 };
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -41,10 +32,9 @@ const Comment_model_1 = __importDefault(require("../models/Comment.model"));
 const currencyTransaction_1 = require("../utils/currencyTransaction");
 const Constants = __importStar(require("../constants"));
 const ErrorMessage = __importStar(require("../errors/error_message"));
-const upvote = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
+const upvote = async (req, res) => {
     const { type, questionId, objectId } = req.body;
-    const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.userId;
+    const userId = req.user?.userId;
     //Trigger solution
     const validType = ["Question", "Comment", "Answer"];
     if (!type) {
@@ -54,7 +44,7 @@ const upvote = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         throw new errors_1.BadRequestError("Valid types are: Question, Answer, and Comment");
     }
     //Checking questionId is available or not
-    const question = yield Question_model_1.default.findById(questionId);
+    const question = await Question_model_1.default.findById(questionId);
     if (!question) {
         throw new errors_1.BadRequestError(ErrorMessage.ERROR_INVALID_QUESTION_ID);
     }
@@ -66,7 +56,7 @@ const upvote = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             }
             break;
         case "Answer":
-            const answer = yield Answer_model_1.default.find({
+            const answer = await Answer_model_1.default.find({
                 _id: objectId,
                 questionId: questionId,
                 answerStatus: 1,
@@ -76,7 +66,7 @@ const upvote = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             }
             break;
         case "Comment":
-            const comment = yield Comment_model_1.default.find({
+            const comment = await Comment_model_1.default.find({
                 _id: objectId,
                 questionId: questionId,
                 commentStatus: 1,
@@ -86,9 +76,9 @@ const upvote = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             }
             break;
     }
-    const result = yield upvoteObject(userId, questionId, objectId, type);
+    const result = await upvoteObject(userId, questionId, objectId, type);
     return res.status(result.status).json(result.msg);
-});
+};
 exports.upvote = upvote;
 // const upvoteQuestion = async (
 //   userId: string,
@@ -164,15 +154,15 @@ exports.upvote = upvote;
 //     };
 //   }
 // };
-const upvoteObject = (userId, questionId, objectId, type) => __awaiter(void 0, void 0, void 0, function* () {
-    const votingDoc = yield Voting_model_1.default.findOne({
+const upvoteObject = async (userId, questionId, objectId, type) => {
+    const votingDoc = await Voting_model_1.default.findOne({
         userId,
         questionId,
         objectId,
         type,
     });
     if (!votingDoc) {
-        yield Voting_model_1.default.create({
+        await Voting_model_1.default.create({
             userId,
             questionId,
             objectId,
@@ -185,7 +175,7 @@ const upvoteObject = (userId, questionId, objectId, type) => __awaiter(void 0, v
                     msg: err,
                 };
         });
-        const transaction = yield (0, currencyTransaction_1.pointTransaction)(userId, Constants.upvoteAward, "Upvote for question");
+        const transaction = await (0, currencyTransaction_1.pointTransaction)(userId, Constants.upvoteAward, "Upvote for question");
         return {
             status: http_status_codes_1.StatusCodes.OK,
             msg: "UPVOTED",
@@ -194,8 +184,8 @@ const upvoteObject = (userId, questionId, objectId, type) => __awaiter(void 0, v
     else {
         //if upvoted
         if (votingDoc.action === 1) {
-            yield votingDoc.remove();
-            const transaction = yield (0, currencyTransaction_1.pointTransaction)(userId, Constants.upvoteAward * -1, "Unvote for question");
+            await votingDoc.remove();
+            const transaction = await (0, currencyTransaction_1.pointTransaction)(userId, Constants.upvoteAward * -1, "Unvote for question");
             return {
                 status: http_status_codes_1.StatusCodes.OK,
                 msg: "UNVOTED",
@@ -203,8 +193,8 @@ const upvoteObject = (userId, questionId, objectId, type) => __awaiter(void 0, v
         }
         //if downvoted
         else {
-            yield votingDoc.remove();
-            yield Voting_model_1.default.create({
+            await votingDoc.remove();
+            await Voting_model_1.default.create({
                 userId,
                 questionId,
                 objectId,
@@ -223,5 +213,5 @@ const upvoteObject = (userId, questionId, objectId, type) => __awaiter(void 0, v
             };
         }
     }
-});
+};
 //# sourceMappingURL=upvoting.controller.js.map

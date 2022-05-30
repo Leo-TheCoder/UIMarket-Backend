@@ -23,19 +23,21 @@ const http_status_codes_1 = require("http-status-codes");
 const ErrorMessage = __importStar(require("../errors/error_message"));
 const errorHandlerMiddleware = (err, req, res, next) => {
     const customError = {
-        statusCode: (err === null || err === void 0 ? void 0 : err.statusCode) || http_status_codes_1.StatusCodes.INTERNAL_SERVER_ERROR,
-        msg: (err === null || err === void 0 ? void 0 : err.message) || "Something went wrong try again later",
+        statusCode: err?.statusCode || http_status_codes_1.StatusCodes.INTERNAL_SERVER_ERROR,
+        msg: err?.message || "Something went wrong try again later",
     };
     if (err.statusCode === http_status_codes_1.StatusCodes.UNAUTHORIZED) {
         return res.status(http_status_codes_1.StatusCodes.UNAUTHORIZED).json({ msg: customError.msg });
     }
     if (err.code === 11000) {
-        return res.status(http_status_codes_1.StatusCodes.BAD_REQUEST).json({
+        return res
+            .status(http_status_codes_1.StatusCodes.BAD_REQUEST)
+            .json({
             msg: ErrorMessage.ERROR_AUTHENTICATION_DUPLICATE,
             mongooseMsg: err.message,
         });
     }
-    if (err.name === "ValidationError") {
+    if (err.name === "ValidationError" || err.kind === "ObjectId") {
         return res
             .status(http_status_codes_1.StatusCodes.BAD_REQUEST)
             .json({ msg: ErrorMessage.ERROR_VALIDATION, mongooseMsg: err.message });

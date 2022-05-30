@@ -1,12 +1,12 @@
-declare const defaultLimit = 10;
-declare const defaultPageNumber = 1;
-declare const defaultMinLength = 20;
-declare const defaultLimitComments = 5;
-declare const minBountyDueDate = 1;
-declare const maxBountyDueDate = 30;
-declare const minBounty = 150;
-declare const maxBounty = 5000;
-declare const bestAnswerAward = 10;
-declare const upvoteAward = 2;
-export { defaultLimit, defaultPageNumber, defaultMinLength, minBountyDueDate, maxBountyDueDate, minBounty, maxBounty, bestAnswerAward, upvoteAward, defaultLimitComments, };
+export declare const defaultLimit = 10;
+export declare const defaultPageNumber = 1;
+export declare const defaultMinLength = 20;
+export declare const defaultLimitComments = 5;
+export declare const minBountyDueDate = 1;
+export declare const maxBountyDueDate = 30;
+export declare const minBounty = 150;
+export declare const maxBounty = 5000;
+export declare const bestAnswerAward = 10;
+export declare const upvoteAward = 2;
+export declare const acceptRefund = 3;
 //# sourceMappingURL=constants.d.ts.map

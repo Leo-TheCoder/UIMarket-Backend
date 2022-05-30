@@ -18,15 +18,6 @@ var __importStar = (this && this.__importStar) || function (mod) {
     __setModuleDefault(result, mod);
     return result;
 };
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -40,16 +31,16 @@ const Comment_model_1 = __importDefault(require("../models/Comment.model"));
 const Answer_model_1 = __importDefault(require("../models/Answer.model"));
 const Constants = __importStar(require("../constants"));
 const ErrorMessage = __importStar(require("../errors/error_message"));
-const createComment = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+const createComment = async (req, res) => {
     const { userId } = req.user;
     //Checking whether questionId is valid
-    const question = yield Question_model_1.default.findById(req.body.questionId);
+    const question = await Question_model_1.default.findById(req.body.questionId);
     if (!question) {
         throw new errors_1.NotFoundError(ErrorMessage.ERROR_INVALID_QUESTION_ID);
     }
     //Checking whether rootId is valid
     if (req.body.rootType === "Answer") {
-        const answer = yield Answer_model_1.default.find({
+        const answer = await Answer_model_1.default.find({
             _id: req.body.rootId,
             questionId: req.body.questionId,
         });
@@ -60,13 +51,16 @@ const createComment = (req, res) => __awaiter(void 0, void 0, void 0, function* 
     else if (req.body.rootId != req.body.questionId) {
         throw new errors_1.BadRequestError(ErrorMessage.ERROR_INVALID_ROOT_ID);
     }
-    const comment = yield Comment_model_1.default.create(Object.assign(Object.assign({}, req.body), { userId }));
+    const comment = await Comment_model_1.default.create({
+        ...req.body,
+        userId,
+    });
     //populate with user model
-    yield comment.populate("userId", "customerEmail customerName");
+    await comment.populate("userId", "customerEmail customerName");
     res.status(http_status_codes_1.StatusCodes.CREATED).json(comment);
-});
+};
 exports.createComment = createComment;
-const getComments = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+const getComments = async (req, res) => {
     const { rootId } = req.params;
     const query = req.query;
     const page = parseInt(query.page) || Constants.defaultPageNumber;
@@ -75,11 +69,11 @@ const getComments = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         rootId,
         commentStatus: 1,
     };
-    const total = yield Comment_model_1.default.countDocuments(queryString);
+    const total = await Comment_model_1.default.countDocuments(queryString);
     const totalPages = total % limit === 0
         ? Math.floor(total / limit)
         : Math.floor(total / limit) + 1;
-    const comments = yield Comment_model_1.default.find(queryString)
+    const comments = await Comment_model_1.default.find(queryString)
         .sort({ createdAt: +1 })
         .populate("userId", "customerName customerEmail")
         .skip((page - 1) * limit)
@@ -88,18 +82,21 @@ const getComments = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
     if (req.user) {
         result = [];
         for (const comment of comments) {
-            const voteStatus = yield (0, statusVote_1.getStatusVote)(req.user.userId, comment._id);
-            result.push(Object.assign(Object.assign({}, comment._doc), { voteStatus }));
+            const voteStatus = await (0, statusVote_1.getStatusVote)(req.user.userId, comment._id);
+            result.push({
+                ...comment._doc,
+                voteStatus,
+            });
         }
     }
     res
         .status(http_status_codes_1.StatusCodes.OK)
         .json({ comments: result, totalPages, limit, page });
-});
+};
 exports.getComments = getComments;
-const updateComment = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+const updateComment = async (req, res) => {
     const { userId } = req.user;
-    const comment = yield Comment_model_1.default.findOne({
+    const comment = await Comment_model_1.default.findOne({
         _id: req.params.commentId,
         commentStatus: 1,
     });
@@ -116,13 +113,13 @@ const updateComment = (req, res) => __awaiter(void 0, void 0, void 0, function* 
     //Update comment
     comment.commentContent = req.body.commentContent;
     comment.updateAt = new Date();
-    const result = yield comment.save();
+    const result = await comment.save();
     res.status(http_status_codes_1.StatusCodes.OK).json(result);
-});
+};
 exports.updateComment = updateComment;
-const deleteComment = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+const deleteComment = async (req, res) => {
     const { userId } = req.user;
-    const commemt = yield Comment_model_1.default.findById(req.params.commentId);
+    const commemt = await Comment_model_1.default.findById(req.params.commentId);
     //Validation
     if (!commemt) {
         throw new errors_1.NotFoundError(ErrorMessage.ERROR_INVALID_COMMENT_ID);
@@ -135,13 +132,13 @@ const deleteComment = (req, res) => __awaiter(void 0, void 0, void 0, function* 
     }
     commemt.commentStatus = 0;
     commemt.updateAt = new Date();
-    const result = yield commemt.save();
+    const result = await commemt.save();
     if (result) {
         res.status(http_status_codes_1.StatusCodes.OK).json(result);
     }
     else {
         throw new errors_1.InternalServerError(ErrorMessage.ERROR_FAILED);
     }
-});
+};
 exports.deleteComment = deleteComment;
 //# sourceMappingURL=comment.controller.js.map

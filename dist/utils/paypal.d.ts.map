@@ -1,0 +1,1 @@
+{"version":3,"file":"paypal.d.ts","sourceRoot":"","sources":["../../src/utils/paypal.ts"],"names":[],"mappings":"AACA,OAAO,EAAE,OAAO,EAAE,OAAO,EAAE,MAAM,sBAAsB,CAAC;AA6BxD,eAAO,MAAM,kBAAkB,gBAChB,OAAO,EAAE,WACb,OAAO,YACN,MAAM,iBAmFjB,CAAC;AAEF,eAAO,MAAM,aAAa,gBACX,MAAM,GAAG,MAAM,YAClB,MAAM,iEAyCjB,CAAC;AAEF,eAAO,MAAM,cAAc,UAAiB,MAAM,iEAsBjD,CAAC"}

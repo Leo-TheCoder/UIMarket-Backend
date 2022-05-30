@@ -18,31 +18,25 @@ var __importStar = (this && this.__importStar) || function (mod) {
     __setModuleDefault(result, mod);
     return result;
 };
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.coinRollBack = exports.coinTransaction = exports.pointRollBack = exports.pointTransaction = void 0;
+exports.shopWithdrawTransaction = exports.shopTransaction = exports.userTransaction = exports.pointRollBack = exports.pointTransaction = void 0;
 //Library
 const errors_1 = require("../errors");
 //Model
 const PointTransaction_model_1 = __importDefault(require("../models/PointTransaction.model"));
-const CoinTransaction_model_1 = __importDefault(require("../models/CoinTransaction.model"));
 const User_model_1 = __importDefault(require("../models/User.model"));
+const Shop_model_1 = __importDefault(require("../models/Shop.model"));
+const UserTransaction_model_1 = __importDefault(require("../models/UserTransaction.model"));
+const ShopTransaction_model_1 = __importDefault(require("../models/ShopTransaction.model"));
+const Invoice_model_1 = __importDefault(require("../models/Invoice.model"));
 //Error
 const ErrorMessage = __importStar(require("../errors/error_message"));
-const pointTransaction = (userId, changeAmount, reason) => __awaiter(void 0, void 0, void 0, function* () {
+const pointTransaction = async (userId, changeAmount, reason) => {
     //Checking userId
-    const user = yield User_model_1.default.findOne({ _id: userId, customerStatus: 1 });
+    const user = await User_model_1.default.findOne({ _id: userId, customerStatus: 1 });
     if (!user) {
         throw new errors_1.NotFoundError(ErrorMessage.ERROR_INVALID_USER_ID);
     }
@@ -53,7 +47,7 @@ const pointTransaction = (userId, changeAmount, reason) => __awaiter(void 0, voi
         throw new errors_1.BadRequestError(ErrorMessage.ERROR_INVALID_AMOUNT);
     }
     //Record the transaction
-    const transaction = yield PointTransaction_model_1.default.create({
+    const transaction = await PointTransaction_model_1.default.create({
         toAccount: userId,
         reason: reason,
         currentAmount: currentAmount,
@@ -65,103 +59,122 @@ const pointTransaction = (userId, changeAmount, reason) => __awaiter(void 0, voi
     }
     else {
         user.customerWallet.point = balanceAmount;
-        const result = yield user.save();
+        const result = await user.save();
         if (!result) {
-            const rollBack = yield PointTransaction_model_1.default.findByIdAndUpdate(transaction._id, { transactionStatus: 0 });
+            const rollBack = await PointTransaction_model_1.default.findByIdAndUpdate(transaction._id, { transactionStatus: 0 });
             throw new errors_1.InternalServerError(ErrorMessage.ERROR_FAILED);
         }
         else {
             return transaction;
         }
     }
-});
+};
 exports.pointTransaction = pointTransaction;
-const pointRollBack = (userId, transactionId, changeAmount) => __awaiter(void 0, void 0, void 0, function* () {
+const pointRollBack = async (userId, transactionId, changeAmount) => {
     //Checking userId
-    const user = yield User_model_1.default.findOne({ _id: userId, customerStatus: 1 });
+    const user = await User_model_1.default.findOne({ _id: userId, customerStatus: 1 });
     if (!user) {
         throw new errors_1.NotFoundError(ErrorMessage.ERROR_INVALID_USER_ID);
     }
     //Delete transaction and roll back point
     const currentAmount = user.customerWallet.point;
     const balanceAmount = currentAmount - changeAmount;
-    const transaction = yield PointTransaction_model_1.default.findByIdAndUpdate(transactionId, { transactionStatus: 0 });
+    const transaction = await PointTransaction_model_1.default.findByIdAndUpdate(transactionId, { transactionStatus: 0 });
     if (transaction) {
         user.customerWallet.point = balanceAmount;
-        const result = yield user.save();
+        const result = await user.save();
         if (result) {
             return result;
         }
         else {
-            const rollBack = yield PointTransaction_model_1.default.findByIdAndUpdate(transactionId, { transactionStatus: 1 });
+            const rollBack = await PointTransaction_model_1.default.findByIdAndUpdate(transactionId, { transactionStatus: 1 });
             throw new errors_1.InternalServerError(ErrorMessage.ERROR_FAILED);
         }
     }
     else {
         throw new errors_1.InternalServerError(ErrorMessage.ERROR_FAILED);
     }
-});
+};
 exports.pointRollBack = pointRollBack;
-const coinTransaction = (userId, changeAmount, reason) => __awaiter(void 0, void 0, void 0, function* () {
-    //Checking userId
-    const user = yield User_model_1.default.findOne({ _id: userId, customerStatus: 1 });
+const userTransaction = async (userId, invoiceId, changeAmount, reason) => {
+    //Checking userId and shopId
+    const userPromise = User_model_1.default.findOne({ _id: userId, customerStatus: 1 }).lean();
+    const invoicePromise = Invoice_model_1.default.findOne({ _id: invoiceId }).lean();
+    const [user, invoice] = await Promise.all([userPromise, invoicePromise]);
     if (!user) {
         throw new errors_1.NotFoundError(ErrorMessage.ERROR_INVALID_USER_ID);
     }
-    //Checking amount
-    const currentAmount = user.customerWallet.coin;
-    const balanceAmount = currentAmount + changeAmount;
-    if (balanceAmount < 0) {
-        throw new errors_1.BadRequestError(ErrorMessage.ERROR_INVALID_AMOUNT);
+    else if (!invoice) {
+        throw new errors_1.NotFoundError(ErrorMessage.ERROR_INVALID_INVOICE_ID);
     }
     //Record the transaction
-    const transaction = yield PointTransaction_model_1.default.create({
-        toAccount: userId,
+    const transaction = await UserTransaction_model_1.default.create({
+        userId: userId,
+        invoiceId: invoiceId,
         reason: reason,
-        currentAmount: currentAmount,
         changeAmount: changeAmount,
-        balanceAmount: balanceAmount,
     });
     if (!transaction) {
         throw new errors_1.NotFoundError(ErrorMessage.ERROR_FAILED);
     }
     else {
-        user.customerWallet.coin = balanceAmount;
-        const result = yield user.save();
-        if (!result) {
-            const rollBack = yield CoinTransaction_model_1.default.findByIdAndUpdate(transaction._id, { transactionStatus: 0 });
-            throw new errors_1.InternalServerError(ErrorMessage.ERROR_FAILED);
-        }
-        else {
-            return transaction;
-        }
+        return transaction;
     }
-});
-exports.coinTransaction = coinTransaction;
-const coinRollBack = (userId, transactionId, changeAmount) => __awaiter(void 0, void 0, void 0, function* () {
-    //Checking userId
-    const user = yield User_model_1.default.findOne({ _id: userId, customerStatus: 1 });
-    if (!user) {
-        throw new errors_1.NotFoundError(ErrorMessage.ERROR_INVALID_USER_ID);
+};
+exports.userTransaction = userTransaction;
+const shopTransaction = async (shopId, invoiceId, reason, changeAmount) => {
+    //Checking shopId
+    const shop = await Shop_model_1.default.findOne({ _id: shopId, shopStatus: 1 });
+    if (!shop) {
+        throw new errors_1.NotFoundError(ErrorMessage.ERROR_INVALID_SHOP_ID);
     }
-    //Delete transaction and roll back point
-    const currentAmount = user.customerWallet.coin;
-    const balanceAmount = currentAmount - changeAmount;
-    const transaction = yield CoinTransaction_model_1.default.findByIdAndUpdate(transactionId, { transactionStatus: 0 });
-    if (transaction) {
-        user.customerWallet.coin = balanceAmount;
-        const result = yield user.save();
-        if (result) {
-            return result;
-        }
-        else {
-            const rollBack = yield CoinTransaction_model_1.default.findByIdAndUpdate(transactionId, { transactionStatus: 1 });
-            throw new errors_1.InternalServerError(ErrorMessage.ERROR_FAILED);
-        }
+    const currentAmount = shop.shopBalance;
+    const balanceAmount = currentAmount + changeAmount;
+    //Checking invoice ID
+    const invoice = await Invoice_model_1.default.findById(invoiceId);
+    if (!invoice) {
+        throw new errors_1.BadRequestError(ErrorMessage.ERROR_INVALID_INVOICE_ID);
     }
-    else {
+    //Update shop wallet
+    shop.shopBalance = balanceAmount;
+    const newBalance = await shop.save();
+    if (!newBalance) {
         throw new errors_1.InternalServerError(ErrorMessage.ERROR_FAILED);
     }
-});
-exports.coinRollBack = coinRollBack;
+    else {
+        const transaction = await ShopTransaction_model_1.default.create({
+            shopId: shopId,
+            invoiceId: invoiceId,
+            reason: reason,
+            currentAmount: currentAmount,
+            changeAmount: changeAmount,
+            balanceAmount: balanceAmount,
+        });
+        return transaction;
+    }
+};
+exports.shopTransaction = shopTransaction;
+const shopWithdrawTransaction = async (shopFullDocument, reason, changeAmount) => {
+    const shop = shopFullDocument;
+    const currentAmount = shop.shopBalance;
+    const balanceAmount = currentAmount + changeAmount;
+    if (balanceAmount < 0) {
+        throw new errors_1.BadRequestError(ErrorMessage.ERROR_INVALID_AMOUNT);
+    }
+    //Update shop wallet
+    shop.shopBalance = balanceAmount;
+    const newBalance = await shop.save();
+    if (!newBalance) {
+        throw new errors_1.InternalServerError(ErrorMessage.ERROR_FAILED);
+    }
+    const transaction = await ShopTransaction_model_1.default.create({
+        shopId: shop._id,
+        reason: reason,
+        currentAmount: currentAmount,
+        changeAmount: changeAmount,
+        balanceAmount: balanceAmount,
+    });
+    return transaction;
+};
+exports.shopWithdrawTransaction = shopWithdrawTransaction;
 //# sourceMappingURL=currencyTransaction.js.map
