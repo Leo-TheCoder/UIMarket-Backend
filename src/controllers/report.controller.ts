@@ -58,3 +58,67 @@ export const rejectReport = async (req: IUserRequest, res: Response) => {
   const result = await report.save();
   res.status(StatusCodes.OK).json(result);
 };
+
+export const reportListEdu = async (req: IUserRequest, res: Response) => {
+  const query = req.query as IQuery;
+  const page = parseInt(query.page!) || Constants.defaultPageNumber;
+  const limit = parseInt(query.limit!) || Constants.defaultLimit;
+
+  const total = await ReportModel.countDocuments({
+    resolveFlag: 0,
+    objectType: { $in: ["Question", "Answer", "Comment"] },
+  });
+
+  const totalPages =
+    total % limit === 0
+      ? Math.floor(total / limit)
+      : Math.floor(total / limit) + 1;
+
+  const reports = await ReportModel.find({
+    resolveFlag: 0,
+    objectType: { $in: ["Question", "Answer", "Comment"] },
+  })
+    .skip((page - 1) * limit)
+    .limit(limit)
+    .sort({ createdAt: 1 })
+    .lean();
+
+  return res.status(StatusCodes.OK).json({
+    totalPages,
+    page,
+    limit,
+    reports,
+  });
+};
+
+export const reportListEC = async (req: IUserRequest, res: Response) => {
+  const query = req.query as IQuery;
+  const page = parseInt(query.page!) || Constants.defaultPageNumber;
+  const limit = parseInt(query.limit!) || Constants.defaultLimit;
+
+  const total = await ReportModel.countDocuments({
+    resolveFlag: 0,
+    objectType: { $in: ["Product", "Shop"] },
+  });
+
+  const totalPages =
+    total % limit === 0
+      ? Math.floor(total / limit)
+      : Math.floor(total / limit) + 1;
+
+  const reports = await ReportModel.find({
+    resolveFlag: 0,
+    objectType: { $in: ["Product", "Shop"] },
+  })
+    .skip((page - 1) * limit)
+    .limit(limit)
+    .sort({ createdAt: 1 })
+    .lean();
+
+  return res.status(StatusCodes.OK).json({
+    totalPages,
+    page,
+    limit,
+    reports,
+  });
+};

@@ -18,7 +18,11 @@ import {
   getAllShops,
 } from "../controllers/admin/shops.controller";
 import { changeSystemFee } from "../controllers/admin/system.controller";
-import { rejectReport } from "../controllers/report.controller";
+import {
+  rejectReport,
+  reportListEC,
+  reportListEdu,
+} from "../controllers/report.controller";
 
 const router = express.Router();
 
@@ -53,6 +57,10 @@ router.post("/system/fee", changeSystemFee);
 //DELETE Method
 
 //===================== Report =======================
+//GET Method
+router.get("/report/list/Edu", reportListEdu);
+router.get("/report/list/EC", reportListEC);
+
 //PUT Method
 router.put("/report/reject/:reportId", adminAuth, rejectReport);
 export default router;
