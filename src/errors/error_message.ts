@@ -42,3 +42,6 @@ export const ERROR_INVALID_AMOUNT = "invalid-amount";
 
 //License
 export const ERROR_LICENSE_EXISTED = "license-existed";
+
+//Report
+export const ERROR_INVALID_REPORT_ID = "invalid-report-id";

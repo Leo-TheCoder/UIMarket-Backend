@@ -1,5 +1,5 @@
 import express from "express";
-import { compulsoryAuth } from "../middlewares/authentication";
+import { adminAuth, compulsoryAuth } from "../middlewares/authentication";
 import {
   createCategory,
   getAllCategory,
@@ -18,6 +18,7 @@ import {
   getAllShops,
 } from "../controllers/admin/shops.controller";
 import { changeSystemFee } from "../controllers/admin/system.controller";
+import { rejectReport } from "../controllers/report.controller";
 
 const router = express.Router();
 
@@ -51,4 +52,7 @@ router.post("/system/fee", changeSystemFee);
 //PUT Method
 //DELETE Method
 
+//===================== Report =======================
+//PUT Method
+router.put("/report/reject/:reportId", adminAuth, rejectReport);
 export default router;

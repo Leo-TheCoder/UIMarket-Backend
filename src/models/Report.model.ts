@@ -19,6 +19,9 @@ const ReportSchema = new mongoose.Schema(
       required: [true, "Please provide reason"],
       minlength: defaultMinLength,
     },
+    reportSolution: {
+      type: String,
+    },
     objectType: {
       type: String,
       required: [true, "Please provide type"],
@@ -27,7 +30,7 @@ const ReportSchema = new mongoose.Schema(
     resolveFlag: {
       type: Number,
       default: 0,
-      enum: [0, 1],
+      enum: [0, 1, -1],
     },
   },
   { timestamps: true },
