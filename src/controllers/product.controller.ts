@@ -107,7 +107,7 @@ export const getAllProducts = async (req: Request, res: Response) => {
       productStatus: 1,
       ...filterObj,
     },
-    projectionProductList
+    projectionProductList,
   )
     .sort(sortObj)
     .skip((page - 1) * limit)
@@ -205,7 +205,7 @@ const findById = async (req: Request, res: Response) => {
       _id: req.params.productId,
       productStatus: 1,
     },
-    { $inc: { allTimeView: 1 } }
+    { $inc: { allTimeView: 1 } },
   )
     .populate({ path: "shopId", select: "shopEmail" })
     .lean();
@@ -302,8 +302,8 @@ const findByName = async (req: Request, res: Response) => {
   ];
 
   //adding sort property to query
-  if(Object.keys(sortObj).length > 0) {
-    searchProductQueryAggregate.push({$sort: sortObj})
+  if (Object.keys(sortObj).length > 0) {
+    searchProductQueryAggregate.push({ $sort: sortObj });
   }
 
   const products = await ProductModel.aggregate(searchProductQueryAggregate);
@@ -361,11 +361,14 @@ const getProductsByShop = async (req: Request, res: Response) => {
       : Math.floor(total / limit) + 1;
 
   //Get product
-  const products = await ProductModel.find({
-    shopId: shopId,
-    productStatus: 1,
-    ...filterObj,
-  })
+  const products = await ProductModel.find(
+    {
+      shopId: shopId,
+      productStatus: 1,
+      ...filterObj,
+    },
+    projectionProductList,
+  )
     .sort(sortObj)
     .skip((page - 1) * limit)
     .limit(limit)

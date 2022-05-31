@@ -12,7 +12,7 @@ const ShopSchema = new mongoose.Schema(
     shopName: {
       type: String,
       required: [true, "Please provide shop name"],
-      minlength: defaultMinLength / 2,
+      // minlength: defaultMinLength / 2,
     },
     shopPayPal: {
       required: false,
