@@ -177,7 +177,7 @@ export const updateShop = async (req: IUserRequest, res: Response) => {
   shop.shopPhone = req.body.shopPhone || shop.shopPhone;
   shop.shopEmail = req.body.shopEmail || shop.shopEmail;
   shop.shopPayPal = req.body.shopPayPal || shop.shopPayPal;
-  shop.updatedAt = new Date();
+  shop.shopBanner = req.body.shopBanner || shop.shopBanner;
 
   const result = await shop.save();
   if (result) {
