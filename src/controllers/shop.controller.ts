@@ -178,6 +178,7 @@ export const updateShop = async (req: IUserRequest, res: Response) => {
   shop.shopEmail = req.body.shopEmail || shop.shopEmail;
   shop.shopPayPal = req.body.shopPayPal || shop.shopPayPal;
   shop.shopBanner = req.body.shopBanner || shop.shopBanner;
+  shop.shopName = req.body.shopName || shop.shopName;
 
   const result = await shop.save();
   if (result) {
