@@ -412,11 +412,26 @@ export const getInvoiceById = async (req: IUserRequest, res: Response) => {
   const {invoiceId} = req.params;
   const {userId} = req.user!;
 
-  const invoice = await InvoiceModel.findById(invoiceId);
+  const invoice = await InvoiceModel.findById(invoiceId).populate({
+    path: "productList.product",
+    select: "productPictures"
+  }).lean();
 
   if(!invoice || invoice.userId != userId) {
     throw new NotFoundError(ErrorMessage.ERROR_INVALID_INVOICE_ID);
   }
+
+  const productList = invoice.productList.map((_product: any) => {
+    const coverPicture = _product.product.productPictures[0];
+
+    const modifyProduct = JSON.parse(JSON.stringify(_product));
+    modifyProduct.coverPicture = coverPicture;
+    modifyProduct.product = _product.product._id;
+    
+    return modifyProduct;
+  })
+
+  invoice.productList = productList;
 
   res.status(StatusCodes.OK).json({invoice})
 }
