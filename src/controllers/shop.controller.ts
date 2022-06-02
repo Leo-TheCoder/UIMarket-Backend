@@ -52,7 +52,7 @@ export const createShop = async (req: IUserRequest, res: Response) => {
     const user = await UserModel.findByIdAndUpdate(
       userId,
       { shopId: newShop._id },
-      { new: true }
+      { new: true },
     );
 
     const token = user.createJWT();
@@ -531,7 +531,7 @@ export const getProductsByName = async (req: IUserRequest, res: Response) => {
 
 export const getProductStatisticV2 = async (
   req: IUserRequest,
-  res: Response
+  res: Response,
 ) => {
   const { shopId } = req.user!;
 
@@ -564,7 +564,7 @@ export const getProductStatisticV2 = async (
       });
 
       const licenses_L30D = licenses.filter(
-        (x: any) => x.createdAt <= today && x.createdAt >= L30D
+        (x: any) => x.createdAt <= today && x.createdAt >= L30D,
       );
 
       last30Days.totalSold = licenses_L30D.length;

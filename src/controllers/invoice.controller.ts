@@ -11,11 +11,11 @@ import ProductModel from "../models/Product.model";
 import InvoiceModel from "../models/Invoice.model";
 import CartModel from "../models/Cart.model";
 import LicenseModel from "../models/License.model";
+import ShopTransactionModel from "../models/ShopTransaction.model";
 
 //Error
 import { BadRequestError, NotFoundError } from "../errors";
 import * as ErrorMessage from "../errors/error_message";
-import ShopTransactionModel from "../models/ShopTransaction.model";
 
 interface IQuery {
   page?: string;
@@ -59,7 +59,7 @@ export const preOrder = async (req: IUserRequest) => {
   //Remove duplicate out of array
   productList = productList.filter(
     (value: any, index: any, self: any) =>
-      index === self.findIndex((t: any) => t.product === value.product)
+      index === self.findIndex((t: any) => t.product === value.product),
   );
 
   //Checking product and get its price
@@ -96,7 +96,7 @@ export const createOrder = async (req: IUserRequest) => {
 export const paidInvoice = async (
   invoice: any,
   transactionId: any,
-  userId: string
+  userId: string,
 ) => {
   //Checking if has transaction Id
 
@@ -121,7 +121,7 @@ export const paidInvoice = async (
   invoice.productList.forEach((product: any) => {
     ProductModel.updateOne(
       { _id: product.product },
-      { $inc: { totalSold: 1 } }
+      { $inc: { totalSold: 1 } },
     ).catch((error) => {
       console.log(error);
     });
@@ -170,7 +170,7 @@ export const purchaseHistory = async (req: IUserRequest, res: Response) => {
     let license = licenses[i]._doc;
 
     let isReview = license.invoice.productList.findIndex(
-      (x: any) => String(x.product) == String(license.product._id)
+      (x: any) => String(x.product) == String(license.product._id),
     );
 
     license.product.productPictures = license.product.productPictures[0];
@@ -221,7 +221,7 @@ export const purchaseHistory = async (req: IUserRequest, res: Response) => {
 
 export const searchPurchaseHistory = async (
   req: IUserRequest,
-  res: Response
+  res: Response,
 ) => {
   const { userId } = req.user!;
   // const userId = "62693a28052feac047bce72f";
@@ -276,7 +276,7 @@ export const searchPurchaseHistory = async (
 
   const productsToSend = purchaseList.map((license) => {
     const productReviewIndex = license.invoice.productList.findIndex(
-      (x: any) => String(x.product) == String(license.product._id)
+      (x: any) => String(x.product) == String(license.product._id),
     );
 
     const resObj = {
