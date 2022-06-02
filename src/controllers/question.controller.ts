@@ -278,7 +278,7 @@ const getQuestionByID = async (req: IUserRequest, res: Response) => {
     //
     .findByIdAndUpdate(req.params.id, { $inc: { totalView: 1 } })
     .populate("questionTag", "tagName")
-    .populate({ path: "userId", select: ["customerName", "customerEmail"] });
+    .populate({ path: "userId", select: ["customerName", "customerEmail", "customerAvatar"] });
 
   //Checking whether there was a question or not
   if (question) {

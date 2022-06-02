@@ -55,6 +55,13 @@ const OrderSchema = new mongoose.Schema(
       default: "Waiting",
       enum: ["Waiting", "Paid"],
     },
+    transactionPaypalId: {
+      type: String,
+    },
+    isRefunded: {
+      type: Boolean,
+      default: false,
+    }
   },
   { timestamps: true },
 );

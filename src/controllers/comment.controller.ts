@@ -50,7 +50,7 @@ const createComment = async (req: IUserRequest, res: Response) => {
   });
 
   //populate with user model
-  await comment.populate("userId", "customerEmail customerName");
+  await comment.populate("userId", "customerEmail customerName customerAvatar");
 
   res.status(StatusCodes.CREATED).json(comment);
 };
@@ -74,7 +74,7 @@ const getComments = async (req: IUserRequest, res: Response) => {
 
   const comments = await CommentModel.find(queryString)
     .sort({ createdAt: +1 })
-    .populate("userId", "customerName customerEmail")
+    .populate("userId", "customerName customerEmail customerAvatar")
     .skip((page - 1) * limit)
     .limit(limit);
 

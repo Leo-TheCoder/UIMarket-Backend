@@ -35,7 +35,11 @@ import reportRouter from "./routes/report.route";
 //Middleware
 import errorHandlerMiddleware from "./middlewares/handle-errors";
 import notFoundMiddleware from "./middlewares/not-found";
-import { adminAuth, compulsoryAuth } from "./middlewares/authentication";
+import {
+  compulsoryAuth,
+  optionalAuth,
+  adminAuth,
+} from "./middlewares/authentication";
 
 app.use(cors());
 app.use(express.json());
@@ -66,7 +70,7 @@ app.use("/api/v1/carts", compulsoryAuth, cartRouter);
 app.use("/api/v1/reports", compulsoryAuth, reportRouter);
 
 //tool
-import {resetTransaction} from "./controllers/dev.test";
+import { resetTransaction } from "./controllers/dev.test";
 app.get("/resetTransaction", resetTransaction);
 
 app.use(notFoundMiddleware);
@@ -75,6 +79,7 @@ app.use(errorHandlerMiddleware);
 //Scheduled Task
 import { resolveBounty } from "./scheduled/resolveBounty";
 import { resolveShopPayment } from "./scheduled/commitTransaction";
+import { clearInvoiceModel } from "./scheduled/clearPendingInvoices";
 
 const start = async () => {
   try {
@@ -92,6 +97,10 @@ const start = async () => {
     //Resolve shop payment run everyday at 00:01
     cron.schedule("1 0 * * *", async () => {
       await resolveShopPayment();
+    });
+
+    cron.schedule("1 0 * * *", async () => {
+      await clearInvoiceModel();
     });
   } catch (error) {
     console.log(error);

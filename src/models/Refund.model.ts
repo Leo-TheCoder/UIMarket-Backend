@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import { defaultMinLength } from "../constants";
+import { RefundStatusEnum } from "../types/enum";
 
 const RefundSchema = new mongoose.Schema(
   {
@@ -9,24 +10,20 @@ const RefundSchema = new mongoose.Schema(
       required: [true, "Please provide user ID"],
       immutable: true,
     },
-    shopId: {
-      type: mongoose.Types.ObjectId,
-      ref: "Shop",
-      required: [true, "Please provide shop ID"],
-      immutable: true,
-    },
     invoiceId: {
       type: mongoose.Types.ObjectId,
       ref: "Order",
-      required: [true, "Please provide invoice ID"],
+      required: [true, "Please provide Invoice ID"],
       immutable: true,
     },
-    productId: {
-      type: mongoose.Types.ObjectId,
-      ref: "Product",
-      required: [true, "Please provide product ID"],
-      immutable: true,
-    },
+    licenseIds: [
+      {
+        type: mongoose.Types.ObjectId,
+        ref: "License",
+        required: [true, "Please provide license ID"],
+        immutable: true,
+      },
+    ],
     refundReason: {
       type: String,
       required: [true, "Please provide reason"],
@@ -40,12 +37,16 @@ const RefundSchema = new mongoose.Schema(
     ],
     refundStatus: {
       type: String,
-      default: "Pending",
-      enum: ["Pending", "Resolved", "Declined"],
+      default: RefundStatusEnum.PENDING,
+      enum: [
+        RefundStatusEnum.PENDING,
+        RefundStatusEnum.RESOLVED,
+        RefundStatusEnum.DECLINED,
+      ],
     },
   },
-  { timestamps: true },
+  { timestamps: true }
 );
 
-RefundSchema.index({ invoiceId: 1, productId: 1 }, { unique: true });
+RefundSchema.index({ invoiceId:1 }, { unique: true });
 export default mongoose.model("Refund", RefundSchema);
