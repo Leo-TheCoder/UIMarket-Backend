@@ -360,7 +360,7 @@ const getProductsByShop = async (req: Request, res: Response) => {
   const filterObj = filterObjMongoose(filter);
 
   //Check shop ID
-  const shop = await ShopModel.find({ _id: shopId, shopStatus: 1 }).lean();
+  const shop = await ShopModel.findOne({ _id: shopId, shopStatus: 1 }).lean();
   if (!shop) {
     throw new NotFoundError(ErrorMessage.ERROR_INVALID_SHOP_ID);
   }
@@ -398,6 +398,7 @@ const getProductsByShop = async (req: Request, res: Response) => {
         ? productPictureList[0]
         : undefined;
     delete product.productPictures;
+    product.shopName = shop.shopName;
     return product;
   });
 
