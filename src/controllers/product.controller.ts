@@ -314,7 +314,7 @@ const findByName = async (req: Request, res: Response) => {
         localField: "shopId",
         foreignField: "_id",
         pipeline: [{ $project: { shopName: 1 } }],
-        as: "shop",
+        as: "shopId",
       },
     },
   ];
@@ -336,7 +336,7 @@ const findByName = async (req: Request, res: Response) => {
         : undefined;
     delete product.productPictures;
     product.productCategory = product.productCategory[0];
-    product.shop = product.shop[0];
+    product.shopId = product.shopId[0];
     return product;
   });
 
