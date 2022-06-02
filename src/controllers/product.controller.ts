@@ -211,6 +211,7 @@ const findById = async (req: IUserRequest, res: Response) => {
     },
     { $inc: { allTimeView: 1 } }
   )
+    .select("-productFile")
     .populate({ path: "shopId", select: "shopEmail" })
     .lean();
 
