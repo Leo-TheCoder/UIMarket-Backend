@@ -11,6 +11,7 @@ const upload = (0, multer_1.default)({ dest: "uploads/" });
 //GET Method
 // router.get("/avatar/", downloadAvatar);
 router.get("/upload", file_controller_1.uploadURL);
+router.get("/download", file_controller_1.generatedownloadURL);
 //POST Method
 // router.post("/avatar", upload.single("avatar"), uploadAvatar);
 //PUT Method

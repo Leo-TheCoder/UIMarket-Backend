@@ -1,13 +1,4 @@
 "use strict";
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -41,6 +32,8 @@ const token_route_1 = __importDefault(require("./routes/token.route"));
 const invoice_route_1 = __importDefault(require("./routes/invoice.route"));
 const review_route_1 = __importDefault(require("./routes/review.route"));
 const license_route_1 = __importDefault(require("./routes/license.route"));
+const cart_route_1 = __importDefault(require("./routes/cart.route"));
+const report_route_1 = __importDefault(require("./routes/report.route"));
 //Middleware
 const handle_errors_1 = __importDefault(require("./middlewares/handle-errors"));
 const not_found_1 = __importDefault(require("./middlewares/not-found"));
@@ -66,27 +59,29 @@ app.use("/api/v1/payment", payment_route_1.default);
 app.use("/api/v1/category", productCategory_route_1.default);
 app.use("/api/v1/token", token_route_1.default);
 app.use("/api/v1/invoices", authentication_1.compulsoryAuth, invoice_route_1.default);
-app.use("/api/v1/reviews", authentication_1.compulsoryAuth, review_route_1.default);
+app.use("/api/v1/reviews", review_route_1.default);
 app.use("/api/v1/licenses", license_route_1.default);
+app.use("/api/v1/carts", authentication_1.compulsoryAuth, cart_route_1.default);
+app.use("/api/v1/reports", authentication_1.compulsoryAuth, report_route_1.default);
 app.use(not_found_1.default);
 app.use(handle_errors_1.default);
-//Schedule Task
+//Scheduled Task
 const resolveBounty_1 = require("./scheduled/resolveBounty");
-const start = () => __awaiter(void 0, void 0, void 0, function* () {
+const start = async () => {
     try {
-        yield (0, connect_1.default)(process.env.MONGO_URI);
+        await (0, connect_1.default)(process.env.MONGO_URI);
         app.listen(PORT, () => {
             console.log(`Server is listening on port ${PORT}...`);
         });
         //Scheduled Tasks
-        //Resolve bounty run everyday at 00:01
-        node_cron_1.default.schedule("0 1 * * *", () => __awaiter(void 0, void 0, void 0, function* () {
-            yield (0, resolveBounty_1.resolveBounty)();
-        }));
+        //Resolve bounty run everyday at every hour
+        node_cron_1.default.schedule("1 * * * *", async () => {
+            await (0, resolveBounty_1.resolveBounty)();
+        });
     }
     catch (error) {
         console.log(error);
     }
-});
+};
 start();
 //# sourceMappingURL=index.js.map

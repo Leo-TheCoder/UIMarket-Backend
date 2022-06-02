@@ -13,7 +13,7 @@ const LicenseSchema = new mongoose_1.default.Schema({
     invoice: {
         type: mongoose_1.default.Types.ObjectId,
         required: [true, "Please provide invoice ID"],
-        ref: "Invoice",
+        ref: "Order",
     },
     shop: {
         type: mongoose_1.default.Types.ObjectId,
@@ -29,6 +29,13 @@ const LicenseSchema = new mongoose_1.default.Schema({
         type: Date,
         required: [true, "Please provide bought time"],
     },
+    licenseFile: {
+        type: String,
+        required: [true, "Please provide license file"],
+    },
+    productPrice: {
+        type: Number,
+    }
 }, { timestamps: true });
 LicenseSchema.index({ invoice: 1, product: 1 }, { unique: true });
 exports.default = mongoose_1.default.model("License", LicenseSchema);

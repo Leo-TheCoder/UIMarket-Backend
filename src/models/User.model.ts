@@ -8,7 +8,7 @@ const UserSchema = new mongoose.Schema(
     customerName: {
       type: String,
       required: [true, "Please provide name"],
-      minlength: 5,
+      // minlength: 5,
     },
     customerAvatar: {
       type: String,
@@ -69,11 +69,11 @@ const UserSchema = new mongoose.Schema(
     isAdmin: {
       type: Boolean,
       default: false,
-    }
+    },
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 UserSchema.methods.hashPassword = async function () {
@@ -93,16 +93,16 @@ UserSchema.methods.createJWT = function () {
     process.env.JWT_SECRET!,
     {
       expiresIn: process.env.JWT_LIFETIME,
-    }
+    },
   );
 };
 
 UserSchema.methods.comparePassword = async function (
-  candidatePassword: string
+  candidatePassword: string,
 ) {
   const isMatch = await bcrypt.compare(
     candidatePassword,
-    this.customerPassword
+    this.customerPassword,
   );
   return isMatch;
 };
@@ -135,7 +135,7 @@ UserSchema.methods.createAccountWithGoogleID = async function (
   customerName: string,
   googleId: string,
   customerEmail: string,
-  customerAvatar: string
+  customerAvatar: string,
 ) {
   this.customerName = customerName;
   this.customerEmail = customerEmail;
@@ -162,7 +162,7 @@ UserSchema.methods.verifyGoogleID = function (googleId: string) {
 
 UserSchema.methods.updateAccountWithGoogle = async function (
   googleId: string,
-  customerAvatar: string
+  customerAvatar: string,
 ) {
   this.customerStatus = 1;
   this.authenToken.Google = googleId;

@@ -34,7 +34,7 @@ const ShopTransactionSchema = new mongoose.Schema(
       enum: [TransactionStatus.PENDING, TransactionStatus.COMPLETED],
     },
   },
-  { timestamps: true },
+  { timestamps: true }
 );
 
 export default mongoose.model("Shop Transaction", ShopTransactionSchema);

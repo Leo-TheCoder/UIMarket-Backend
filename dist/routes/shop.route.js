@@ -12,6 +12,9 @@ router.get("/product", authentication_1.compulsoryAuth, shop_controller_1.getAll
 router.get("/product/statistic", authentication_1.compulsoryAuth, shop_controller_1.getProductStatistic);
 router.get("/info/:shopId", authentication_1.optionalAuth, shop_controller_1.getShopById);
 router.get("/search/:shopName", shop_controller_1.getShopByName);
+router.get("/payment/history", authentication_1.compulsoryAuth, shop_controller_1.paymentHistory);
+router.get("/product/search/:productName", authentication_1.compulsoryAuth, shop_controller_1.getProductsByName);
+router.get("/product/statistic-v2", authentication_1.compulsoryAuth, shop_controller_1.getProductStatisticV2);
 //POST Method/
 router.post("/register", authentication_1.compulsoryAuth, shop_controller_1.createShop);
 router.post("/product", authentication_1.compulsoryAuth, shop_controller_1.uploadProduct);

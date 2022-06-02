@@ -18,15 +18,6 @@ var __importStar = (this && this.__importStar) || function (mod) {
     __setModuleDefault(result, mod);
     return result;
 };
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -45,16 +36,16 @@ const Answer_model_1 = __importDefault(require("../models/Answer.model"));
 const ErrorMessage = __importStar(require("../errors/error_message"));
 const errors_1 = require("../errors");
 //get _id of tags in list (create tags if they don't exist)
-const createTagList = (tagList) => __awaiter(void 0, void 0, void 0, function* () {
+const createTagList = async (tagList) => {
     const promises = [];
     for (const tag of tagList) {
         promises.push(QuestionTag_model_1.default.findOneAndUpdate({ tagName: tag }, { $inc: { totalQuestion: +1 } }, { new: true, upsert: true }));
     }
-    const tagObjects = yield Promise.all(promises);
+    const tagObjects = await Promise.all(promises);
     return tagObjects.map((obj) => obj._id);
-});
+};
 //create question endpoint
-const createQuestion = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+const createQuestion = async (req, res) => {
     const { userId } = req.user;
     //get array of tags' list
     const tagList = req.body.questionTag;
@@ -63,7 +54,7 @@ const createQuestion = (req, res) => __awaiter(void 0, void 0, void 0, function*
         list = [];
     }
     else {
-        list = yield createTagList(tagList);
+        list = await createTagList(tagList);
     }
     //Case bounty question
     if (req.body.questionBounty && req.body.questionBounty > 0) {
@@ -78,8 +69,8 @@ const createQuestion = (req, res) => __awaiter(void 0, void 0, void 0, function*
         }
         const dueDate = new Date(req.body.bountyDueDate);
         //Checking valid due date
-        var diff = Math.abs(dueDate.getTime() - new Date().getTime());
-        var diffDays = Math.ceil(diff / (1000 * 3600 * 24));
+        let diff = Math.abs(dueDate.getTime() - new Date().getTime());
+        let diffDays = Math.ceil(diff / (1000 * 3600 * 24));
         if (diffDays < Constants.minBountyDueDate ||
             diffDays > Constants.maxBountyDueDate) {
             throw new errors_1.BadRequestError(` Due date at least ${Constants.minBountyDueDate} day(s) and maximum ${Constants.maxBountyDueDate} days`);
@@ -87,14 +78,19 @@ const createQuestion = (req, res) => __awaiter(void 0, void 0, void 0, function*
         const awardDueDate = new Date(dueDate.getTime());
         //Checking valid balance
         const changeAmount = req.body.questionBounty * -1;
-        const transaction = yield (0, currencyTransaction_1.pointTransaction)(userId, changeAmount, "Create bounty question");
+        const transaction = await (0, currencyTransaction_1.pointTransaction)(userId, changeAmount, "Create bounty question");
         if (transaction) {
             req.body.bountyActive = 1;
         }
         //Create question
-        const question = yield Question_model_1.default.create(Object.assign(Object.assign({}, req.body), { userId: userId, questionTag: list, awardDueDate: awardDueDate.setDate(awardDueDate.getDate() + 14) }));
+        const question = await Question_model_1.default.create({
+            ...req.body,
+            userId: userId,
+            questionTag: list,
+            awardDueDate: awardDueDate.setDate(awardDueDate.getDate() + 14),
+        });
         if (!question && req.body.bountyActive != 1) {
-            yield (0, currencyTransaction_1.pointRollBack)(userId, transaction._id, changeAmount);
+            await (0, currencyTransaction_1.pointRollBack)(userId, transaction._id, changeAmount);
             throw new errors_1.InternalServerError(ErrorMessage.ERROR_FAILED);
         }
         else {
@@ -103,14 +99,18 @@ const createQuestion = (req, res) => __awaiter(void 0, void 0, void 0, function*
     }
     else {
         //Normal question
-        const question = yield Question_model_1.default.create(Object.assign(Object.assign({}, req.body), { userId: userId, questionTag: list }));
+        const question = await Question_model_1.default.create({
+            ...req.body,
+            userId: userId,
+            questionTag: list,
+        });
         res.status(http_status_codes_1.StatusCodes.CREATED).json(question);
     }
-});
+};
 exports.createQuestion = createQuestion;
-const searchWithTitle = (page, limit, title, queryString, projection) => __awaiter(void 0, void 0, void 0, function* () {
+const searchWithTitle = async (page, limit, title, queryString, projection) => {
     const selectOption = projection;
-    const totalQuestion = yield Question_model_1.default.aggregate([
+    const totalQuestion = await Question_model_1.default.aggregate([
         {
             $search: {
                 index: "questionTitle",
@@ -133,7 +133,7 @@ const searchWithTitle = (page, limit, title, queryString, projection) => __await
     const totalPages = total % limit === 0
         ? Math.floor(total / limit)
         : Math.floor(total / limit) + 1;
-    const questions = yield Question_model_1.default.aggregate([
+    const questions = await Question_model_1.default.aggregate([
         {
             $search: {
                 index: "questionTitle",
@@ -149,11 +149,11 @@ const searchWithTitle = (page, limit, title, queryString, projection) => __await
         { $limit: limit },
         { $project: selectOption },
     ]);
-    yield Question_model_1.default.populate(questions, {
+    await Question_model_1.default.populate(questions, {
         path: "questionTag",
         select: { tagName: 1 },
     });
-    yield Question_model_1.default.populate(questions, {
+    await Question_model_1.default.populate(questions, {
         path: "userId",
         select: { customerName: 1 },
     });
@@ -161,17 +161,16 @@ const searchWithTitle = (page, limit, title, queryString, projection) => __await
         questions,
         totalPages,
     };
-});
-const getQuestions = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
+};
+const getQuestions = async (req, res) => {
     const query = req.query;
     const page = parseInt(query.page) || Constants.defaultPageNumber;
     const limit = parseInt(query.limit) || Constants.defaultLimit;
     const tag = query.tag;
-    const selectWith = ((_a = query.selectWith) === null || _a === void 0 ? void 0 : _a.toLowerCase().trim()) || "all";
+    const selectWith = query.selectWith?.toLowerCase().trim() || "all";
     const title = query.title;
     //Handle with Query Parameters
-    var queryString = { questionStatus: 1 };
+    let queryString = { questionStatus: 1 };
     let projection = { questionContent: 0, __v: 0 };
     //Checking selectWith option
     if (selectWith === "bounty") {
@@ -182,12 +181,12 @@ const getQuestions = (req, res) => __awaiter(void 0, void 0, void 0, function* (
     }
     if (tag) {
         const tagList = tag.split(",");
-        const tags = yield QuestionTag_model_1.default.find({ tagName: { $in: tagList } });
+        const tags = await QuestionTag_model_1.default.find({ tagName: { $in: tagList } });
         const tagIdList = tags.map((tag) => tag._id);
         queryString.questionTag = { $in: tagIdList };
     }
     if (title) {
-        const { questions, totalPages } = yield searchWithTitle(page, limit, title, queryString, projection);
+        const { questions, totalPages } = await searchWithTitle(page, limit, title, queryString, projection);
         return res.status(http_status_codes_1.StatusCodes.OK).json({
             totalPages,
             page,
@@ -195,11 +194,11 @@ const getQuestions = (req, res) => __awaiter(void 0, void 0, void 0, function* (
             questions,
         });
     }
-    const total = yield Question_model_1.default.countDocuments(queryString);
+    const total = await Question_model_1.default.countDocuments(queryString);
     const totalPages = total % limit === 0
         ? Math.floor(total / limit)
         : Math.floor(total / limit) + 1;
-    const questions = yield Question_model_1.default.find(queryString, projection)
+    const questions = await Question_model_1.default.find(queryString, projection)
         .sort({ questionBounty: -1, totalView: -1 })
         .skip((page - 1) * limit)
         .limit(limit)
@@ -212,9 +211,9 @@ const getQuestions = (req, res) => __awaiter(void 0, void 0, void 0, function* (
         limit,
         questions,
     });
-});
+};
 exports.getQuestions = getQuestions;
-const getQuestionByID = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+const getQuestionByID = async (req, res) => {
     //Voting Status of user for this question
     let voteStatus = {
         upvote: false,
@@ -222,10 +221,10 @@ const getQuestionByID = (req, res) => __awaiter(void 0, void 0, void 0, function
     };
     //Checking logged in user whether voted for this question
     if (req.user) {
-        voteStatus = yield (0, statusVote_1.getStatusVote)(req.user.userId, req.params.id);
+        voteStatus = await (0, statusVote_1.getStatusVote)(req.user.userId, req.params.id);
     }
     //Find the question and increase its view by 1
-    let question = yield Question_model_1.default
+    let question = await Question_model_1.default
         //
         .findByIdAndUpdate(req.params.id, { $inc: { totalView: 1 } })
         .populate("questionTag", "tagName")
@@ -239,16 +238,16 @@ const getQuestionByID = (req, res) => __awaiter(void 0, void 0, void 0, function
     else {
         throw new errors_1.NotFoundError(ErrorMessage.ERROR_INVALID_QUESTION_ID);
     }
-});
+};
 exports.getQuestionByID = getQuestionByID;
-const chooseBestAnswer = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+const chooseBestAnswer = async (req, res) => {
     //Checking whether this user is owner of this post
     const { userId } = req.user;
-    const question = yield Question_model_1.default.findOne({
+    const question = await Question_model_1.default.findOne({
         _id: req.params.questionId,
         questionStatus: 1,
     });
-    const answer = yield Answer_model_1.default.findOne({
+    const answer = await Answer_model_1.default.findOne({
         _id: req.params.answerId,
         questionId: req.params.questionId,
         answerStatus: 1,
@@ -278,22 +277,22 @@ const chooseBestAnswer = (req, res) => __awaiter(void 0, void 0, void 0, functio
         if (currentBestAnswer === req.params.answerId) {
             answer.bestAnswer = 0;
             question.bestAnswer = null;
-            const result = yield answer.save();
-            yield question.save();
+            const result = await answer.save();
+            await question.save();
             res.status(http_status_codes_1.StatusCodes.OK).json({ Action: "Unvote best answer", result });
         }
         //Choose new best answer
         else {
-            const oldBestAnswer = yield Answer_model_1.default.findById(currentBestAnswer);
+            const oldBestAnswer = await Answer_model_1.default.findById(currentBestAnswer);
             if (!oldBestAnswer) {
                 throw new errors_1.GoneError(ErrorMessage.ERROR_GONE);
             }
             oldBestAnswer.bestAnswer = 0;
             question.bestAnswer = answer._id;
             answer.bestAnswer = 1;
-            yield oldBestAnswer.save();
-            yield question.save();
-            const result = yield answer.save();
+            await oldBestAnswer.save();
+            await question.save();
+            const result = await answer.save();
             res
                 .status(http_status_codes_1.StatusCodes.OK)
                 .json({ Action: "Choose another best answer", result });
@@ -305,28 +304,28 @@ const chooseBestAnswer = (req, res) => __awaiter(void 0, void 0, void 0, functio
         let pointReward = Constants.bestAnswerAward;
         //Note this answer is best answer
         answer.bestAnswer = 1;
-        const resultAnswer = yield answer.save();
+        const resultAnswer = await answer.save();
         //If this is bountied question, award bounty to answer owner
         if (question.questionBounty > 0 && question.bountyActive == 1) {
             //Noted that this bounty has been resolved
             question.bountyActive = 0;
             pointReward = question.questionBounty;
         }
-        const transaction = yield (0, currencyTransaction_1.pointTransaction)(answerOwner, pointReward, "Best answer for question");
+        const transaction = await (0, currencyTransaction_1.pointTransaction)(answerOwner, pointReward, "Best answer for question");
         question.bestAnswer = answer._id;
-        const resultQuestion = yield question.save();
+        const resultQuestion = await question.save();
         if (resultAnswer && resultQuestion && transaction) {
             res
                 .status(http_status_codes_1.StatusCodes.OK)
                 .json({ Action: "Choose best answer", resultAnswer });
         }
     }
-});
+};
 exports.chooseBestAnswer = chooseBestAnswer;
-const deleteQuestion = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+const deleteQuestion = async (req, res) => {
     //Checking whether this user is owner of this post
     const { userId } = req.user;
-    const question = yield Question_model_1.default.findById(req.params.questionId);
+    const question = await Question_model_1.default.findById(req.params.questionId);
     if (!question) {
         throw new errors_1.NotFoundError(ErrorMessage.ERROR_INVALID_QUESTION_ID);
     }
@@ -338,13 +337,13 @@ const deleteQuestion = (req, res) => __awaiter(void 0, void 0, void 0, function*
     }
     //Set question status to 0 and decrease total question in tag by 1
     question.questionStatus = 0;
-    question.questionTag.map((tag) => __awaiter(void 0, void 0, void 0, function* () {
-        let tags = yield QuestionTag_model_1.default.updateOne({ _id: tag }, { $inc: { totalQuestion: -1 } });
+    question.questionTag.map(async (tag) => {
+        let tags = await QuestionTag_model_1.default.updateOne({ _id: tag }, { $inc: { totalQuestion: -1 } });
         if (!tags) {
             throw new errors_1.InternalServerError(ErrorMessage.ERROR_INVALID_TAG_ID);
         }
-    }));
-    const result = yield question.save();
+    });
+    const result = await question.save();
     //Return result
     if (result) {
         res.status(http_status_codes_1.StatusCodes.OK).json(result);
@@ -352,11 +351,11 @@ const deleteQuestion = (req, res) => __awaiter(void 0, void 0, void 0, function*
     else {
         throw new errors_1.InternalServerError(ErrorMessage.ERROR_FAILED);
     }
-});
+};
 exports.deleteQuestion = deleteQuestion;
-const updateQuestion = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+const updateQuestion = async (req, res) => {
     const { userId } = req.user;
-    const question = yield Question_model_1.default.findOne({
+    const question = await Question_model_1.default.findOne({
         _id: req.params.questionId,
         questionStatus: 1,
     });
@@ -379,15 +378,15 @@ const updateQuestion = (req, res) => __awaiter(void 0, void 0, void 0, function*
         question.questionTitle = questionTitle;
         question.questionContent = questionContent;
         question.questionBounty = questionBounty;
-        const result = yield question.save();
+        const result = await question.save();
         res.status(http_status_codes_1.StatusCodes.OK).json(result);
     }
-});
+};
 exports.updateQuestion = updateQuestion;
-const rebountyQuestion = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+const rebountyQuestion = async (req, res) => {
     //Checking whether this user is owner of this post
     const { userId } = req.user;
-    const question = yield Question_model_1.default.findOne({
+    const question = await Question_model_1.default.findOne({
         _id: req.params.questionId,
         questionStatus: 1,
         bountyActive: 1,
@@ -421,8 +420,8 @@ const rebountyQuestion = (req, res) => __awaiter(void 0, void 0, void 0, functio
     else if (newDueDate <= question.bountyDueDate) {
         throw new errors_1.BadRequestError("New due date must larger than old one");
     }
-    var diff = Math.abs(newDueDate.getTime() - new Date().getTime());
-    var diffDays = Math.ceil(diff / (1000 * 3600 * 24));
+    let diff = Math.abs(newDueDate.getTime() - new Date().getTime());
+    let diffDays = Math.ceil(diff / (1000 * 3600 * 24));
     if (diffDays < Constants.minBountyDueDate ||
         diffDays > Constants.maxBountyDueDate) {
         throw new errors_1.BadRequestError(`Due date at least ${Constants.minBountyDueDate} day(s) and maximum ${Constants.maxBountyDueDate} days from today`);
@@ -432,12 +431,12 @@ const rebountyQuestion = (req, res) => __awaiter(void 0, void 0, void 0, functio
     question.bountyDueDate = newDueDate;
     question.awardDueDate = awardDueDate.setDate(awardDueDate.getDate() + 14);
     question.updateAt = new Date();
-    const transaction = yield (0, currencyTransaction_1.pointTransaction)(userId, newBounty * -1, "Rebounty for question");
+    const transaction = await (0, currencyTransaction_1.pointTransaction)(userId, newBounty * -1, "Rebounty for question");
     if (!transaction) {
         throw new errors_1.InternalServerError(ErrorMessage.ERROR_FAILED);
     }
     else {
-        const result = yield question.save();
+        const result = await question.save();
         if (result) {
             res.status(http_status_codes_1.StatusCodes.OK).json(result);
         }
@@ -445,6 +444,6 @@ const rebountyQuestion = (req, res) => __awaiter(void 0, void 0, void 0, functio
             throw new errors_1.InternalServerError(ErrorMessage.ERROR_FAILED);
         }
     }
-});
+};
 exports.rebountyQuestion = rebountyQuestion;
 //# sourceMappingURL=question.controller.js.map

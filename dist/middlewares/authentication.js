@@ -22,7 +22,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.optionalAuth = exports.compulsoryAuth = void 0;
+exports.optionalAuth = exports.compulsoryAuth = exports.adminAuth = void 0;
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const errors_1 = require("../errors");
 const ErrorMessage = __importStar(require("../errors/error_message"));
@@ -40,6 +40,7 @@ const compulsoryAuth = (req, res, next) => {
             shopId: payload.shopId,
             name: payload.name,
             isActive: payload.isActive,
+            isAdmin: payload.isAdmin,
         };
         next();
     }
@@ -63,6 +64,7 @@ const optionalAuth = (req, res, next) => {
             shopId: payload.shopId,
             name: payload.name,
             isActive: payload.isActive,
+            isAdmin: payload.isAdmin,
         };
         next();
     }
@@ -72,4 +74,13 @@ const optionalAuth = (req, res, next) => {
     }
 };
 exports.optionalAuth = optionalAuth;
+const adminAuth = (req, res, next) => {
+    if (req.user?.isAdmin) {
+        next();
+    }
+    else {
+        throw new errors_1.ForbiddenError(ErrorMessage.ERROR_AUTHENTICATION_INVALID);
+    }
+};
+exports.adminAuth = adminAuth;
 //# sourceMappingURL=authentication.js.map

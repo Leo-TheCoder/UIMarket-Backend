@@ -18,15 +18,6 @@ var __importStar = (this && this.__importStar) || function (mod) {
     __setModuleDefault(result, mod);
     return result;
 };
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -45,6 +36,8 @@ var SortTypes;
     SortTypes["MoneyDes"] = "money-des";
     SortTypes["NameAsc"] = "name-asc";
     SortTypes["NameDes"] = "name-des";
+    SortTypes["SoldAsc"] = "sold-asc";
+    SortTypes["SoldDes"] = "sold-des";
 })(SortTypes || (SortTypes = {}));
 var FilterTypes;
 (function (FilterTypes) {
@@ -67,6 +60,12 @@ const sortObjMongoose = (sort) => {
     }
     if (sort === SortTypes.NameDes) {
         return { productName: -1 };
+    }
+    if (sort === SortTypes.SoldAsc) {
+        return { totalSold: 1 };
+    }
+    if (sort === SortTypes.SoldDes) {
+        return { totalSold: -1 };
     }
     return {};
 };
@@ -91,8 +90,9 @@ const filterObjMongoose = (filter) => {
 const projectionProductList = {
     __v: 0,
     productDescription: 0,
+    productFile: 0,
 };
-const getAllProducts = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+const getAllProducts = async (req, res) => {
     const query = req.query;
     const page = parseInt(query.page) || Constants.defaultPageNumber;
     const limit = parseInt(query.limit) || Constants.defaultLimit;
@@ -100,20 +100,33 @@ const getAllProducts = (req, res) => __awaiter(void 0, void 0, void 0, function*
     const sortObj = sortObjMongoose(sort);
     const filter = query.filter;
     const filterObj = filterObjMongoose(filter);
-    const total = yield Product_model_1.default.countDocuments(Object.assign({ productStatus: 1 }, filterObj)).lean();
+    const total = await Product_model_1.default.countDocuments({
+        productStatus: 1,
+        ...filterObj,
+    }).lean();
     const totalPages = total % limit === 0
         ? Math.floor(total / limit)
         : Math.floor(total / limit) + 1;
     //Get product
-    const products = yield Product_model_1.default.find(Object.assign({ productStatus: 1 }, filterObj), projectionProductList)
+    const products = await Product_model_1.default.find({
+        productStatus: 1,
+        ...filterObj,
+    }, projectionProductList)
         .sort(sortObj)
         .skip((page - 1) * limit)
         .limit(limit)
         .populate({ path: "productCategory", select: ["categoryName"] })
+        .populate({ path: "shopId", select: ["shopName"] })
         .lean();
     const productsResult = products.map((product) => {
+        //get first item in array
+        const productPictureList = product.productPictures;
         //get first picture
-        product.productPicture = product.productPicture[0];
+        product.coverPicture =
+            productPictureList && productPictureList.length > 0
+                ? productPictureList[0]
+                : undefined;
+        delete product.productPictures;
         return product;
     });
     return res.status(http_status_codes_1.StatusCodes.OK).json({
@@ -122,9 +135,9 @@ const getAllProducts = (req, res) => __awaiter(void 0, void 0, void 0, function*
         limit,
         products: productsResult,
     });
-});
+};
 exports.getAllProducts = getAllProducts;
-const findByCategory = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+const findByCategory = async (req, res) => {
     const query = req.query;
     const page = parseInt(query.page) || Constants.defaultPageNumber;
     const limit = parseInt(query.limit) || Constants.defaultLimit;
@@ -133,27 +146,42 @@ const findByCategory = (req, res) => __awaiter(void 0, void 0, void 0, function*
     const filter = query.filter;
     const filterObj = filterObjMongoose(filter);
     //Checking valid category
-    const category = yield Category_model_1.default.findById(req.params.categoryId).lean();
+    const category = await Category_model_1.default.findById(req.params.categoryId).lean();
     if (!category) {
         throw new errors_1.NotFoundError(ErrorMessage.ERROR_INVALID_CATEGORY_ID);
     }
     //Get total product
-    const total = yield Product_model_1.default.countDocuments(Object.assign({ productCategory: req.params.categoryId, productStatus: 1 }, filterObj)).lean();
+    const total = await Product_model_1.default.countDocuments({
+        productCategory: req.params.categoryId,
+        productStatus: 1,
+        ...filterObj,
+    }).lean();
     const totalPages = total % limit === 0
         ? Math.floor(total / limit)
         : Math.floor(total / limit) + 1;
     //Get product
-    const products = yield Product_model_1.default
+    const products = await Product_model_1.default
         //
-        .find(Object.assign({ productCategory: req.params.categoryId, productStatus: 1 }, filterObj))
+        .find({
+        productCategory: req.params.categoryId,
+        productStatus: 1,
+        ...filterObj,
+    })
         .sort(sortObj)
         .skip((page - 1) * limit)
         .limit(limit)
         .populate({ path: "productCategory", select: ["categoryName"] })
+        .populate({ path: "shopId", select: ["shopName"] })
         .lean();
     const productsResult = products.map((product) => {
+        //get first item in array
+        const productPictureList = product.productPictures;
         //get first picture
-        product.productPicture = product.productPicture[0];
+        product.coverPicture =
+            productPictureList && productPictureList.length > 0
+                ? productPictureList[0]
+                : undefined;
+        delete product.productPictures;
         return product;
     });
     return res.status(http_status_codes_1.StatusCodes.OK).json({
@@ -162,22 +190,32 @@ const findByCategory = (req, res) => __awaiter(void 0, void 0, void 0, function*
         limit,
         products: productsResult,
     });
-});
+};
 exports.findByCategory = findByCategory;
-const findById = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const product = yield Product_model_1.default.findByIdAndUpdate({
+const findById = async (req, res) => {
+    const product = await Product_model_1.default.findByIdAndUpdate({
         _id: req.params.productId,
         productStatus: 1,
-    }, { $inc: { allTimeView: 1 } });
+    }, { $inc: { allTimeView: 1 } })
+        .populate({ path: "shopId", select: "shopEmail" })
+        .lean();
+    //Add customer email of shop
+    const customerEmail = await Shop_model_1.default.findById(product.shopId._id)
+        .select({ userId: 1 })
+        .populate({
+        path: "userId",
+        select: "customerEmail -_id",
+    });
+    product.shopId.customerEmail = customerEmail.userId.customerEmail;
     if (!product) {
         throw new errors_1.NotFoundError(ErrorMessage.ERROR_INVALID_PRODUCT_ID);
     }
     else {
         res.status(http_status_codes_1.StatusCodes.OK).json({ product });
     }
-});
+};
 exports.findById = findById;
-const findByName = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+const findByName = async (req, res) => {
     const query = req.query;
     const page = parseInt(query.page) || Constants.defaultPageNumber;
     const limit = parseInt(query.limit) || Constants.defaultLimit;
@@ -185,7 +223,7 @@ const findByName = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
     const sortObj = sortObjMongoose(sort);
     const filter = query.filter;
     const filterObj = filterObjMongoose(filter);
-    const totalProduct = yield Product_model_1.default.aggregate([
+    const totalProduct = await Product_model_1.default.aggregate([
         {
             $search: {
                 index: "productName",
@@ -195,7 +233,7 @@ const findByName = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
                 },
             },
         },
-        { $match: Object.assign({ productStatus: 1 }, filterObj) },
+        { $match: { productStatus: 1, ...filterObj } },
         { $count: "total" },
     ]);
     if (totalProduct.length < 1) {
@@ -203,14 +241,14 @@ const findByName = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
             totalPages: 0,
             page,
             limit,
-            products: []
+            products: [],
         });
     }
     const total = totalProduct[0].total;
     const totalPages = total % limit === 0
         ? Math.floor(total / limit)
         : Math.floor(total / limit) + 1;
-    const products = yield Product_model_1.default.aggregate([
+    const searchProductQueryAggregate = [
         {
             $search: {
                 index: "productName",
@@ -220,11 +258,10 @@ const findByName = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
                 },
             },
         },
-        { $match: Object.assign({ productStatus: 1 }, filterObj) },
+        { $match: { productStatus: 1, ...filterObj } },
         { $addFields: { score: { $meta: "searchScore" } } },
         { $skip: (page - 1) * limit },
         { $limit: limit },
-        // { $sort: sortObj}
         { $project: projectionProductList },
         {
             $lookup: {
@@ -244,10 +281,21 @@ const findByName = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
                 as: "shop",
             },
         },
-    ]);
+    ];
+    //adding sort property to query
+    if (Object.keys(sortObj).length > 0) {
+        searchProductQueryAggregate.push({ $sort: sortObj });
+    }
+    const products = await Product_model_1.default.aggregate(searchProductQueryAggregate);
     const productsResult = products.map((product) => {
         //get first item in array
-        product.productPicture = product.productPicture[0];
+        const productPictureList = product.productPictures;
+        //get first picture
+        product.coverPicture =
+            productPictureList && productPictureList.length > 0
+                ? productPictureList[0]
+                : undefined;
+        delete product.productPictures;
         product.productCategory = product.productCategory[0];
         product.shop = product.shop[0];
         return product;
@@ -258,9 +306,9 @@ const findByName = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         limit,
         products: productsResult,
     });
-});
+};
 exports.findByName = findByName;
-const getProductsByShop = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+const getProductsByShop = async (req, res) => {
     const shopId = req.params.shopId;
     const query = req.query;
     const page = parseInt(query.page) || Constants.defaultPageNumber;
@@ -270,25 +318,39 @@ const getProductsByShop = (req, res) => __awaiter(void 0, void 0, void 0, functi
     const filter = query.filter;
     const filterObj = filterObjMongoose(filter);
     //Check shop ID
-    const shop = yield Shop_model_1.default.find({ _id: shopId, shopStatus: 1 }).lean();
+    const shop = await Shop_model_1.default.find({ _id: shopId, shopStatus: 1 }).lean();
     if (!shop) {
         throw new errors_1.NotFoundError(ErrorMessage.ERROR_INVALID_SHOP_ID);
     }
     //Get total product
-    const total = yield Product_model_1.default.countDocuments(Object.assign({ shopId: shopId, productStatus: 1 }, filterObj)).lean();
+    const total = await Product_model_1.default.countDocuments({
+        shopId: shopId,
+        productStatus: 1,
+        ...filterObj,
+    }).lean();
     const totalPages = total % limit === 0
         ? Math.floor(total / limit)
         : Math.floor(total / limit) + 1;
     //Get product
-    const products = yield Product_model_1.default.find(Object.assign({ shopId: shopId, productStatus: 1 }, filterObj))
+    const products = await Product_model_1.default.find({
+        shopId: shopId,
+        productStatus: 1,
+        ...filterObj,
+    })
         .sort(sortObj)
         .skip((page - 1) * limit)
         .limit(limit)
         .populate({ path: "productCategory", select: ["categoryName"] })
         .lean();
     const productsResult = products.map((product) => {
+        //get first item in array
+        const productPictureList = product.productPictures;
         //get first picture
-        product.productPicture = product.productPicture[0];
+        product.coverPicture =
+            productPictureList && productPictureList.length > 0
+                ? productPictureList[0]
+                : undefined;
+        delete product.productPictures;
         return product;
     });
     return res.status(http_status_codes_1.StatusCodes.OK).json({
@@ -297,6 +359,6 @@ const getProductsByShop = (req, res) => __awaiter(void 0, void 0, void 0, functi
         limit,
         products: productsResult,
     });
-});
+};
 exports.getProductsByShop = getProductsByShop;
 //# sourceMappingURL=product.controller.js.map

@@ -449,28 +449,31 @@ export const createRequestRefund = async (req: IUserRequest, res: Response) => {
 //   const page = parseInt(query.page!) || Constants.defaultPageNumber;
 //   const limit = parseInt(query.limit!) || Constants.defaultLimit;
 
-//   const total = await UserTransactionModel.countDocuments({
+//   //Checking history
+//   const history = await LicenseModel.findOne({
 //     userId: userId,
+//     invoice: invoiceId,
+//     product: productId,
 //   }).lean();
+//   if (!history) {
+//     throw new NotFoundError(ErrorMessage.ERROR_INVALID_REQUEST_REFUND);
+//   }
 
-//   const totalPages =
-//     total % limit === 0
-//       ? Math.floor(total / limit)
-//       : Math.floor(total / limit) + 1;
+//   //Checking bought time
+//   const { boughtTime } = history;
+//   let diff = Math.abs(boughtTime.getTime() - new Date().getTime());
+//   let diffDays = Math.ceil(diff / (1000 * 3600 * 24));
 
-//   //Get transactions
-//   const transactions = await UserTransactionModel.find({
+//   if (diffDays > Constants.acceptRefund) {
+//     throw new BadRequestError(ErrorMessage.ERROR_EXPIRED_REFUND_TIME);
+//   }
+
+//   //Create refund request
+//   const request = await RefundModel.create({
 //     userId: userId,
-//   })
-//     .skip((page - 1) * limit)
-//     .limit(limit)
-//     .sort({ createdAt: -1 })
-//     .lean();
-
-//   res.status(StatusCodes.OK).json({
-//     totalPages,
-//     page,
-//     limit,
-//     transactions,
+//     shopId: history.shop,
+//     ...req.body,
 //   });
+
+//   res.status(StatusCodes.CREATED).json(request);
 // };

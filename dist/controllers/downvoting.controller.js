@@ -18,15 +18,6 @@ var __importStar = (this && this.__importStar) || function (mod) {
     __setModuleDefault(result, mod);
     return result;
 };
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -39,10 +30,9 @@ const Voting_model_1 = __importDefault(require("../models/Voting.model"));
 const Answer_model_1 = __importDefault(require("../models/Answer.model"));
 const Comment_model_1 = __importDefault(require("../models/Comment.model"));
 const ErrorMessage = __importStar(require("../errors/error_message"));
-const downvote = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
+const downvote = async (req, res) => {
     const { type, questionId, objectId } = req.body;
-    const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.userId;
+    const userId = req.user?.userId;
     const validType = ["Question", "Comment", "Answer"];
     if (!type) {
         throw new errors_1.BadRequestError(ErrorMessage.ERROR_MISSING_BODY);
@@ -51,7 +41,7 @@ const downvote = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         throw new errors_1.BadRequestError("Valid types are: Question, Answer and Comment");
     }
     //Checking questionId is available or not
-    const question = yield Question_model_1.default.findById(questionId);
+    const question = await Question_model_1.default.findById(questionId);
     if (!question) {
         throw new errors_1.BadRequestError(ErrorMessage.ERROR_INVALID_QUESTION_ID);
     }
@@ -63,7 +53,7 @@ const downvote = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             }
             break;
         case "Answer":
-            const answer = yield Answer_model_1.default.find({
+            const answer = await Answer_model_1.default.find({
                 _id: objectId,
                 questionId: questionId,
                 answerStatus: 1,
@@ -73,7 +63,7 @@ const downvote = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             }
             break;
         case "Comment":
-            const comment = yield Comment_model_1.default.find({
+            const comment = await Comment_model_1.default.find({
                 _id: objectId,
                 questionId: questionId,
                 commentStatus: 1,
@@ -83,9 +73,9 @@ const downvote = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             }
             break;
     }
-    const result = yield downvoteObject(userId, questionId, objectId, type);
+    const result = await downvoteObject(userId, questionId, objectId, type);
     return res.status(result.status).json(result.msg);
-});
+};
 exports.downvote = downvote;
 // const downvoteQuestion = async (
 //   userId: string,
@@ -161,15 +151,15 @@ exports.downvote = downvote;
 //     };
 //   }
 // };
-const downvoteObject = (userId, questionId, objectId, type) => __awaiter(void 0, void 0, void 0, function* () {
-    const votingDoc = yield Voting_model_1.default.findOne({
+const downvoteObject = async (userId, questionId, objectId, type) => {
+    const votingDoc = await Voting_model_1.default.findOne({
         userId,
         questionId,
         objectId,
         type,
     });
     if (!votingDoc) {
-        yield Voting_model_1.default.create({
+        await Voting_model_1.default.create({
             userId,
             questionId,
             objectId,
@@ -190,7 +180,7 @@ const downvoteObject = (userId, questionId, objectId, type) => __awaiter(void 0,
     else {
         //if downvoted
         if (votingDoc.action === 0) {
-            yield votingDoc.remove();
+            await votingDoc.remove();
             return {
                 status: http_status_codes_1.StatusCodes.OK,
                 msg: "UNVOTED",
@@ -198,8 +188,8 @@ const downvoteObject = (userId, questionId, objectId, type) => __awaiter(void 0,
         }
         //if upvoted
         else {
-            yield votingDoc.remove();
-            yield Voting_model_1.default.create({
+            await votingDoc.remove();
+            await Voting_model_1.default.create({
                 userId,
                 questionId,
                 objectId,
@@ -218,5 +208,5 @@ const downvoteObject = (userId, questionId, objectId, type) => __awaiter(void 0,
             };
         }
     }
-});
+};
 //# sourceMappingURL=downvoting.controller.js.map

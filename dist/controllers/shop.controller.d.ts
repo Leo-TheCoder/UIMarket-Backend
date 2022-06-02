@@ -11,4 +11,7 @@ export declare const getShopByName: (req: IUserRequest, res: Response) => Promis
 export declare const deactiveProduct: (req: IUserRequest, res: Response) => Promise<void>;
 export declare const activeProduct: (req: IUserRequest, res: Response) => Promise<void>;
 export declare const getProductStatistic: (req: IUserRequest, res: Response) => Promise<Response<any, Record<string, any>>>;
+export declare const paymentHistory: (req: IUserRequest, res: Response) => Promise<Response<any, Record<string, any>>>;
+export declare const getProductsByName: (req: IUserRequest, res: Response) => Promise<Response<any, Record<string, any>> | undefined>;
+export declare const getProductStatisticV2: (req: IUserRequest, res: Response) => Promise<void>;
 //# sourceMappingURL=shop.controller.d.ts.map
