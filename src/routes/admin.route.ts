@@ -19,6 +19,8 @@ import {
 } from "../controllers/admin/shops.controller";
 import { changeSystemFee } from "../controllers/admin/system.controller";
 import {
+  acceptReport,
+  getReportDetail,
   rejectReport,
   reportListEC,
   reportListEdu,
@@ -60,7 +62,10 @@ router.post("/system/fee", changeSystemFee);
 //GET Method
 router.get("/report/list/Edu", reportListEdu);
 router.get("/report/list/EC", reportListEC);
+router.get("/report/detail/:objectId", getReportDetail);
 
 //PUT Method
-router.put("/report/reject/:reportId", adminAuth, rejectReport);
+router.put("/report/reject/:reportId", rejectReport);
+router.put("/report/accept/:reportId", acceptReport);
+
 export default router;
