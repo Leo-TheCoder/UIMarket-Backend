@@ -23,7 +23,7 @@ export const updateInvoiceAndLicensesBeforeRefund = (
       _id: invoiceId,
     },
     {
-      isRefunded: false,
+      isRefunded: true,
     }
   ).catch((error) => {
     console.error("Update refunding invoice status: FAILED!");
