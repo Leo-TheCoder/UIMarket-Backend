@@ -65,11 +65,16 @@ app.use("/api/v1/licenses", licenseRouter);
 app.use("/api/v1/carts", compulsoryAuth, cartRouter);
 app.use("/api/v1/reports", compulsoryAuth, reportRouter);
 
+//tool
+import {resetTransaction} from "./controllers/dev.test";
+app.get("/resetTransaction", resetTransaction);
+
 app.use(notFoundMiddleware);
 app.use(errorHandlerMiddleware);
 
 //Scheduled Task
 import { resolveBounty } from "./scheduled/resolveBounty";
+import { resolveShopPayment } from "./scheduled/commitTransaction";
 
 const start = async () => {
   try {
@@ -82,6 +87,11 @@ const start = async () => {
     //Resolve bounty run everyday at every hour
     cron.schedule("1 * * * *", async () => {
       await resolveBounty();
+    });
+
+    //Resolve shop payment run everyday at 00:01
+    cron.schedule("1 0 * * *", async () => {
+      await resolveShopPayment();
     });
   } catch (error) {
     console.log(error);

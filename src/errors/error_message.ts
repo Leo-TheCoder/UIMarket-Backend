@@ -32,6 +32,7 @@ export const ERROR_INVALID_PRODUCT_ID = "invalid-product-id";
 export const ERROR_INVALID_SHOP_ID = "invalid-shop-id";
 export const ERROR_INVALID_INVOICE_ID = "invalid-invoice-id";
 export const ERROR_INVALID_REVIEW_ID = "invalid-review-id";
+export const ERROR_INVALID_LICENSE_ID = "invalid-license-id";
 
 //Refund
 export const ERROR_INVALID_REQUEST_REFUND = "invalid-request-refund";

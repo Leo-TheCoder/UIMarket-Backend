@@ -12,6 +12,9 @@ import InvoiceModel from "../models/Invoice.model";
 //Error
 import * as ErrorMessage from "../errors/error_message";
 
+//Enum
+import { TransactionActionEnum } from "../types/enum";
+
 export const pointTransaction = async (
   userId: string,
   changeAmount: number,
@@ -129,7 +132,8 @@ export const userTransaction = async (
 export const shopTransaction = async (
   shopId: string,
   invoiceId: string | null,
-  reason: string,
+  productId: string | null,
+  action: TransactionActionEnum,
   changeAmount: number,
 ) => {
   //Checking shopId
@@ -156,7 +160,8 @@ export const shopTransaction = async (
    const transaction = await ShopTransactionModel.create({
      shopId: shopId,
      invoiceId: invoiceId,
-     reason: reason,
+     productId: productId,
+     action: action,
      currentAmount: currentAmount,
      changeAmount: changeAmount,
      balanceAmount: balanceAmount,
@@ -167,7 +172,6 @@ export const shopTransaction = async (
 
 export const shopWithdrawTransaction = async(
   shopFullDocument: any,
-  reason: string,
   changeAmount: number
 ) => {
   const shop = shopFullDocument;
@@ -188,7 +192,7 @@ export const shopWithdrawTransaction = async(
 
    const transaction = await ShopTransactionModel.create({
      shopId: shop._id,
-     reason: reason,
+     action: TransactionActionEnum.WITHDRAW,
      currentAmount: currentAmount,
      changeAmount: changeAmount,
      balanceAmount: balanceAmount,

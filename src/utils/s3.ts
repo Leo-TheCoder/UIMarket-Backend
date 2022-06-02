@@ -68,7 +68,11 @@ export const generateUploadURL = async (folder: String, isPrivate: boolean) => {
   return uploadURL;
 };
 
-export const downloadURL = async (folder: String, isPrivate: boolean) => {
+export const downloadURL = async (
+  folder: String,
+  isPrivate: boolean,
+  fileName: String,
+) => {
   let bucket;
   if (isPrivate == true) {
     bucket = prdbucketName;
@@ -80,8 +84,8 @@ export const downloadURL = async (folder: String, isPrivate: boolean) => {
     Bucket: bucket,
     Key: folder,
     Expires: 3600,
-    ResponseContentDisposition: `attachment;`,
-    // ResponseContentDisposition: `attachment; filename="${fileName}"`,
+    // ResponseContentDisposition: `attachment;`,
+    ResponseContentDisposition: `attachment; filename="${fileName}.zip"`,
   };
   const url = s3.getSignedUrl("getObject", params);
 

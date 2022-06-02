@@ -1,4 +1,4 @@
-import { TransactionStatus } from "../enum";
+import { TransactionStatusEnum, TransactionActionEnum } from "../enum";
 
 export type Product = {
   shop: string;
@@ -20,7 +20,10 @@ export type Invoice = {
 
 export type ShopTransaction = {
   _id: string;
-  reason: string;
+  productId: string;
+  action: TransactionActionEnum;
   changeAmount: number;
-  transactionStatus: TransactionStatus;
+  transactionStatus: TransactionStatusEnum;
+  updatedAt?: Date;
+  createdAt?: Date;
 };

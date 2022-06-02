@@ -48,6 +48,7 @@ import * as ErrorMessage from "../errors/error_message";
 interface IQuery {
   folder?: string;
   isPrivate?: string;
+  fileName?: string;
 }
 
 //FE Solution
@@ -73,11 +74,12 @@ export const generatedownloadURL = async (req: Request, res: Response) => {
   const query = req.query as IQuery;
   const folder = query.folder;
   const isPrivate = query.isPrivate === "true" || false;
+  const fileName = query.fileName;
 
-  if (!folder || !query.isPrivate) {
+  if (!folder || !isPrivate || !fileName) {
     throw new BadRequestError(ErrorMessage.ERROR_MISSING_BODY);
   }
-  const url = await downloadURL(folder, isPrivate);
+  const url = await downloadURL(folder, isPrivate, fileName);
 
   if (url) {
     res.status(StatusCodes.OK).send({ url });
