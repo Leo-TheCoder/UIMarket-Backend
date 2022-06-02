@@ -172,51 +172,24 @@ export const purchaseHistory = async (req: IUserRequest, res: Response) => {
     .populate({ path: "shop", select: "shopName" })
     .populate({ path: "invoice", select: "productList isRefunded" });
 
-  let productsToResponse = [];
-  for (let i = 0; i < licenses.length; i++) {
-    let license = licenses[i]._doc;
-
-    let isReview = license.invoice.productList.findIndex(
+  const productsToResponse = licenses.map(_license => {
+    const license = _license.toObject();
+    const isReview = license.invoice.productList.findIndex(
       (x: any) => String(x.product) == String(license.product._id)
-    );
+    )
 
-    license.product.productPictures = license.product.productPictures[0];
-    license.isReview = license.invoice.productList[isReview].isReview;
-    license.invoiceId = license.invoice._id;
-
-    delete license.invoice;
-
-    productsToResponse.push(license);
-  }
-
-  // const products = [];
-
-  // for (let i = 0; i < invoices.length; i++) {
-  //   const productList = invoices[i].productList;
-  //   for (let j = 0; j < productList.length; j++) {
-  //     products.push(productList[j]);
-  //   }
-  // }
-
-  // const productsToResponse = products.map((product) => {
-  //   const productPictureList = product.product.productPictures;
-  //   const coverPicture =
-  //     productPictureList && productPictureList.length > 0
-  //       ? productPictureList[0]
-  //       : undefined;
-
-  //   return {
-  //     productId: product.product._id,
-  //     productFile: product.product.productFile,
-  //     coverPicture,
-  //     shop: product.shop,
-  //     productName: product.productName,
-  //     productPrice: product.productPrice,
-  //     isReview: product.isReview,
-  //     license: product.license,
-  //   };
-  // });
-  // console.log(licenses[0]);
+    const picture = license.product.productPictures[0];
+    return {
+      ...license,
+      invoice: undefined,
+      isReview: license.invoice.productList[isReview].isReview,
+      invoiceId: license.invoice._id,
+      product: {
+        ...license.product,
+        productPictures: picture, 
+      }
+    }
+  });
 
   res.status(StatusCodes.OK).json({
     totalPages,
