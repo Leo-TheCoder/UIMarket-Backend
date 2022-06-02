@@ -410,3 +410,67 @@ export const createRequestRefund = async (req: IUserRequest, res: Response) => {
 
   res.status(StatusCodes.CREATED).json(request);
 };
+
+// export const paymentHistory = async (req: IUserRequest, res: Response) => {
+//   const { userId } = req.user!;
+//   const query = req.query as IQuery;
+//   const page = parseInt(query.page!) || Constants.defaultPageNumber;
+//   const limit = parseInt(query.limit!) || Constants.defaultLimit;
+
+//   const total = await UserTransactionModel.countDocuments({
+//     userId: userId,
+//   }).lean();
+
+//   const totalPages =
+//     total % limit === 0
+//       ? Math.floor(total / limit)
+//       : Math.floor(total / limit) + 1;
+
+//   //Get transactions
+//   const transactions = await UserTransactionModel.find({
+//     userId: userId,
+//   })
+//     .skip((page - 1) * limit)
+//     .limit(limit)
+//     .sort({ createdAt: -1 })
+//     .lean();
+
+//   res.status(StatusCodes.OK).json({
+//     totalPages,
+//     page,
+//     limit,
+//     transactions,
+//   });
+// };
+
+// export const paymentHistory = async (req: IUserRequest, res: Response) => {
+//   const { userId } = req.user!;
+//   const query = req.query as IQuery;
+//   const page = parseInt(query.page!) || Constants.defaultPageNumber;
+//   const limit = parseInt(query.limit!) || Constants.defaultLimit;
+
+//   const total = await UserTransactionModel.countDocuments({
+//     userId: userId,
+//   }).lean();
+
+//   const totalPages =
+//     total % limit === 0
+//       ? Math.floor(total / limit)
+//       : Math.floor(total / limit) + 1;
+
+//   //Get transactions
+//   const transactions = await UserTransactionModel.find({
+//     userId: userId,
+//   })
+//     .skip((page - 1) * limit)
+//     .limit(limit)
+//     .sort({ createdAt: -1 })
+//     .lean();
+
+//   res.status(StatusCodes.OK).json({
+//     totalPages,
+//     page,
+//     limit,
+//     transactions,
+//   });
+// };

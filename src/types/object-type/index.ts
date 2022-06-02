@@ -23,4 +23,4 @@ export type ShopTransaction = {
   reason: string;
   changeAmount: number;
   transactionStatus: TransactionStatus;
-}
+};
