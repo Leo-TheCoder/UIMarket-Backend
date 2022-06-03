@@ -213,6 +213,7 @@ const findById = async (req: IUserRequest, res: Response) => {
   )
     .select("-productFile")
     .populate({ path: "shopId", select: "shopEmail" })
+    .populate({path: "productCategory", select: "categoryName"})
     .lean();
 
   if (!product) {
