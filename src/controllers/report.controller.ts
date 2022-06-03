@@ -154,6 +154,38 @@ export const reportListEC = async (req: IUserRequest, res: Response) => {
   });
 };
 
+export const reportListAll = async (req: Request, res: Response) => {
+  const query = req.query as IQuery;
+  const page = parseInt(query.page!) || Constants.defaultPageNumber;
+  const limit = parseInt(query.limit!) || Constants.defaultLimit;
+
+  const total = await ReportStatusModel.countDocuments({
+    resolveFlag: 0,
+    reportQuantity: { $gte: Constants.minReportQuantity },
+  });
+
+  const totalPages =
+    total % limit === 0
+      ? Math.floor(total / limit)
+      : Math.floor(total / limit) + 1;
+
+  const reports = await ReportStatusModel.find({
+    resolveFlag: 0,
+    reportQuantity: { $gte: Constants.minReportQuantity },
+  })
+    .skip((page - 1) * limit)
+    .limit(limit)
+    .sort({ createdAt: 1 })
+    .lean();
+
+  return res.status(StatusCodes.OK).json({
+    totalPages,
+    page,
+    limit,
+    reports,
+  });
+};
+
 export const acceptReport = async (req: Request, res: Response) => {
   const report = await ReportStatusModel.findOne({
     _id: req.params.reportId,

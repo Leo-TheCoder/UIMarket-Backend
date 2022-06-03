@@ -22,6 +22,7 @@ import {
   acceptReport,
   getReportDetail,
   rejectReport,
+  reportListAll,
   reportListEC,
   reportListEdu,
 } from "../controllers/report.controller";
@@ -62,6 +63,7 @@ router.post("/system/fee", changeSystemFee);
 //GET Method
 router.get("/report/list/Edu", reportListEdu);
 router.get("/report/list/EC", reportListEC);
+router.get("/report/list/All", reportListAll);
 router.get("/report/detail/:objectId", getReportDetail);
 
 //PUT Method
