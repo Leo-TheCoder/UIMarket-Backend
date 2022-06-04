@@ -213,7 +213,7 @@ const findById = async (req: IUserRequest, res: Response) => {
   )
     .select("-productFile")
     .populate({ path: "shopId", select: "shopEmail" })
-    .populate({path: "productCategory", select: "categoryName"})
+    .populate({ path: "productCategory", select: "categoryName" })
     .lean();
 
   if (!product) {
@@ -399,8 +399,9 @@ const getProductsByShop = async (req: Request, res: Response) => {
       productPictureList && productPictureList.length > 0
         ? productPictureList[0]
         : undefined;
-    delete product.productPictures;
     product.shopName = shop.shopName;
+    delete product.productPictures;
+    delete product.productFile;
     return product;
   });
 
