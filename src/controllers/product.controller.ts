@@ -380,11 +380,14 @@ const getProductsByShop = async (req: Request, res: Response) => {
       : Math.floor(total / limit) + 1;
 
   //Get product
-  const products = await ProductModel.find({
-    shopId: shopId,
-    productStatus: 1,
-    ...filterObj,
-  })
+  const products = await ProductModel.find(
+    {
+      shopId: shopId,
+      productStatus: 1,
+      ...filterObj,
+    },
+    projectionProductList
+  )
     .sort(sortObj)
     .skip((page - 1) * limit)
     .limit(limit)
@@ -395,14 +398,20 @@ const getProductsByShop = async (req: Request, res: Response) => {
     //get first item in array
     const productPictureList = product.productPictures;
     //get first picture
-    product.coverPicture =
+    const coverPicture =
       productPictureList && productPictureList.length > 0
         ? productPictureList[0]
         : undefined;
-    product.shopName = shop.shopName;
     delete product.productPictures;
-    delete product.productFile;
-    return product;
+
+    return {
+      ...product,
+      shopId: {
+        _id: shop._id,
+        shopName: shop.shopName,
+      },
+      coverPicture,
+    };
   });
 
   return res.status(StatusCodes.OK).json({
