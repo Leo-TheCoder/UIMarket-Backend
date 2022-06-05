@@ -1,8 +1,10 @@
 import LicenseModel from "../models/License.model";
 import InvoiceModel from "../models/Invoice.model";
-import { LicesneStatusEnum } from "../types/enum";
+import { LicesneStatusEnum, TransactionActionEnum } from "../types/enum";
 import { InternalServerError } from "../errors";
 import * as ErrorMessage from "../errors/error_message";
+import { Invoice } from "../types/object-type";
+import { shopTransaction } from "./currencyTransaction";
 
 export const updateInvoiceAndLicensesBeforeRefund = (
   licenseIds: string[],
@@ -89,3 +91,53 @@ export const updateInvoiceAndLicensesAfterDeclineRefund = (
     throw new InternalServerError(ErrorMessage.ERROR_FAILED);
   });
 };
+
+
+export const updateInvoiceAndLicensesAfterPayment = async (
+  invoice: Invoice,
+  sellerFee: number,
+  userId: string,
+) => {
+  const updateInvoiceLicensePromises = invoice.productList.map(
+    (product, index) => {
+      if(invoice.invoiceTotal > 0) {
+
+        let netAmount = (product.productPrice * (100 - sellerFee)) / 100;
+        netAmount = Math.round(netAmount * 100) / 100;
+        shopTransaction(
+          product.shop,
+          invoice._id,
+          product.product,
+          TransactionActionEnum.RECEIVE,
+          netAmount
+        ).catch((err) => {
+          console.log(err);
+        });
+      } 
+      //Create license for user
+      const license = new LicenseModel({
+        userId,
+        invoice: invoice._id,
+        shop: product.shop,
+        product: product.product,
+        boughtTime: new Date(),
+        licenseFile: "a",
+        productPrice: product.productPrice,
+      });
+
+      return license
+        .save()
+        .then((savedLicense: any) => {
+          invoice.productList[index].license = savedLicense._id;
+        })
+        .catch((error: any) => {
+          console.error(error);
+        });
+    }
+  );
+
+  await Promise.all(updateInvoiceLicensePromises);
+  invoice.save().catch((error: any) => {
+    console.error(error);
+  });
+}

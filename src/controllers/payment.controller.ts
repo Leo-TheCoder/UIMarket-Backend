@@ -56,6 +56,7 @@ import {
   updateInvoiceAndLicensesAfterDeclineRefund,
   updateInvoiceAndLicensesAfterRefund,
   updateInvoiceAndLicensesBeforeRefund,
+  updateInvoiceAndLicensesAfterPayment,
 } from "../utils/statusInvoice";
 
 interface IQuery {
@@ -90,14 +91,32 @@ const getAccessToken = async () => {
 
 export const createOrder = async (req: IUserRequest, res: Response) => {
   const invoice = (await createInvoice(req)) as Invoice;
+  const { userId } = req.user!;
 
   const productList = invoice.productList as Array<Product>;
+
+  if (invoice.invoiceTotal === 0) {
+    //Update invoice status
+    await paidInvoice(invoice, undefined, userId, "0");
+
+    updateInvoiceAndLicensesAfterPayment(invoice, 0, userId).catch((err) =>
+      console.error("Free invoice update error")
+    );
+
+    return res.status(StatusCodes.OK).json({
+      invoiceId: invoice._id,
+      invoice: invoice,
+      isFree: true,
+    });
+  }
+
   const buyerFee = (await getSystemDocument()).buyerFee;
   try {
     const response = await CreateOrder_PayPal(productList, invoice, buyerFee);
     res.json({
       paypal_link: response,
       invoiceId: invoice._id,
+      isFree: false,
     });
   } catch (error) {
     console.log(error);
@@ -292,46 +311,47 @@ export const captureOrder = async (req: IUserRequest, res: Response) => {
 
   const sellerFee = (await getSystemDocument()).sellerFee;
 
-  const updateInvoiceLicensePromises = invoice.productList.map(
-    (product, index) => {
-      let netAmount = (product.productPrice * (100 - sellerFee)) / 100;
-      netAmount = Math.round(netAmount * 100) / 100;
+  await updateInvoiceAndLicensesAfterPayment(invoice, sellerFee, userId);
+  // const updateInvoiceLicensePromises = invoice.productList.map(
+  //   (product, index) => {
+  //     let netAmount = (product.productPrice * (100 - sellerFee)) / 100;
+  //     netAmount = Math.round(netAmount * 100) / 100;
 
-      shopTransaction(
-        product.shop,
-        invoiceId,
-        product.product,
-        TransactionActionEnum.RECEIVE,
-        netAmount
-      ).catch((err) => {
-        console.log(err);
-      });
-      //Create license for user
-      const license = new LicenseModel({
-        userId,
-        invoice: invoiceId,
-        shop: product.shop,
-        product: product.product,
-        boughtTime: new Date(),
-        licenseFile: "a",
-        productPrice: product.productPrice,
-      });
+  //     shopTransaction(
+  //       product.shop,
+  //       invoiceId,
+  //       product.product,
+  //       TransactionActionEnum.RECEIVE,
+  //       netAmount
+  //     ).catch((err) => {
+  //       console.log(err);
+  //     });
+  //     //Create license for user
+  //     const license = new LicenseModel({
+  //       userId,
+  //       invoice: invoiceId,
+  //       shop: product.shop,
+  //       product: product.product,
+  //       boughtTime: new Date(),
+  //       licenseFile: "a",
+  //       productPrice: product.productPrice,
+  //     });
 
-      return license
-        .save()
-        .then((savedLicense: any) => {
-          invoice.productList[index].license = savedLicense._id;
-        })
-        .catch((error: any) => {
-          console.error(error);
-        });
-    }
-  );
+  //     return license
+  //       .save()
+  //       .then((savedLicense: any) => {
+  //         invoice.productList[index].license = savedLicense._id;
+  //       })
+  //       .catch((error: any) => {
+  //         console.error(error);
+  //       });
+  //   }
+  // );
 
-  await Promise.all(updateInvoiceLicensePromises);
-  invoice.save().catch((error: any) => {
-    console.error(error);
-  });
+  // await Promise.all(updateInvoiceLicensePromises);
+  // invoice.save().catch((error: any) => {
+  //   console.error(error);
+  // });
 };
 
 export const paymentHistory = async (req: IUserRequest, res: Response) => {
@@ -500,7 +520,10 @@ export const refund = async (req: IUserRequest, res: Response) => {
     refundDoc.refundStatus = RefundStatusEnum.RESOLVED;
     await refundDoc.save();
   } else {
-    updateInvoiceAndLicensesAfterDeclineRefund(licenseIds, refundDoc.invoiceId._id);
+    updateInvoiceAndLicensesAfterDeclineRefund(
+      licenseIds,
+      refundDoc.invoiceId._id
+    );
 
     refundDoc.refundStatus = RefundStatusEnum.DECLINED;
     await refundDoc.save();
