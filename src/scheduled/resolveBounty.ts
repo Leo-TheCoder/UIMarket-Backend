@@ -54,3 +54,5 @@ export const resolveBounty = async () => {
     await questions[i].save();
   }
 };
+
+resolveBounty();

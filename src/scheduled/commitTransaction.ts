@@ -32,3 +32,5 @@ export const resolveShopPayment = async () => {
 
   await Promise.all(updateShopBalancePromises);
 };
+
+resolveShopPayment();
