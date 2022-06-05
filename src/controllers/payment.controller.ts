@@ -96,14 +96,7 @@ export const createOrder = async (req: IUserRequest, res: Response) => {
   const productList = invoice.productList as Array<Product>;
 
   if (invoice.invoiceTotal === 0) {
-    //Update invoice status
-    // await paidInvoice(invoice, undefined, userId, "0");
-
-    // updateInvoiceAndLicensesAfterPayment(invoice, 0, 0, userId, "0").catch((err) =>
-    //   console.error("Free invoice update error")
-    // );
-
-    updateInvoiceAndLicensesAfterPayment_Transaction(invoice, 0, 0, userId, "0").catch(error => {
+    await updateInvoiceAndLicensesAfterPayment_Transaction(invoice, 0, 0, userId, "0").catch(error => {
       console.error("Free invoice update error");
     });
 
@@ -292,69 +285,15 @@ export const captureOrder = async (req: IUserRequest, res: Response) => {
     const buyerFee = (await getSystemDocument()).buyerFee;
     const sellerFee = (await getSystemDocument()).sellerFee;
 
-    await updateInvoiceAndLicensesAfterPayment_Transaction(invoice, sellerFee, buyerFee,userId, transactionPaypalId);
-    // const fee = (invoice.invoiceTotal * buyerFee) / 100;
-    // const totalAmount = invoice.invoiceTotal + fee;
-    // //Record user coin
-    // const transaction = await userTransaction(
-    //   userId,
-    //   invoiceId,
-    //   -totalAmount, //minus number
-    //   `Pay for invoice: #${invoiceId}`,
-    //   TransactionStatusEnum.COMPLETED
-    // );
-    // //Update invoice status
-    // await paidInvoice(invoice, transaction._id, userId, transactionPaypalId);
-
     res.status(StatusCodes.OK).json({
       data: response?.data,
       invoiceId,
     });
+    await updateInvoiceAndLicensesAfterPayment_Transaction(invoice, sellerFee, buyerFee,userId, transactionPaypalId);
   } catch (error) {
     console.log(error);
     throw new InternalServerError(ErrorMessage.ERROR_FAILED);
   }
-
-  // const updateInvoiceLicensePromises = invoice.productList.map(
-  //   (product, index) => {
-  //     let netAmount = (product.productPrice * (100 - sellerFee)) / 100;
-  //     netAmount = Math.round(netAmount * 100) / 100;
-
-  //     shopTransaction(
-  //       product.shop,
-  //       invoiceId,
-  //       product.product,
-  //       TransactionActionEnum.RECEIVE,
-  //       netAmount
-  //     ).catch((err) => {
-  //       console.log(err);
-  //     });
-  //     //Create license for user
-  //     const license = new LicenseModel({
-  //       userId,
-  //       invoice: invoiceId,
-  //       shop: product.shop,
-  //       product: product.product,
-  //       boughtTime: new Date(),
-  //       licenseFile: "a",
-  //       productPrice: product.productPrice,
-  //     });
-
-  //     return license
-  //       .save()
-  //       .then((savedLicense: any) => {
-  //         invoice.productList[index].license = savedLicense._id;
-  //       })
-  //       .catch((error: any) => {
-  //         console.error(error);
-  //       });
-  //   }
-  // );
-
-  // await Promise.all(updateInvoiceLicensePromises);
-  // invoice.save().catch((error: any) => {
-  //   console.error(error);
-  // });
 };
 
 export const paymentHistory = async (req: IUserRequest, res: Response) => {
