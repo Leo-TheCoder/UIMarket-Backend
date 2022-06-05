@@ -56,7 +56,7 @@ import {
   updateInvoiceAndLicensesAfterDeclineRefund,
   updateInvoiceAndLicensesAfterRefund,
   updateInvoiceAndLicensesBeforeRefund,
-  updateInvoiceAndLicensesAfterPayment,
+  updateInvoiceAndLicensesAfterPayment_Transaction,
 } from "../utils/statusInvoice";
 
 interface IQuery {
@@ -97,11 +97,15 @@ export const createOrder = async (req: IUserRequest, res: Response) => {
 
   if (invoice.invoiceTotal === 0) {
     //Update invoice status
-    await paidInvoice(invoice, undefined, userId, "0");
+    // await paidInvoice(invoice, undefined, userId, "0");
 
-    updateInvoiceAndLicensesAfterPayment(invoice, 0, userId).catch((err) =>
-      console.error("Free invoice update error")
-    );
+    // updateInvoiceAndLicensesAfterPayment(invoice, 0, 0, userId, "0").catch((err) =>
+    //   console.error("Free invoice update error")
+    // );
+
+    updateInvoiceAndLicensesAfterPayment_Transaction(invoice, 0, 0, userId, "0").catch(error => {
+      console.error("Free invoice update error");
+    });
 
     return res.status(StatusCodes.OK).json({
       invoiceId: invoice._id,
@@ -286,19 +290,21 @@ export const captureOrder = async (req: IUserRequest, res: Response) => {
   try {
     const { response, transactionPaypalId } = await Capture_PayPal(token);
     const buyerFee = (await getSystemDocument()).buyerFee;
+    const sellerFee = (await getSystemDocument()).sellerFee;
 
-    const fee = (invoice.invoiceTotal * buyerFee) / 100;
-    const totalAmount = invoice.invoiceTotal + fee;
-    //Record user coin
-    const transaction = await userTransaction(
-      userId,
-      invoiceId,
-      -totalAmount, //minus number
-      `Pay for invoice: #${invoiceId}`,
-      TransactionStatusEnum.COMPLETED
-    );
-    //Update invoice status
-    await paidInvoice(invoice, transaction._id, userId, transactionPaypalId);
+    await updateInvoiceAndLicensesAfterPayment_Transaction(invoice, sellerFee, buyerFee,userId, transactionPaypalId);
+    // const fee = (invoice.invoiceTotal * buyerFee) / 100;
+    // const totalAmount = invoice.invoiceTotal + fee;
+    // //Record user coin
+    // const transaction = await userTransaction(
+    //   userId,
+    //   invoiceId,
+    //   -totalAmount, //minus number
+    //   `Pay for invoice: #${invoiceId}`,
+    //   TransactionStatusEnum.COMPLETED
+    // );
+    // //Update invoice status
+    // await paidInvoice(invoice, transaction._id, userId, transactionPaypalId);
 
     res.status(StatusCodes.OK).json({
       data: response?.data,
@@ -309,9 +315,6 @@ export const captureOrder = async (req: IUserRequest, res: Response) => {
     throw new InternalServerError(ErrorMessage.ERROR_FAILED);
   }
 
-  const sellerFee = (await getSystemDocument()).sellerFee;
-
-  await updateInvoiceAndLicensesAfterPayment(invoice, sellerFee, userId);
   // const updateInvoiceLicensePromises = invoice.productList.map(
   //   (product, index) => {
   //     let netAmount = (product.productPrice * (100 - sellerFee)) / 100;

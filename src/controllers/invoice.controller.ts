@@ -99,7 +99,8 @@ export const paidInvoice = async (
   invoice: any,
   transactionId: any,
   userId: string,
-  transasctionPaypalId: string
+  transasctionPaypalId: string,
+  opt: { session: any }
 ) => {
   //Checking if has transaction Id
 
@@ -115,28 +116,28 @@ export const paidInvoice = async (
   invoice.transactionId = transactionId;
   invoice.invoiceStatus = "Paid";
   invoice.transactionPaypalId = transasctionPaypalId;
-  await invoice.save();
+  await invoice.save(opt);
 
   if (!invoice) {
     throw new BadRequestError(ErrorMessage.ERROR_INVALID_INVOICE_ID);
   }
 
   //Increase total sold by 1
-  invoice.productList.forEach((product: any) => {
-    ProductModel.updateOne(
-      { _id: product.product },
-      { $inc: { totalSold: 1 } }
-    ).catch((error) => {
-      console.log(error);
-    });
+  const productIds = invoice.productList.map((product: any) => product.product);
+  await ProductModel.updateMany(
+    {
+      _id: { $in: productIds },
+    },
+    { $inc: { totalSold: 1 } },
+    { session: opt.session }
+  );
 
-    CartModel.findOneAndRemove({
-      userId,
-      product: product.product,
-    }).catch((error) => {
-      console.log(error);
-    });
-  });
+  //Delete in cart
+  await CartModel.deleteMany(
+    { userId, product: { $in: productIds } },
+    { session: opt.session }
+  );
+
 
   return invoice;
 };
@@ -151,7 +152,7 @@ export const purchaseHistory = async (req: IUserRequest, res: Response) => {
   const filterObj = {
     userId,
     licenseStatus: LicesneStatusEnum.ACTIVE,
-  }
+  };
 
   const total = await LicenseModel.find(filterObj).count();
 
@@ -172,11 +173,11 @@ export const purchaseHistory = async (req: IUserRequest, res: Response) => {
     .populate({ path: "shop", select: "shopName" })
     .populate({ path: "invoice", select: "productList isRefunded" });
 
-  const productsToResponse = licenses.map(_license => {
+  const productsToResponse = licenses.map((_license) => {
     const license = _license.toObject();
     const isReview = license.invoice.productList.findIndex(
       (x: any) => String(x.product) == String(license.product._id)
-    )
+    );
 
     const picture = license.product.productPictures[0];
     return {
@@ -186,9 +187,9 @@ export const purchaseHistory = async (req: IUserRequest, res: Response) => {
       invoiceId: license.invoice._id,
       product: {
         ...license.product,
-        productPictures: picture, 
-      }
-    }
+        productPictures: picture,
+      },
+    };
   });
 
   res.status(StatusCodes.OK).json({
@@ -324,7 +325,7 @@ export const getShopTransaction = async (req: IUserRequest, res: Response) => {
 
   const filterObject = {
     shopId,
-    ...filterObj
+    ...filterObj,
   };
   const projectionObject = {
     _id: 1,
@@ -382,15 +383,17 @@ export const getShopTransaction = async (req: IUserRequest, res: Response) => {
 };
 
 export const getInvoiceById = async (req: IUserRequest, res: Response) => {
-  const {invoiceId} = req.params;
-  const {userId} = req.user!;
+  const { invoiceId } = req.params;
+  const { userId } = req.user!;
 
-  const invoice = await InvoiceModel.findById(invoiceId).populate({
-    path: "productList.product",
-    select: "productPictures"
-  }).lean();
+  const invoice = await InvoiceModel.findById(invoiceId)
+    .populate({
+      path: "productList.product",
+      select: "productPictures",
+    })
+    .lean();
 
-  if(!invoice || invoice.userId != userId) {
+  if (!invoice || invoice.userId != userId) {
     throw new NotFoundError(ErrorMessage.ERROR_INVALID_INVOICE_ID);
   }
 
@@ -400,11 +403,11 @@ export const getInvoiceById = async (req: IUserRequest, res: Response) => {
     const modifyProduct = JSON.parse(JSON.stringify(_product));
     modifyProduct.coverPicture = coverPicture;
     modifyProduct.product = _product.product._id;
-    
+
     return modifyProduct;
-  })
+  });
 
   invoice.productList = productList;
 
-  res.status(StatusCodes.OK).json({invoice})
-}
+  res.status(StatusCodes.OK).json({ invoice });
+};

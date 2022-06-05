@@ -15,7 +15,7 @@ export type Invoice = {
   invoiceTotal: number;
   invoiceStatus: string;
   _id: string;
-  save: () => Promise<any>;
+  save: (option?: any ) => Promise<any>;
 };
 
 export type ShopTransaction = {

@@ -14,6 +14,7 @@ import * as ErrorMessage from "../errors/error_message";
 
 //Enum
 import { TransactionActionEnum, TransactionStatusEnum } from "../types/enum";
+import { Invoice } from "../types/object-type";
 
 export const pointTransaction = async (
   userId: string,
@@ -103,14 +104,19 @@ export const userTransaction = async (
   invoiceId: string,
   changeAmount: number,
   reason: string,
-  status: TransactionStatusEnum
+  status: TransactionStatusEnum,
+  opt: { session: any }
 ) => {
   //Checking userId and shopId
   const userPromise = UserModel.findOne({
     _id: userId,
     customerStatus: 1,
-  }).lean();
-  const invoicePromise = InvoiceModel.findOne({ _id: invoiceId }).lean();
+  })
+    .session(opt.session)
+    .lean();
+  const invoicePromise = InvoiceModel.findOne({ _id: invoiceId })
+    .session(opt.session)
+    .lean();
   const [user, invoice] = await Promise.all([userPromise, invoicePromise]);
   if (!user) {
     throw new NotFoundError(ErrorMessage.ERROR_INVALID_USER_ID);
@@ -119,13 +125,20 @@ export const userTransaction = async (
   }
 
   //Record the transaction
-  const transaction = await UserTransactionModel.create({
+  // const transaction = await UserTransactionModel.create({
+  //   userId: userId,
+  //   invoiceId: invoiceId,
+  //   reason: reason,
+  //   changeAmount: changeAmount,
+  //   transactionStatus: status,
+  // });
+  const transaction = await new UserTransactionModel({
     userId: userId,
     invoiceId: invoiceId,
     reason: reason,
     changeAmount: changeAmount,
     transactionStatus: status,
-  });
+  }).save(opt);
 
   if (!transaction) {
     throw new NotFoundError(ErrorMessage.ERROR_FAILED);
@@ -139,10 +152,13 @@ export const shopTransaction = async (
   invoiceId: string | null,
   productId: string | null,
   action: TransactionActionEnum,
-  changeAmount: number
+  changeAmount: number,
+  opt: { session: any }
 ) => {
   //Checking shopId
-  const shop = await ShopModel.findOne({ _id: shopId, shopStatus: 1 });
+  const shop = await ShopModel.findOne({ _id: shopId, shopStatus: 1 }).session(
+    opt.session
+  );
   if (!shop) {
     throw new NotFoundError(ErrorMessage.ERROR_INVALID_SHOP_ID);
   }
@@ -151,7 +167,7 @@ export const shopTransaction = async (
   const balanceAmount = currentAmount + changeAmount;
 
   //Checking invoice ID
-  const invoice = await InvoiceModel.findById(invoiceId);
+  const invoice = await InvoiceModel.findById(invoiceId).session(opt.session);
   if (!invoice) {
     throw new BadRequestError(ErrorMessage.ERROR_INVALID_INVOICE_ID);
   }
@@ -159,8 +175,8 @@ export const shopTransaction = async (
   // //Update shop wallet
   // shop.shopBalance = balanceAmount;
   // const newBalance = await shop.save();
-  
-  const transaction = await ShopTransactionModel.create({
+
+  const transaction = await new ShopTransactionModel({
     shopId: shopId,
     invoiceId: invoiceId,
     productId: productId,
@@ -168,8 +184,47 @@ export const shopTransaction = async (
     currentAmount: currentAmount,
     changeAmount: changeAmount,
     balanceAmount: balanceAmount,
-  });
+  }).save(opt);
   return transaction;
+};
+
+export const shopTransactionObjects = (
+  invoice: Invoice,
+  action: TransactionActionEnum,
+  sellerFee: number,
+  shopBalances: {_id: String, shopBalance: number}[],
+) => {
+  const shopIds = shopBalances.map(shop => shop._id);
+  const banlances = shopBalances.map(shop => shop.shopBalance);
+
+  return invoice.productList.map((product, index) => {
+    let netAmount = (product.productPrice * (100 - sellerFee)) / 100;
+    netAmount = Math.round(netAmount * 100) / 100;
+
+    const searchIndex = (s: String) => {
+      for(let i = 0; i < shopIds.length; i++) {
+        if(s == shopIds[i]) {
+          return i;
+        }
+      }
+      return -1;
+    }
+
+    const shopIndex = searchIndex(product.shop);
+    const currentAmount = banlances[shopIndex];
+    const balanceAmount = currentAmount + netAmount;
+
+    return {
+      shopId: product.shop,
+      invoiceId: invoice._id,
+      productId: product.product,
+      action: action,
+      currentAmount: currentAmount,
+      changeAmount: netAmount,
+      balanceAmount: balanceAmount,
+    }
+
+  })
 };
 
 export const shopWithdrawTransaction = async (
@@ -208,14 +263,17 @@ export const refundTransaction = async (
   userId: string,
   invoiceId: string,
   productIds: string[],
-  amount: number,
+  amount: number
 ) => {
-  const shopTransactionResult = await ShopTransactionModel.updateMany({
-    invoiceId,
-    productId: {$in: productIds}
-  }, {
-    transactionStatus: TransactionStatusEnum.REFUNDED
-  });
+  const shopTransactionResult = await ShopTransactionModel.updateMany(
+    {
+      invoiceId,
+      productId: { $in: productIds },
+    },
+    {
+      transactionStatus: TransactionStatusEnum.REFUNDED,
+    }
+  );
 
   await UserTransactionModel.create({
     userId: userId,
@@ -223,5 +281,5 @@ export const refundTransaction = async (
     reason: `Refund from DeeX`,
     changeAmount: amount,
     transactionStatus: TransactionStatusEnum.REFUNDED,
-  })
+  });
 };
