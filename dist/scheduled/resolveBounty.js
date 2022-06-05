@@ -46,4 +46,5 @@ const resolveBounty = async () => {
     }
 };
 exports.resolveBounty = resolveBounty;
+(0, exports.resolveBounty)();
 //# sourceMappingURL=resolveBounty.js.map

@@ -11,7 +11,7 @@ const UserSchema = new mongoose_1.default.Schema({
     customerName: {
         type: String,
         required: [true, "Please provide name"],
-        minlength: 5,
+        // minlength: 5,
     },
     customerAvatar: {
         type: String,
@@ -72,7 +72,7 @@ const UserSchema = new mongoose_1.default.Schema({
     isAdmin: {
         type: Boolean,
         default: false,
-    }
+    },
 }, {
     timestamps: true,
 });

@@ -15,7 +15,7 @@ const ShopSchema = new mongoose_1.default.Schema({
     shopName: {
         type: String,
         required: [true, "Please provide shop name"],
-        minlength: constants_1.defaultMinLength / 2,
+        // minlength: defaultMinLength / 2,
     },
     shopPayPal: {
         required: false,

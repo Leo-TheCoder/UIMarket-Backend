@@ -336,7 +336,7 @@ const getProductsByShop = async (req, res) => {
         shopId: shopId,
         productStatus: 1,
         ...filterObj,
-    })
+    }, projectionProductList)
         .sort(sortObj)
         .skip((page - 1) * limit)
         .limit(limit)
