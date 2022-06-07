@@ -153,11 +153,15 @@ const getProfileInfo = async (req: IUserRequest, res: Response) => {
   const user = JSON.parse(JSON.stringify(userDoc._doc));
 
   if (!(req.user && req.user.userId === userId)) {
-    delete user.customerWallet;
     delete user.customerStatus;
   }
-
-  res.status(StatusCodes.OK).json({ user });
+  user.customerWallet.coin = undefined;
+  res.status(StatusCodes.OK).json({ user: {
+    ...user,
+    customerWallet: {
+      point: user.customerWallet.point,
+    }
+  } });
 };
 
 const updateProfile = async (req: IUserRequest, res: Response) => {
