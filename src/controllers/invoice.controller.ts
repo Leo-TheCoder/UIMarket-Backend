@@ -99,7 +99,6 @@ export const paidInvoice = async (
   invoice: any,
   transactionId: any,
   userId: string,
-  transasctionPaypalId: string,
   opt: { session: any }
 ) => {
   //Checking if has transaction Id
@@ -115,7 +114,6 @@ export const paidInvoice = async (
   // ).lean();
   invoice.transactionId = transactionId;
   invoice.invoiceStatus = "Paid";
-  invoice.transactionPaypalId = transasctionPaypalId;
   await invoice.save(opt);
 
   if (!invoice) {

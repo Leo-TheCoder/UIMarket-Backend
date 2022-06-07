@@ -96,15 +96,28 @@ export const createOrder = async (req: IUserRequest, res: Response) => {
   const productList = invoice.productList as Array<Product>;
 
   if (invoice.invoiceTotal === 0) {
-    await updateInvoiceAndLicensesAfterPayment_Transaction(invoice, 0, 0, userId, "0").catch(error => {
-      console.error("Free invoice update error");
-    });
+    const session = await InvoiceModel.startSession();
+    try {
+      await updateInvoiceAndLicensesAfterPayment_Transaction(invoice, 0, 0, userId, session);
+      invoice.transactionPaypalId = "0";
+      await invoice.save({session});
 
-    return res.status(StatusCodes.OK).json({
-      invoiceId: invoice._id,
-      invoice: invoice,
-      isFree: true,
-    });
+      await session.commitTransaction();
+      await session.endSession();
+
+      return res.status(StatusCodes.OK).json({
+        invoiceId: invoice._id,
+        invoice: invoice,
+        isFree: true,
+      });
+    } catch(error) {
+      console.log(error);
+      await session.abortTransaction();
+      await session.endSession();
+
+      throw new InternalServerError(ErrorMessage.ERROR_FAILED);
+    }
+
   }
 
   const buyerFee = (await getSystemDocument()).buyerFee;
@@ -280,18 +293,29 @@ export const captureOrder = async (req: IUserRequest, res: Response) => {
     throw new BadRequestError(ErrorMessage.ERROR_INVALID_INVOICE_ID);
   }
 
+  const session = await InvoiceModel.startSession();
   try {
-    const { response, transactionPaypalId } = await Capture_PayPal(token);
     const buyerFee = (await getSystemDocument()).buyerFee;
     const sellerFee = (await getSystemDocument()).sellerFee;
+    await updateInvoiceAndLicensesAfterPayment_Transaction(invoice, sellerFee, buyerFee,userId, session);
+    const { response, transactionPaypalId } = await Capture_PayPal(token);
+    invoice.transactionPaypalId = transactionPaypalId;
+    await invoice.save({session: session});
+
+    await session.commitTransaction();
+    await session.endSession();
 
     res.status(StatusCodes.OK).json({
       data: response?.data,
       invoiceId,
     });
-    await updateInvoiceAndLicensesAfterPayment_Transaction(invoice, sellerFee, buyerFee,userId, transactionPaypalId);
   } catch (error) {
+    // If an error occurred, abort the whole transaction and
+    // undo any changes that might have happened
     console.log(error);
+    await session.abortTransaction();
+    await session.endSession();
+
     throw new InternalServerError(ErrorMessage.ERROR_FAILED);
   }
 };

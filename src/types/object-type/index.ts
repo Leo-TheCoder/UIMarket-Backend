@@ -13,6 +13,8 @@ export type Invoice = {
   productList: Array<Product>;
   userId: string;
   invoiceTotal: number;
+  transactionPaypalId?: string;
+  transactionId?: string;
   invoiceStatus: string;
   _id: string;
   save: (option?: any ) => Promise<any>;

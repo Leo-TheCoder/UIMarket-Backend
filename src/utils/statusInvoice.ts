@@ -16,6 +16,7 @@ import {
 import { paidInvoice } from "../controllers/invoice.controller";
 import ShopModel from "../models/Shop.model";
 import ShopTransactionModel from "../models/ShopTransaction.model";
+import { ClientSession } from "mongoose/node_modules/mongodb";
 
 export const updateInvoiceAndLicensesBeforeRefund = (
   licenseIds: string[],
@@ -175,100 +176,84 @@ export const updateInvoiceAndLicensesAfterPayment_Transaction = async (
   sellerFee: number,
   buyerFee: number,
   userId: string,
-  transactionPaypalId: string
+  session: ClientSession
 ) => {
-  const session = await InvoiceModel.startSession();
   session.startTransaction();
 
-  try {
-    const opt = { session };
+  const opt = { session };
 
-    if (invoice.invoiceTotal > 0) {
-      const fee = (invoice.invoiceTotal * buyerFee) / 100;
-      const totalAmount = invoice.invoiceTotal + fee;
+  if (invoice.invoiceTotal > 0) {
+    const fee = (invoice.invoiceTotal * buyerFee) / 100;
+    const totalAmount = invoice.invoiceTotal + fee;
 
-      //Record user coin
-      const transaction = await userTransaction(
-        userId,
-        invoice._id,
-        -totalAmount, //minus number
-        `Pay for invoice: #${invoice._id}`,
-        TransactionStatusEnum.COMPLETED,
-        opt
-      );
-      //Update invoice status
-      await paidInvoice(
-        invoice,
-        transaction._id,
-        userId,
-        transactionPaypalId,
-        opt
-      );
-    } else {
-      await paidInvoice(invoice, undefined, userId, transactionPaypalId, opt);
-    }
+    //Record user coin
+    const transaction = await userTransaction(
+      userId,
+      invoice._id,
+      -totalAmount, //minus number
+      `Pay for invoice: #${invoice._id}`,
+      TransactionStatusEnum.COMPLETED,
+      opt
+    );
+    //Update invoice status
+    await paidInvoice(invoice, transaction._id, userId, opt);
+  } else {
+    await paidInvoice(invoice, undefined, userId, opt);
+  }
 
-    if (invoice.invoiceTotal > 0) {
-      const shops = (
-        await ShopModel.find({
-          _id: { $in: invoice.productList.map((product) => product.shop) },
-          shopStatus: 1,
-        })
-          .session(opt.session)
-          .lean()
-      ).map((shop: any) => {
-        return {
-          _id: shop._id.toString(),
-          shopBalance: shop.shopBalance,
-        };
-      });
-
-      const transactionObjects = shopTransactionObjects(
-        invoice,
-        TransactionActionEnum.RECEIVE,
-        sellerFee,
-        shops
-      );
-      await ShopTransactionModel.insertMany(transactionObjects, {
-        session: opt.session,
-      });
-    }
-
-    const licenseObjects = invoice.productList.map(product => {
+  if (invoice.invoiceTotal > 0) {
+    const shops = (
+      await ShopModel.find({
+        _id: { $in: invoice.productList.map((product) => product.shop) },
+        shopStatus: 1,
+      })
+        .session(opt.session)
+        .lean()
+    ).map((shop: any) => {
       return {
-        userId,
-        invoice: invoice._id,
-        shop: product.shop,
-        product: product.product,
-        boughtTime: new Date(),
-        licenseFile: "a",
-        productPrice: product.productPrice,
-      }
+        _id: shop._id.toString(),
+        shopBalance: shop.shopBalance,
+      };
     });
 
-    const licenses = await LicenseModel.create(licenseObjects, {session: opt.session});
-    licenses.forEach(license => {
-      const id = license._id;
-      const productId = license.product.toString();
-
-      for(let i = 0; i < invoice.productList.length; i++) {
-        const product = invoice.productList[i];
-        if(product.product == productId) {
-          product.license = id;
-          break;
-        }
-      }
-    })
-
-    await  invoice.save(opt)
-
-    await session.commitTransaction();
-    await session.endSession();
-  } catch (error) {
-    // If an error occurred, abort the whole transaction and
-    // undo any changes that might have happened
-    await session.abortTransaction();
-    await session.endSession();
-    throw error;
+    const transactionObjects = shopTransactionObjects(
+      invoice,
+      TransactionActionEnum.RECEIVE,
+      sellerFee,
+      shops
+    );
+    await ShopTransactionModel.insertMany(transactionObjects, {
+      session: opt.session,
+    });
   }
+
+  const licenseObjects = invoice.productList.map((product) => {
+    return {
+      userId,
+      invoice: invoice._id,
+      shop: product.shop,
+      product: product.product,
+      boughtTime: new Date(),
+      licenseFile: "a",
+      productPrice: product.productPrice,
+    };
+  });
+
+  const licenses = await LicenseModel.create(licenseObjects, {
+    session: opt.session,
+  });
+  licenses.forEach((license) => {
+    const id = license._id;
+    const productId = license.product.toString();
+
+    for (let i = 0; i < invoice.productList.length; i++) {
+      const product = invoice.productList[i];
+      if (product.product == productId) {
+        product.license = id;
+        break;
+      }
+    }
+  });
+
+  await invoice.save(opt);
 };
