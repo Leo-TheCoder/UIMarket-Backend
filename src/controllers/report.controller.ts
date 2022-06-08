@@ -67,7 +67,7 @@ export const createReport = async (req: IUserRequest, res: Response) => {
 
 export const rejectReport = async (req: Request, res: Response) => {
   const report = await ReportStatusModel.findOne({
-    _id: req.params.reportId,
+    reportObject: req.params.reportId,
     resolveFlag: 0,
   });
 
@@ -188,7 +188,7 @@ export const reportListAll = async (req: Request, res: Response) => {
 
 export const acceptReport = async (req: Request, res: Response) => {
   const report = await ReportStatusModel.findOne({
-    _id: req.params.reportId,
+    reportObject: req.params.reportId,
     resolveFlag: 0,
   });
   if (!report) {
