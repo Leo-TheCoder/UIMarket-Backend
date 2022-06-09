@@ -178,8 +178,6 @@ export const updateInvoiceAndLicensesAfterPayment_Transaction = async (
   userId: string,
   session: ClientSession
 ) => {
-  session.startTransaction();
-
   const opt = { session };
 
   if (invoice.invoiceTotal > 0) {

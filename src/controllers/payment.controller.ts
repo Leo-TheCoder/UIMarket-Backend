@@ -323,36 +323,32 @@ export const captureOrder = async (req: IUserRequest, res: Response) => {
   }
 
   const session = await InvoiceModel.startSession();
+  const buyerFee = (await getSystemDocument()).buyerFee;
+  const sellerFee = (await getSystemDocument()).sellerFee;
   try {
-    const buyerFee = (await getSystemDocument()).buyerFee;
-    const sellerFee = (await getSystemDocument()).sellerFee;
-    await updateInvoiceAndLicensesAfterPayment_Transaction(
-      invoice,
-      sellerFee,
-      buyerFee,
-      userId,
-      session
-    );
-    const { response, transactionPaypalId } = await Capture_PayPal(token);
-    invoice.transactionPaypalId = transactionPaypalId;
-    await invoice.save({ session: session });
-
-    await session.commitTransaction();
-    await session.endSession();
-
-    res.status(StatusCodes.OK).json({
-      data: response?.data,
-      invoiceId,
-    });
+    await session.withTransaction(async() => {
+      await updateInvoiceAndLicensesAfterPayment_Transaction(
+        invoice,
+        sellerFee,
+        buyerFee,
+        userId,
+        session
+      );
+      const { response, transactionPaypalId } = await Capture_PayPal(token);
+      invoice.transactionPaypalId = transactionPaypalId;
+      await invoice.save({ session: session });
+  
+    })
   } catch (error) {
-    // If an error occurred, abort the whole transaction and
-    // undo any changes that might have happened
-    console.log(error);
-    await session.abortTransaction();
-    await session.endSession();
-
-    throw new InternalServerError(ErrorMessage.ERROR_FAILED);
+    console.error(error);
   }
+  
+
+  await session.endSession();
+
+  res.status(StatusCodes.OK).json({
+    invoiceId,
+  });
 };
 
 export const paymentHistory = async (req: IUserRequest, res: Response) => {
