@@ -159,7 +159,7 @@ export const shopTransaction = async (
   // //Update shop wallet
   // shop.shopBalance = balanceAmount;
   // const newBalance = await shop.save();
-  
+
   const transaction = await ShopTransactionModel.create({
     shopId: shopId,
     invoiceId: invoiceId,
@@ -209,19 +209,31 @@ export const refundTransaction = async (
   invoiceId: string,
   productIds: string[],
   amount: number,
+  opt: { session: any }
 ) => {
-  const shopTransactionResult = await ShopTransactionModel.updateMany({
-    invoiceId,
-    productId: {$in: productIds}
-  }, {
-    transactionStatus: TransactionStatusEnum.REFUNDED
-  });
+  await ShopTransactionModel.updateMany(
+    {
+      invoiceId,
+      productId: { $in: productIds },
+    },
+    {
+      transactionStatus: TransactionStatusEnum.REFUNDED,
+    },
+    {
+      session: opt.session,
+    }
+  );
 
-  await UserTransactionModel.create({
-    userId: userId,
-    invoiceId: invoiceId,
-    reason: `Refund from DeeX`,
-    changeAmount: amount,
-    transactionStatus: TransactionStatusEnum.REFUNDED,
-  })
+  await UserTransactionModel.create(
+    [
+      {
+        userId: userId,
+        invoiceId: invoiceId,
+        reason: `Refund from DeeX`,
+        changeAmount: amount,
+        transactionStatus: TransactionStatusEnum.REFUNDED,
+      },
+    ],
+    { session: opt.session }
+  );
 };

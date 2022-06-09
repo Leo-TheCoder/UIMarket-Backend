@@ -26,6 +26,12 @@ import {
   reportListEC,
   reportListEdu,
 } from "../controllers/report.controller";
+import {
+  acceptRefund,
+  getAllRefund,
+  getRefundById,
+  rejectRefund,
+} from "../controllers/admin/refund.controller";
 
 const router = express.Router();
 
@@ -69,5 +75,13 @@ router.get("/report/detail/:objectId", getReportDetail);
 //PUT Method
 router.put("/report/reject/:reportId", rejectReport);
 router.put("/report/accept/:reportId", acceptReport);
+
+//===================== Refund ========================
+//GET Method
+router.get("/refund", getAllRefund);
+router.get("/refund/:refundId", getRefundById),
+  //POST Method
+  router.post("/refund/accept/:refundId", acceptRefund);
+router.post("/refund/reject/:refundId", rejectRefund);
 
 export default router;

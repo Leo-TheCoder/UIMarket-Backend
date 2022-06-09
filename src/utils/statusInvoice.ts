@@ -30,62 +30,64 @@ export const updateInvoiceAndLicensesBeforeRefund = (
   });
 };
 
-export const updateInvoiceAndLicensesAfterRefund = (
+export const updateInvoiceAndLicensesAfterRefund = async (
   licenseIds: string[],
-  invoiceId: string
+  invoiceId: string,
+  opt: {session: any},
 ) => {
   //license status update
-  LicenseModel.updateMany(
+  await LicenseModel.updateMany(
     {
       _id: { $in: licenseIds },
     },
     {
       licenseStatus: LicesneStatusEnum.DEACTIVE,
+    },
+    {
+      session: opt.session
     }
-  ).catch((error) => {
-    console.error("Update refund licenses: FAILED!");
-    throw new InternalServerError(ErrorMessage.ERROR_FAILED);
-  });
+  );
 
   //invoice refund status update
-  InvoiceModel.updateOne(
+  await InvoiceModel.updateOne(
     {
       _id: invoiceId,
     },
     {
       isRefunded: true,
+    },
+    {
+      session: opt.session,
     }
-  ).catch((error) => {
-    console.error("Update refund invoice status: FAILED!");
-    throw new InternalServerError(ErrorMessage.ERROR_FAILED);
-  });
+  )
 };
 
-export const updateInvoiceAndLicensesAfterDeclineRefund = (
+export const updateInvoiceAndLicensesAfterDeclineRefund = async (
   licenseIds: string[],
-  invoiceId: string
+  invoiceId: string,
+  opt: { session: any }
 ) => {
-  LicenseModel.updateMany(
+  await LicenseModel.updateMany(
     {
       _id: { $in: licenseIds },
     },
     {
       licenseStatus: LicesneStatusEnum.ACTIVE,
+    },
+    {
+      session: opt.session,
     }
-  ).catch((error) => {
-    console.error("Update non-refund licenses: FAILED!");
-    throw new InternalServerError(ErrorMessage.ERROR_FAILED);
-  });
+  );
 
-  InvoiceModel.updateOne(
+  await InvoiceModel.updateOne(
     {
       _id: invoiceId,
     },
     {
       isRefunded: false,
+    },
+    {
+      session: opt.session,
     }
-  ).catch((error) => {
-    console.error("Update non-refund invoice status: FAILED!");
-    throw new InternalServerError(ErrorMessage.ERROR_FAILED);
-  });
+  );
 };
