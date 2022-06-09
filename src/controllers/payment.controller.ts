@@ -116,7 +116,6 @@ export const createOrder = async (req: IUserRequest, res: Response) => {
     req.body.productList,
     buyerFee,
   )) as Invoice;
-
   const productList = invoice.productList as Array<Product>;
 
   if (invoice.invoiceTotal === 0) {

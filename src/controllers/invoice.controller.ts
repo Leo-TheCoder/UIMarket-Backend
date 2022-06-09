@@ -60,7 +60,7 @@ export const preOrder = async (productList: any[]) => {
   //Remove duplicate out of array
   productList = productList.filter(
     (value: any, index: any, self: any) =>
-      index === self.findIndex((t: any) => t.product === value.product)
+      index === self.findIndex((t: any) => t._id === value._id)
   );
 
   //Checking product and get its price
