@@ -79,9 +79,9 @@ router.put("/report/accept/:reportId", acceptReport);
 //===================== Refund ========================
 //GET Method
 router.get("/refund", getAllRefund);
-router.get("/refund/:refundId", getRefundById),
-  //POST Method
-  router.post("/refund/accept/:refundId", acceptRefund);
+router.get("/refund/:refundId", getRefundById);
+//POST Method
+router.post("/refund/accept/:refundId", acceptRefund);
 router.post("/refund/reject/:refundId", rejectRefund);
 
 export default router;
