@@ -50,8 +50,7 @@ const validProduct = async (productId: string) => {
   }
 };
 
-export const preOrder = async (req: IUserRequest) => {
-  let productList = req.body.productList as Product[];
+export const preOrder = async (productList: any[]) => {
   let invoiceTotal = 0;
 
   if (!productList) {
@@ -66,29 +65,42 @@ export const preOrder = async (req: IUserRequest) => {
 
   //Checking product and get its price
   const productPromises = productList.map((productObj, index) => {
-    return validProduct(productObj.product).then((_validProduct) => {
+    return validProduct(productObj._id).then((_validProduct) => {
       if (_validProduct.productPrice >= 0) {
         invoiceTotal += _validProduct.productPrice;
 
         productList[index].shopName = _validProduct.shopId.shopName;
         productList[index].productName = _validProduct.productName;
         productList[index].productPrice = _validProduct.productPrice;
+
+        return {
+          product: productObj._id,
+          productName: _validProduct.productName,
+          shop: productObj.shopId,
+          shopName: _validProduct.shopId.shopName,
+          productPrice: _validProduct.productPrice,
+        }
       }
     });
   });
-  await Promise.all(productPromises);
-  return { productList, invoiceTotal };
+  const list = await Promise.all(productPromises);
+  return { productList: list, invoiceTotal };
 };
 
-export const createOrder = async (req: IUserRequest) => {
-  const { userId } = req.user!;
-  const body = await preOrder(req);
-  const { productList } = body;
+export const createOrder = async (
+  userId: string,
+  _productList: Product[],
+  buyerFee: number
+) => {
+  const { productList, invoiceTotal } = await preOrder(_productList);
+  let amountTotal = (invoiceTotal * (100 + buyerFee)) / 100;
+  amountTotal = Math.round(amountTotal * 100) / 100;
+
 
   //Create invoice
   let invoice = await InvoiceModel.create({
     productList: productList,
-    invoiceTotal: body.invoiceTotal,
+    invoiceTotal: amountTotal,
     userId: userId,
   });
 
@@ -135,7 +147,6 @@ export const paidInvoice = async (
     { userId, product: { $in: productIds } },
     { session: opt.session }
   );
-
 
   return invoice;
 };

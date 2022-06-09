@@ -29,35 +29,35 @@ const refreshAccessToken = async () => {
 };
 
 export const CreateOrder_PayPal = async (
-  productList: Product[],
-  invoice: Invoice,
-  buyerFee: number
+  //productList: Product[],
+  //invoice: Invoice,
+  totalAmount: number
 ) => {
-  const items_detail = productList.map((product) => {
-    return {
-      name: product.productName,
-      unit_amount: {
-        currency_code: "USD",
-        value: product.productPrice,
-      },
-      quantity: "1",
-      description: "Deex Product",
-    };
-  });
+  // const items_detail = productList.map((product) => {
+  //   return {
+  //     name: product.productName,
+  //     unit_amount: {
+  //       currency_code: "USD",
+  //       value: product.productPrice,
+  //     },
+  //     quantity: "1",
+  //     description: "Deex Product",
+  //   };
+  // });
 
   //push fee
-  const fee = (invoice.invoiceTotal * buyerFee) / 100;
-  items_detail.push({
-    name: "DeeX System Fee",
-    unit_amount: {
-      currency_code: "USD",
-      value: fee,
-    },
-    quantity: "1",
-    description: `${buyerFee}% with total invoice`,
-  });
+  // const fee = (invoice.invoiceTotal * buyerFee) / 100;
+  // items_detail.push({
+  //   name: "DeeX System Fee",
+  //   unit_amount: {
+  //     currency_code: "USD",
+  //     value: fee,
+  //   },
+  //   quantity: "1",
+  //   description: `${buyerFee}% with total invoice`,
+  // });
 
-  const totalAmount = invoice.invoiceTotal + fee;
+  // const totalAmount = invoice.invoiceTotal + fee;
   const order = {
     intent: "CAPTURE",
     purchase_units: [
@@ -66,14 +66,7 @@ export const CreateOrder_PayPal = async (
         amount: {
           currency_code: "USD",
           value: totalAmount,
-          breakdown: {
-            item_total: {
-              currency_code: "USD",
-              value: totalAmount,
-            },
-          },
         },
-        items: items_detail,
       },
     ],
     application_context: {
@@ -113,7 +106,7 @@ export const CreateOrder_PayPal = async (
     throw new Error("Something wrong with paypal");
   }
 
-  return linkPayPal;
+  return response?.data;
 };
 
 export const Payout_PayPal = async (

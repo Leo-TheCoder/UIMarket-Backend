@@ -30,6 +30,7 @@ import {
 import {
   createOrder as createInvoice,
   paidInvoice,
+  preOrder as checkOrder,
 } from "./invoice.controller";
 import {
   shopTransaction,
@@ -51,7 +52,6 @@ import {
   TransactionStatusEnum,
 } from "../types/enum";
 import ShopTransactionModel from "../models/ShopTransaction.model";
-import { error } from "console";
 import {
   updateInvoiceAndLicensesAfterDeclineRefund,
   updateInvoiceAndLicensesAfterRefund,
@@ -89,18 +89,48 @@ const getAccessToken = async () => {
   return data.access_token;
 };
 
+export const getBuyerFee = async (req: IUserRequest, res: Response) => {
+  const buyerFee = (await getSystemDocument()).buyerFee;
+  return res.status(StatusCodes.OK).json({ buyerFee });
+};
+
+export const getSellerFee = async (req: IUserRequest, res: Response) => {
+  const sellerFee = (await getSystemDocument()).sellerFee;
+  return res.status(StatusCodes.OK).json({ sellerFee });
+};
+
+export const preOrder = async (req: IUserRequest, res: Response) => {
+  const { productList, invoiceTotal } = await checkOrder(req.body.productList);
+  const buyerFee = (await getSystemDocument()).buyerFee;
+
+  res
+    .status(StatusCodes.OK)
+    .json({ productList, invoiceTotal, buyerFee, isFree: invoiceTotal === 0 });
+};
+
 export const createOrder = async (req: IUserRequest, res: Response) => {
-  const invoice = (await createInvoice(req)) as Invoice;
   const { userId } = req.user!;
+  const buyerFee = (await getSystemDocument()).buyerFee;
+  const invoice = (await createInvoice(
+    userId,
+    req.body.productList,
+    buyerFee,
+  )) as Invoice;
 
   const productList = invoice.productList as Array<Product>;
 
   if (invoice.invoiceTotal === 0) {
     const session = await InvoiceModel.startSession();
     try {
-      await updateInvoiceAndLicensesAfterPayment_Transaction(invoice, 0, 0, userId, session);
+      await updateInvoiceAndLicensesAfterPayment_Transaction(
+        invoice,
+        0,
+        0,
+        userId,
+        session
+      );
       invoice.transactionPaypalId = "0";
-      await invoice.save({session});
+      await invoice.save({ session });
 
       await session.commitTransaction();
       await session.endSession();
@@ -110,19 +140,18 @@ export const createOrder = async (req: IUserRequest, res: Response) => {
         invoice: invoice,
         isFree: true,
       });
-    } catch(error) {
+    } catch (error) {
       console.log(error);
       await session.abortTransaction();
       await session.endSession();
 
       throw new InternalServerError(ErrorMessage.ERROR_FAILED);
     }
-
   }
-
-  const buyerFee = (await getSystemDocument()).buyerFee;
+  
   try {
-    const response = await CreateOrder_PayPal(productList, invoice, buyerFee);
+    //const response = await CreateOrder_PayPal(productList, invoice, buyerFee);
+    const response = await CreateOrder_PayPal(invoice.invoiceTotal);
     res.json({
       paypal_link: response,
       invoiceId: invoice._id,
@@ -297,10 +326,16 @@ export const captureOrder = async (req: IUserRequest, res: Response) => {
   try {
     const buyerFee = (await getSystemDocument()).buyerFee;
     const sellerFee = (await getSystemDocument()).sellerFee;
-    await updateInvoiceAndLicensesAfterPayment_Transaction(invoice, sellerFee, buyerFee,userId, session);
+    await updateInvoiceAndLicensesAfterPayment_Transaction(
+      invoice,
+      sellerFee,
+      buyerFee,
+      userId,
+      session
+    );
     const { response, transactionPaypalId } = await Capture_PayPal(token);
     invoice.transactionPaypalId = transactionPaypalId;
-    await invoice.save({session: session});
+    await invoice.save({ session: session });
 
     await session.commitTransaction();
     await session.endSession();

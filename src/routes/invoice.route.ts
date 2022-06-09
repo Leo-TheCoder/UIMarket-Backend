@@ -17,7 +17,7 @@ router.get("/transaction", getShopTransaction);
 router.get("/detail/:invoiceId", getInvoiceById);
 
 //POST Method
-router.post("/", createOrder);
+//router.post("/", createOrder);
 router.post("/preOrder", preOrder);
 
 export default router;
