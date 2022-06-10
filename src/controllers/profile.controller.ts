@@ -143,7 +143,7 @@ const getProfileInfo = async (req: IUserRequest, res: Response) => {
 
   const userDoc = await UserModel.findById(
     userId,
-    "-authenToken -customerPassword -createdAt -updatedAt",
+    "-authenToken -customerPassword -createdAt -updatedAt -portfolio -refreshToken",
   );
 
   if (!userDoc) {
@@ -205,3 +205,31 @@ const updateProfile = async (req: IUserRequest, res: Response) => {
 };
 
 export { getProfileActivity, updateProfile, getProfileInfo };
+
+interface IPortfolio {
+  image?: string[]
+}
+
+export const getPortfolio = async (req: IUserRequest, res: Response) => {
+  const {userId} = req.params;
+  const portfolio = await UserModel.findById(userId).select("portfolio").lean();
+  
+  return res.status(StatusCodes.OK).json({
+    portfolio,
+  })
+}
+
+export const updatePortfolio = async(req: IUserRequest, res: Response) => {
+  const {userId} = req.user!;
+  const portfolio = req.body.portfolio as IPortfolio;
+
+  const userDocument = await UserModel.findById(userId).select("portfolio");
+
+  userDocument.portfolio = portfolio;
+  await userDocument.save();
+
+  return res.status(StatusCodes.OK).json({
+    portfolio: userDocument.toObject(),
+  })
+
+}
