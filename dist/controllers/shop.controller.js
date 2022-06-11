@@ -168,7 +168,8 @@ const updateShop = async (req, res) => {
     shop.shopPhone = req.body.shopPhone || shop.shopPhone;
     shop.shopEmail = req.body.shopEmail || shop.shopEmail;
     shop.shopPayPal = req.body.shopPayPal || shop.shopPayPal;
-    shop.updatedAt = new Date();
+    shop.shopBanner = req.body.shopBanner || shop.shopBanner;
+    shop.shopName = req.body.shopName || shop.shopName;
     const result = await shop.save();
     if (result) {
         res.status(http_status_codes_1.StatusCodes.OK).json({ result });
@@ -179,18 +180,18 @@ const updateShop = async (req, res) => {
 };
 exports.updateShop = updateShop;
 const getShopById = async (req, res) => {
-    var selectOption = { __v: 0 };
+    const selectOption = { __v: 0 };
     if (!req.user?.shopId || req.user.shopId != req.params.shopId) {
         selectOption.shopIDCard = 0;
         selectOption.shopBalance = 0;
-        selectOption.userId = 0;
         selectOption.taxCode = 0;
     }
-    const shop = await Shop_model_1.default.find({
+    const shop = await Shop_model_1.default.findOne({
         _id: req.params.shopId,
         shopStatus: 1,
     })
         .select(selectOption)
+        .populate({ path: "userId", select: "customerAvatar" })
         .lean();
     if (!shop) {
         throw new errors_1.NotFoundError(ErrorMessage.ERROR_INVALID_SHOP_ID);

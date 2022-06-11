@@ -47,10 +47,10 @@ const UserSchema = new mongoose_1.default.Schema({
         },
     },
     customerWallet: {
-        coin: {
-            type: Number,
-            default: 0,
-        },
+        // coin: {
+        //   type: Number,
+        //   default: 0,
+        // },
         point: {
             type: Number,
             default: 0,
@@ -73,6 +73,12 @@ const UserSchema = new mongoose_1.default.Schema({
         type: Boolean,
         default: false,
     },
+    portfolio: {
+        images: [{
+                type: String,
+                required: false,
+            }]
+    }
 }, {
     timestamps: true,
 });

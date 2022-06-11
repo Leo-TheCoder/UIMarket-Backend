@@ -30,6 +30,8 @@ const Category_model_1 = __importDefault(require("../models/Category.model"));
 const errors_1 = require("../errors");
 const Shop_model_1 = __importDefault(require("../models/Shop.model"));
 const ErrorMessage = __importStar(require("../errors/error_message"));
+const License_model_1 = __importDefault(require("../models/License.model"));
+const enum_1 = require("../types/enum");
 var SortTypes;
 (function (SortTypes) {
     SortTypes["MoneyAsc"] = "money-asc";
@@ -193,12 +195,18 @@ const findByCategory = async (req, res) => {
 };
 exports.findByCategory = findByCategory;
 const findById = async (req, res) => {
+    const userId = req.user?.userId;
     const product = await Product_model_1.default.findByIdAndUpdate({
         _id: req.params.productId,
         productStatus: 1,
     }, { $inc: { allTimeView: 1 } })
+        .select("-productFile")
         .populate({ path: "shopId", select: "shopEmail" })
+        .populate({ path: "productCategory", select: "categoryName" })
         .lean();
+    if (!product) {
+        throw new errors_1.NotFoundError(ErrorMessage.ERROR_INVALID_PRODUCT_ID);
+    }
     //Add customer email of shop
     const customerEmail = await Shop_model_1.default.findById(product.shopId._id)
         .select({ userId: 1 })
@@ -207,12 +215,18 @@ const findById = async (req, res) => {
         select: "customerEmail -_id",
     });
     product.shopId.customerEmail = customerEmail.userId.customerEmail;
-    if (!product) {
-        throw new errors_1.NotFoundError(ErrorMessage.ERROR_INVALID_PRODUCT_ID);
+    let isBought = false;
+    if (userId) {
+        const licenseCount = await License_model_1.default.count({
+            product: product._id,
+            userId,
+            licenseStatus: {
+                $in: [enum_1.LicesneStatusEnum.ACTIVE, enum_1.LicesneStatusEnum.REFUNDING],
+            },
+        });
+        isBought = licenseCount > 0;
     }
-    else {
-        res.status(http_status_codes_1.StatusCodes.OK).json({ product });
-    }
+    return res.status(http_status_codes_1.StatusCodes.OK).json({ product, isBought });
 };
 exports.findById = findById;
 const findByName = async (req, res) => {
@@ -278,7 +292,7 @@ const findByName = async (req, res) => {
                 localField: "shopId",
                 foreignField: "_id",
                 pipeline: [{ $project: { shopName: 1 } }],
-                as: "shop",
+                as: "shopId",
             },
         },
     ];
@@ -297,7 +311,7 @@ const findByName = async (req, res) => {
                 : undefined;
         delete product.productPictures;
         product.productCategory = product.productCategory[0];
-        product.shop = product.shop[0];
+        product.shopId = product.shopId[0];
         return product;
     });
     res.status(http_status_codes_1.StatusCodes.OK).json({
@@ -318,7 +332,7 @@ const getProductsByShop = async (req, res) => {
     const filter = query.filter;
     const filterObj = filterObjMongoose(filter);
     //Check shop ID
-    const shop = await Shop_model_1.default.find({ _id: shopId, shopStatus: 1 }).lean();
+    const shop = await Shop_model_1.default.findOne({ _id: shopId, shopStatus: 1 }).lean();
     if (!shop) {
         throw new errors_1.NotFoundError(ErrorMessage.ERROR_INVALID_SHOP_ID);
     }
@@ -346,12 +360,18 @@ const getProductsByShop = async (req, res) => {
         //get first item in array
         const productPictureList = product.productPictures;
         //get first picture
-        product.coverPicture =
-            productPictureList && productPictureList.length > 0
-                ? productPictureList[0]
-                : undefined;
+        const coverPicture = productPictureList && productPictureList.length > 0
+            ? productPictureList[0]
+            : undefined;
         delete product.productPictures;
-        return product;
+        return {
+            ...product,
+            shopId: {
+                _id: shop._id,
+                shopName: shop.shopName,
+            },
+            coverPicture,
+        };
     });
     return res.status(http_status_codes_1.StatusCodes.OK).json({
         totalPages,

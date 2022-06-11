@@ -44,10 +44,11 @@ const generatedownloadURL = async (req, res) => {
     const query = req.query;
     const folder = query.folder;
     const isPrivate = query.isPrivate === "true" || false;
-    if (!folder || !query.isPrivate) {
+    const fileName = query.fileName;
+    if (!folder || !isPrivate || !fileName) {
         throw new errors_1.BadRequestError(ErrorMessage.ERROR_MISSING_BODY);
     }
-    const url = await (0, s3_1.downloadURL)(folder, isPrivate);
+    const url = await (0, s3_1.downloadURL)(folder, isPrivate, fileName);
     if (url) {
         res.status(http_status_codes_1.StatusCodes.OK).send({ url });
     }

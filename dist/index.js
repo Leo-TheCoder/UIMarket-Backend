@@ -53,7 +53,7 @@ app.use("/api/v1/profile", profile_route_1.default);
 app.use("/api/v1/file", authentication_1.compulsoryAuth, file_route_1.default);
 app.use("/api/v1/shop", shop_route_1.default);
 app.use("/api/v1/admin", admin_route_1.default);
-app.use("/api/v1/products", product_route_1.default);
+app.use("/api/v1/products", authentication_1.optionalAuth, product_route_1.default);
 app.use("/api/v1/verify", verify_route_1.default);
 app.use("/api/v1/payment", payment_route_1.default);
 app.use("/api/v1/category", productCategory_route_1.default);
@@ -63,10 +63,15 @@ app.use("/api/v1/reviews", review_route_1.default);
 app.use("/api/v1/licenses", license_route_1.default);
 app.use("/api/v1/carts", authentication_1.compulsoryAuth, cart_route_1.default);
 app.use("/api/v1/reports", authentication_1.compulsoryAuth, report_route_1.default);
+//tool
+const dev_test_1 = require("./controllers/dev.test");
+app.get("/resetTransaction", dev_test_1.resetTransaction);
 app.use(not_found_1.default);
 app.use(handle_errors_1.default);
 //Scheduled Task
 const resolveBounty_1 = require("./scheduled/resolveBounty");
+const commitTransaction_1 = require("./scheduled/commitTransaction");
+const clearPendingInvoices_1 = require("./scheduled/clearPendingInvoices");
 const start = async () => {
     try {
         await (0, connect_1.default)(process.env.MONGO_URI);
@@ -77,6 +82,13 @@ const start = async () => {
         //Resolve bounty run everyday at every hour
         node_cron_1.default.schedule("1 * * * *", async () => {
             await (0, resolveBounty_1.resolveBounty)();
+        });
+        //Resolve shop payment run everyday at 00:01
+        node_cron_1.default.schedule("1 0 * * *", async () => {
+            await (0, commitTransaction_1.resolveShopPayment)();
+        });
+        node_cron_1.default.schedule("1 0 * * *", async () => {
+            await (0, clearPendingInvoices_1.clearInvoiceModel)();
         });
     }
     catch (error) {

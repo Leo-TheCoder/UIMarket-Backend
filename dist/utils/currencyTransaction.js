@@ -22,7 +22,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.shopWithdrawTransaction = exports.shopTransaction = exports.userTransaction = exports.pointRollBack = exports.pointTransaction = void 0;
+exports.refundTransaction = exports.shopWithdrawTransaction = exports.shopTransactionObjects = exports.shopTransaction = exports.userTransaction = exports.pointRollBack = exports.pointTransaction = void 0;
 //Library
 const errors_1 = require("../errors");
 //Model
@@ -34,6 +34,8 @@ const ShopTransaction_model_1 = __importDefault(require("../models/ShopTransacti
 const Invoice_model_1 = __importDefault(require("../models/Invoice.model"));
 //Error
 const ErrorMessage = __importStar(require("../errors/error_message"));
+//Enum
+const enum_1 = require("../types/enum");
 const pointTransaction = async (userId, changeAmount, reason) => {
     //Checking userId
     const user = await User_model_1.default.findOne({ _id: userId, customerStatus: 1 });
@@ -96,10 +98,17 @@ const pointRollBack = async (userId, transactionId, changeAmount) => {
     }
 };
 exports.pointRollBack = pointRollBack;
-const userTransaction = async (userId, invoiceId, changeAmount, reason) => {
+const userTransaction = async (userId, invoiceId, changeAmount, reason, status, opt) => {
     //Checking userId and shopId
-    const userPromise = User_model_1.default.findOne({ _id: userId, customerStatus: 1 }).lean();
-    const invoicePromise = Invoice_model_1.default.findOne({ _id: invoiceId }).lean();
+    const userPromise = User_model_1.default.findOne({
+        _id: userId,
+        customerStatus: 1,
+    })
+        .session(opt.session)
+        .lean();
+    const invoicePromise = Invoice_model_1.default.findOne({ _id: invoiceId })
+        .session(opt.session)
+        .lean();
     const [user, invoice] = await Promise.all([userPromise, invoicePromise]);
     if (!user) {
         throw new errors_1.NotFoundError(ErrorMessage.ERROR_INVALID_USER_ID);
@@ -108,12 +117,20 @@ const userTransaction = async (userId, invoiceId, changeAmount, reason) => {
         throw new errors_1.NotFoundError(ErrorMessage.ERROR_INVALID_INVOICE_ID);
     }
     //Record the transaction
-    const transaction = await UserTransaction_model_1.default.create({
+    // const transaction = await UserTransactionModel.create({
+    //   userId: userId,
+    //   invoiceId: invoiceId,
+    //   reason: reason,
+    //   changeAmount: changeAmount,
+    //   transactionStatus: status,
+    // });
+    const transaction = await new UserTransaction_model_1.default({
         userId: userId,
         invoiceId: invoiceId,
         reason: reason,
         changeAmount: changeAmount,
-    });
+        transactionStatus: status,
+    }).save(opt);
     if (!transaction) {
         throw new errors_1.NotFoundError(ErrorMessage.ERROR_FAILED);
     }
@@ -122,39 +139,64 @@ const userTransaction = async (userId, invoiceId, changeAmount, reason) => {
     }
 };
 exports.userTransaction = userTransaction;
-const shopTransaction = async (shopId, invoiceId, reason, changeAmount) => {
+const shopTransaction = async (shopId, invoiceId, productId, action, changeAmount, opt) => {
     //Checking shopId
-    const shop = await Shop_model_1.default.findOne({ _id: shopId, shopStatus: 1 });
+    const shop = await Shop_model_1.default.findOne({ _id: shopId, shopStatus: 1 }).session(opt.session);
     if (!shop) {
         throw new errors_1.NotFoundError(ErrorMessage.ERROR_INVALID_SHOP_ID);
     }
     const currentAmount = shop.shopBalance;
     const balanceAmount = currentAmount + changeAmount;
     //Checking invoice ID
-    const invoice = await Invoice_model_1.default.findById(invoiceId);
+    const invoice = await Invoice_model_1.default.findById(invoiceId).session(opt.session);
     if (!invoice) {
         throw new errors_1.BadRequestError(ErrorMessage.ERROR_INVALID_INVOICE_ID);
     }
-    //Update shop wallet
-    shop.shopBalance = balanceAmount;
-    const newBalance = await shop.save();
-    if (!newBalance) {
-        throw new errors_1.InternalServerError(ErrorMessage.ERROR_FAILED);
-    }
-    else {
-        const transaction = await ShopTransaction_model_1.default.create({
-            shopId: shopId,
-            invoiceId: invoiceId,
-            reason: reason,
-            currentAmount: currentAmount,
-            changeAmount: changeAmount,
-            balanceAmount: balanceAmount,
-        });
-        return transaction;
-    }
+    // //Update shop wallet
+    // shop.shopBalance = balanceAmount;
+    // const newBalance = await shop.save();
+    const transaction = await new ShopTransaction_model_1.default({
+        shopId: shopId,
+        invoiceId: invoiceId,
+        productId: productId,
+        action: action,
+        currentAmount: currentAmount,
+        changeAmount: changeAmount,
+        balanceAmount: balanceAmount,
+    }).save(opt);
+    return transaction;
 };
 exports.shopTransaction = shopTransaction;
-const shopWithdrawTransaction = async (shopFullDocument, reason, changeAmount) => {
+const shopTransactionObjects = (invoice, action, sellerFee, shopBalances) => {
+    const shopIds = shopBalances.map(shop => shop._id);
+    const banlances = shopBalances.map(shop => shop.shopBalance);
+    return invoice.productList.map((product, index) => {
+        let netAmount = (product.productPrice * (100 - sellerFee)) / 100;
+        netAmount = Math.round(netAmount * 100) / 100;
+        const searchIndex = (s) => {
+            for (let i = 0; i < shopIds.length; i++) {
+                if (s == shopIds[i]) {
+                    return i;
+                }
+            }
+            return -1;
+        };
+        const shopIndex = searchIndex(product.shop);
+        const currentAmount = banlances[shopIndex];
+        const balanceAmount = currentAmount + netAmount;
+        return {
+            shopId: product.shop,
+            invoiceId: invoice._id,
+            productId: product.product,
+            action: action,
+            currentAmount: currentAmount,
+            changeAmount: netAmount,
+            balanceAmount: balanceAmount,
+        };
+    });
+};
+exports.shopTransactionObjects = shopTransactionObjects;
+const shopWithdrawTransaction = async (shopFullDocument, changeAmount) => {
     const shop = shopFullDocument;
     const currentAmount = shop.shopBalance;
     const balanceAmount = currentAmount + changeAmount;
@@ -169,12 +211,29 @@ const shopWithdrawTransaction = async (shopFullDocument, reason, changeAmount) =
     }
     const transaction = await ShopTransaction_model_1.default.create({
         shopId: shop._id,
-        reason: reason,
+        action: enum_1.TransactionActionEnum.WITHDRAW,
         currentAmount: currentAmount,
         changeAmount: changeAmount,
         balanceAmount: balanceAmount,
+        transactionStatus: enum_1.TransactionStatusEnum.COMPLETED,
     });
     return transaction;
 };
 exports.shopWithdrawTransaction = shopWithdrawTransaction;
+const refundTransaction = async (userId, invoiceId, productIds, amount) => {
+    const shopTransactionResult = await ShopTransaction_model_1.default.updateMany({
+        invoiceId,
+        productId: { $in: productIds },
+    }, {
+        transactionStatus: enum_1.TransactionStatusEnum.REFUNDED,
+    });
+    await UserTransaction_model_1.default.create({
+        userId: userId,
+        invoiceId: invoiceId,
+        reason: `Refund from DeeX`,
+        changeAmount: amount,
+        transactionStatus: enum_1.TransactionStatusEnum.REFUNDED,
+    });
+};
+exports.refundTransaction = refundTransaction;
 //# sourceMappingURL=currencyTransaction.js.map

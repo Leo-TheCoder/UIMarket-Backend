@@ -9,4 +9,5 @@ export declare const maxBounty = 5000;
 export declare const bestAnswerAward = 10;
 export declare const upvoteAward = 2;
 export declare const acceptRefund = 3;
+export declare const invoicePendingPeriod = 3;
 //# sourceMappingURL=constants.d.ts.map

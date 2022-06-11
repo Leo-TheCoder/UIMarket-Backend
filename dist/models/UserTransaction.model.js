@@ -4,6 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const mongoose_1 = __importDefault(require("mongoose"));
+const enum_1 = require("../types/enum");
 const UserTransactionSchema = new mongoose_1.default.Schema({
     userId: {
         type: mongoose_1.default.Types.ObjectId,
@@ -24,8 +25,12 @@ const UserTransactionSchema = new mongoose_1.default.Schema({
     },
     transactionStatus: {
         type: Number,
-        default: 1,
-        enum: [0, 1],
+        default: enum_1.TransactionStatusEnum.COMPLETED,
+        enum: [
+            enum_1.TransactionStatusEnum.REFUNDED,
+            enum_1.TransactionStatusEnum.PENDING,
+            enum_1.TransactionStatusEnum.COMPLETED,
+        ],
     },
 }, { timestamps: true });
 exports.default = mongoose_1.default.model("User Transaction", UserTransactionSchema);

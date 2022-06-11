@@ -18,13 +18,7 @@ const ShopSchema = new mongoose_1.default.Schema({
         // minlength: defaultMinLength / 2,
     },
     shopPayPal: {
-        required: false,
-        paypalEmail: {
-            type: String,
-        },
-        paypalId: {
-            type: String,
-        },
+        type: String,
     },
     shopDescription: {
         type: String,
@@ -58,5 +52,5 @@ const ShopSchema = new mongoose_1.default.Schema({
         default: null,
     },
 }, { timestamps: true });
-exports.default = mongoose_1.default.model("Shop", ShopSchema);
+exports.default = mongoose_1.default.model('Shop', ShopSchema);
 //# sourceMappingURL=Shop.model.js.map

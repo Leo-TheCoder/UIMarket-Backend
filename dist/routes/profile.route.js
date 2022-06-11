@@ -10,8 +10,10 @@ const router = express_1.default.Router();
 //GET Method
 router.get("/activity/:userId", authentication_1.optionalAuth, profile_controller_1.getProfileActivity);
 router.get("/info/:userId", authentication_1.optionalAuth, profile_controller_1.getProfileInfo);
+router.get("/portfolio/:userId", authentication_1.optionalAuth, profile_controller_1.getPortfolio);
 //POST Method
 router.post("/info", authentication_1.compulsoryAuth, profile_controller_1.updateProfile);
+router.post("/portfolio", authentication_1.compulsoryAuth, profile_controller_1.updatePortfolio);
 //PUT Method
 //DELETE Method
 exports.default = router;

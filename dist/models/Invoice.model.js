@@ -47,15 +47,22 @@ const OrderSchema = new mongoose_1.default.Schema({
         type: Number,
         required: [true, "Please provide invoice total"],
     },
-    transactionId: {
-        type: mongoose_1.default.Types.ObjectId,
-        ref: "Coin Transaction",
-        required: [false, "Please provide transaction Id"],
-    },
+    // transactionId: {
+    //   type: mongoose.Types.ObjectId,
+    //   ref: "Coin Transaction",
+    //   required: [false, "Please provide transaction Id"],
+    // },
     invoiceStatus: {
         type: String,
         default: "Waiting",
         enum: ["Waiting", "Paid"],
+    },
+    transactionPaypalId: {
+        type: String,
+    },
+    isRefunded: {
+        type: Boolean,
+        default: false,
     },
 }, { timestamps: true });
 exports.default = mongoose_1.default.model("Order", OrderSchema);

@@ -56,7 +56,7 @@ const createComment = async (req, res) => {
         userId,
     });
     //populate with user model
-    await comment.populate("userId", "customerEmail customerName");
+    await comment.populate("userId", "customerEmail customerName customerAvatar");
     res.status(http_status_codes_1.StatusCodes.CREATED).json(comment);
 };
 exports.createComment = createComment;
@@ -75,7 +75,7 @@ const getComments = async (req, res) => {
         : Math.floor(total / limit) + 1;
     const comments = await Comment_model_1.default.find(queryString)
         .sort({ createdAt: +1 })
-        .populate("userId", "customerName customerEmail")
+        .populate("userId", "customerName customerEmail customerAvatar")
         .skip((page - 1) * limit)
         .limit(limit);
     let result = comments;

@@ -45,7 +45,7 @@ const createAnswer = async (req, res) => {
         });
         answer = await Answer_model_1.default.populate(answer, {
             path: "userId",
-            select: ["customerName", "customerEmail"],
+            select: ["customerName", "customerEmail", "customerAvatar"],
         });
         res.status(http_status_codes_1.StatusCodes.CREATED).json(answer);
     }
@@ -91,6 +91,7 @@ const getAnswer = async (req, res) => {
                         $project: {
                             customerName: 1,
                             customerEmail: 1,
+                            customerAvatar: 1,
                         },
                     },
                 ],

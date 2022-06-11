@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.acceptRefund = exports.upvoteAward = exports.bestAnswerAward = exports.maxBounty = exports.minBounty = exports.maxBountyDueDate = exports.minBountyDueDate = exports.defaultLimitComments = exports.defaultMinLength = exports.defaultPageNumber = exports.defaultLimit = void 0;
+exports.invoicePendingPeriod = exports.acceptRefund = exports.upvoteAward = exports.bestAnswerAward = exports.maxBounty = exports.minBounty = exports.maxBountyDueDate = exports.minBountyDueDate = exports.defaultLimitComments = exports.defaultMinLength = exports.defaultPageNumber = exports.defaultLimit = void 0;
 //Pagination
 exports.defaultLimit = 10;
 exports.defaultPageNumber = 1;
@@ -17,4 +17,6 @@ exports.bestAnswerAward = 10;
 exports.upvoteAward = 2;
 //Refund
 exports.acceptRefund = 3;
+//Invoice pending period
+exports.invoicePendingPeriod = 3;
 //# sourceMappingURL=constants.js.map

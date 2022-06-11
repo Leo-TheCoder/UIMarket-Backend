@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Capture_PayPal = exports.Payout_PayPal = exports.CreateOrder_PayPal = void 0;
+exports.Refund_PayPal = exports.Capture_PayPal = exports.Payout_PayPal = exports.CreateOrder_PayPal = void 0;
 const axios_1 = __importDefault(require("axios"));
 const uuid_1 = require("uuid");
 const PAYPAL_API_CLIENT = process.env.PAYPAL_API_CLIENT;
@@ -26,30 +26,33 @@ const refreshAccessToken = async () => {
     });
     return access_token;
 };
-const CreateOrder_PayPal = async (productList, invoice, buyerFee) => {
-    const items_detail = productList.map((product) => {
-        return {
-            name: product.productName,
-            unit_amount: {
-                currency_code: "USD",
-                value: product.productPrice,
-            },
-            quantity: "1",
-            description: "Deex Product",
-        };
-    });
+const CreateOrder_PayPal = async (
+//productList: Product[],
+//invoice: Invoice,
+totalAmount) => {
+    // const items_detail = productList.map((product) => {
+    //   return {
+    //     name: product.productName,
+    //     unit_amount: {
+    //       currency_code: "USD",
+    //       value: product.productPrice,
+    //     },
+    //     quantity: "1",
+    //     description: "Deex Product",
+    //   };
+    // });
     //push fee
-    const fee = (invoice.invoiceTotal * buyerFee) / 100;
-    items_detail.push({
-        name: "DeeX System Fee",
-        unit_amount: {
-            currency_code: "USD",
-            value: fee,
-        },
-        quantity: "1",
-        description: `${buyerFee}% with total invoice`,
-    });
-    const totalAmount = invoice.invoiceTotal + fee;
+    // const fee = (invoice.invoiceTotal * buyerFee) / 100;
+    // items_detail.push({
+    //   name: "DeeX System Fee",
+    //   unit_amount: {
+    //     currency_code: "USD",
+    //     value: fee,
+    //   },
+    //   quantity: "1",
+    //   description: `${buyerFee}% with total invoice`,
+    // });
+    // const totalAmount = invoice.invoiceTotal + fee;
     const order = {
         intent: "CAPTURE",
         purchase_units: [
@@ -58,14 +61,7 @@ const CreateOrder_PayPal = async (productList, invoice, buyerFee) => {
                 amount: {
                     currency_code: "USD",
                     value: totalAmount,
-                    breakdown: {
-                        item_total: {
-                            currency_code: "USD",
-                            value: totalAmount,
-                        },
-                    },
                 },
-                items: items_detail,
             },
         ],
         application_context: {
@@ -103,7 +99,7 @@ const CreateOrder_PayPal = async (productList, invoice, buyerFee) => {
     if (!linkPayPal) {
         throw new Error("Something wrong with paypal");
     }
-    return linkPayPal;
+    return response?.data;
 };
 exports.CreateOrder_PayPal = CreateOrder_PayPal;
 const Payout_PayPal = async (amountValue, receiver) => {
@@ -158,7 +154,44 @@ const Capture_PayPal = async (token) => {
     catch (error) {
         console.log(error.response.data);
     }
-    return response;
+    const transactionPaypalId = response?.data.purchase_units[0].payments.captures[0].id;
+    return {
+        transactionPaypalId,
+        response,
+    };
 };
 exports.Capture_PayPal = Capture_PayPal;
+const Refund_PayPal = async (captureId, feeAmount, invoiceId, note_to_payer) => {
+    const refundDetail = {
+        amount: {
+            value: feeAmount,
+            currency_code: "USD",
+        },
+        invoice_id: invoiceId,
+        note_to_payer,
+    };
+    const refundPromise = () => {
+        return axios_1.default.post(`${PAYPAL_API}/v2/payments/captures/${captureId}/refund`, refundDetail, {
+            headers: {
+                Authorization: `Bearer ${accessToken}`,
+            }
+        });
+    };
+    let response;
+    try {
+        response = await refundPromise();
+    }
+    catch (error) {
+        if (error.response.data.error == "invalid_token") {
+            accessToken = await refreshAccessToken();
+            response = await refundPromise();
+        }
+        else {
+            console.log(error.response.data);
+        }
+    }
+    ;
+    return response;
+};
+exports.Refund_PayPal = Refund_PayPal;
 //# sourceMappingURL=paypal.js.map

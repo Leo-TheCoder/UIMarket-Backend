@@ -16,8 +16,14 @@ const ShopTransactionSchema = new mongoose_1.default.Schema({
         ref: "Invoice",
         required: false,
     },
-    reason: {
+    productId: {
+        type: mongoose_1.default.Types.ObjectId,
+        ref: "Product",
+        required: false,
+    },
+    action: {
         type: String,
+        enum: [enum_1.TransactionActionEnum.RECEIVE, enum_1.TransactionActionEnum.WITHDRAW],
     },
     currentAmount: {
         type: Number,
@@ -33,8 +39,12 @@ const ShopTransactionSchema = new mongoose_1.default.Schema({
     },
     transactionStatus: {
         type: Number,
-        default: enum_1.TransactionStatus.PENDING,
-        enum: [enum_1.TransactionStatus.PENDING, enum_1.TransactionStatus.COMPLETED],
+        default: enum_1.TransactionStatusEnum.PENDING,
+        enum: [
+            enum_1.TransactionStatusEnum.REFUNDED,
+            enum_1.TransactionStatusEnum.PENDING,
+            enum_1.TransactionStatusEnum.COMPLETED,
+        ],
     },
 }, { timestamps: true });
 exports.default = mongoose_1.default.model("Shop Transaction", ShopTransactionSchema);

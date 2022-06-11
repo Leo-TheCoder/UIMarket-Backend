@@ -10,8 +10,9 @@ const router = express_1.default.Router();
 router.get("/history", invoice_controller_1.purchaseHistory);
 router.get("/history/:productName", invoice_controller_1.searchPurchaseHistory);
 router.get("/transaction", invoice_controller_1.getShopTransaction);
+router.get("/detail/:invoiceId", invoice_controller_1.getInvoiceById);
 //POST Method
-router.post("/", invoice_controller_1.createOrder);
+//router.post("/", createOrder);
 router.post("/preOrder", invoice_controller_1.preOrder);
 exports.default = router;
 //# sourceMappingURL=invoice.route.js.map

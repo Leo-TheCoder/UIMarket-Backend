@@ -23,6 +23,7 @@ export declare const ERROR_INVALID_PRODUCT_ID = "invalid-product-id";
 export declare const ERROR_INVALID_SHOP_ID = "invalid-shop-id";
 export declare const ERROR_INVALID_INVOICE_ID = "invalid-invoice-id";
 export declare const ERROR_INVALID_REVIEW_ID = "invalid-review-id";
+export declare const ERROR_INVALID_LICENSE_ID = "invalid-license-id";
 export declare const ERROR_INVALID_REQUEST_REFUND = "invalid-request-refund";
 export declare const ERROR_EXPIRED_REFUND_TIME = "expired-refund-time";
 export declare const ERROR_INVALID_AMOUNT = "invalid-amount";

@@ -9,7 +9,7 @@ const shop_controller_1 = require("../controllers/shop.controller");
 const router = express_1.default.Router();
 //GET Method
 router.get("/product", authentication_1.compulsoryAuth, shop_controller_1.getAllProduct);
-router.get("/product/statistic", authentication_1.compulsoryAuth, shop_controller_1.getProductStatistic);
+router.get("/product/statistic", authentication_1.compulsoryAuth, shop_controller_1.getProductStatisticV2);
 router.get("/info/:shopId", authentication_1.optionalAuth, shop_controller_1.getShopById);
 router.get("/search/:shopName", shop_controller_1.getShopByName);
 router.get("/payment/history", authentication_1.compulsoryAuth, shop_controller_1.paymentHistory);

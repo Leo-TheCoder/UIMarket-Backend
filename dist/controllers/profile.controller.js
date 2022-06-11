@@ -22,7 +22,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getProfileInfo = exports.updateProfile = exports.getProfileActivity = void 0;
+exports.updatePortfolio = exports.getPortfolio = exports.getProfileInfo = exports.updateProfile = exports.getProfileActivity = void 0;
 const Question_model_1 = __importDefault(require("../models/Question.model"));
 const Answer_model_1 = __importDefault(require("../models/Answer.model"));
 const User_model_1 = __importDefault(require("../models/User.model"));
@@ -127,16 +127,21 @@ const getProfileActivity = async (req, res) => {
 exports.getProfileActivity = getProfileActivity;
 const getProfileInfo = async (req, res) => {
     const { userId } = req.params;
-    const userDoc = await User_model_1.default.findById(userId, "-authenToken -customerPassword -createdAt -updatedAt");
+    const userDoc = await User_model_1.default.findById(userId, "-authenToken -customerPassword -createdAt -updatedAt -portfolio -refreshToken");
     if (!userDoc) {
         throw new errors_1.NotFoundError(ErrorMessage.ERROR_INVALID_USER_ID);
     }
     const user = JSON.parse(JSON.stringify(userDoc._doc));
     if (!(req.user && req.user.userId === userId)) {
-        delete user.customerWallet;
         delete user.customerStatus;
     }
-    res.status(http_status_codes_1.StatusCodes.OK).json({ user });
+    user.customerWallet.coin = undefined;
+    res.status(http_status_codes_1.StatusCodes.OK).json({ user: {
+            ...user,
+            customerWallet: {
+                point: user.customerWallet.point,
+            }
+        } });
 };
 exports.getProfileInfo = getProfileInfo;
 const updateProfile = async (req, res) => {
@@ -163,4 +168,23 @@ const updateProfile = async (req, res) => {
     res.status(http_status_codes_1.StatusCodes.OK).json(result);
 };
 exports.updateProfile = updateProfile;
+const getPortfolio = async (req, res) => {
+    const { userId } = req.params;
+    const portfolio = await User_model_1.default.findById(userId).select("portfolio").lean();
+    return res.status(http_status_codes_1.StatusCodes.OK).json({
+        portfolio,
+    });
+};
+exports.getPortfolio = getPortfolio;
+const updatePortfolio = async (req, res) => {
+    const { userId } = req.user;
+    const portfolio = req.body.portfolio;
+    const userDocument = await User_model_1.default.findById(userId).select("portfolio");
+    userDocument.portfolio = portfolio;
+    await userDocument.save();
+    return res.status(http_status_codes_1.StatusCodes.OK).json({
+        portfolio: userDocument.toObject(),
+    });
+};
+exports.updatePortfolio = updatePortfolio;
 //# sourceMappingURL=profile.controller.js.map
