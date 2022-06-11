@@ -82,7 +82,7 @@ const getAccessToken = async () => {
         username: PAYPAL_API_CLIENT,
         password: PAYPAL_API_SECRET,
       },
-    },
+    }
   );
   console.log(data);
   return data.access_token;
@@ -128,7 +128,7 @@ export const withdrawPayment = async (req: IUserRequest, res: Response) => {
     const response = await Payout_PayPal(amountValue, receiver);
     const transaction = await shopWithdrawTransaction(
       shop,
-      -amountValue, //minus value
+      -amountValue //minus value
     ).catch((err) => console.log(err));
 
     res.status(StatusCodes.OK).json({
@@ -143,11 +143,11 @@ export const withdrawPayment = async (req: IUserRequest, res: Response) => {
 
 export const returnAfterLoginPaypal = async (
   req: IUserRequest,
-  res: Response,
+  res: Response
 ) => {
   const query = req.query;
   const authorization_base64 = Buffer.from(
-    `${PAYPAL_API_CLIENT}:${PAYPAL_API_SECRET}`,
+    `${PAYPAL_API_CLIENT}:${PAYPAL_API_SECRET}`
   ).toString("base64");
 
   //GET ACCESS TOKEN
@@ -162,7 +162,7 @@ export const returnAfterLoginPaypal = async (
         "Content-Type": "application/x-www-form-urlencoded",
         Authorization: `Basic ${authorization_base64}`,
       },
-    },
+    }
   );
   const { access_token } = response.data;
 
@@ -173,7 +173,7 @@ export const returnAfterLoginPaypal = async (
         "Content-Type": "application/json",
         Authorization: `Bearer ${access_token}`,
       },
-    },
+    }
   );
 
   //store paypal info into db
@@ -197,7 +197,7 @@ export const returnAfterLoginPaypal = async (
 
 export const authorizationEndpoint = async (
   req: IUserRequest,
-  res: Response,
+  res: Response
 ) => {
   const user = req.user;
   const { shopId } = user!;
@@ -240,7 +240,7 @@ export const chargeCoin = async (req: IUserRequest, res: Response) => {
       headers: {
         Authorization: `Bearer ${access_token}`,
       },
-    },
+    }
   );
 
   res.json(response.data);
@@ -276,7 +276,7 @@ export const captureOrder = async (req: IUserRequest, res: Response) => {
       invoiceId,
       -totalAmount, //minus number
       `Pay for invoice: #${invoiceId}`,
-      TransactionStatusEnum.COMPLETED,
+      TransactionStatusEnum.COMPLETED
     );
     //Update invoice status
     await paidInvoice(invoice, transaction._id, userId, transactionPaypalId);
@@ -302,7 +302,7 @@ export const captureOrder = async (req: IUserRequest, res: Response) => {
         invoiceId,
         product.product,
         TransactionActionEnum.RECEIVE,
-        netAmount,
+        netAmount
       ).catch((err) => {
         console.log(err);
       });
@@ -325,7 +325,7 @@ export const captureOrder = async (req: IUserRequest, res: Response) => {
         .catch((error: any) => {
           console.error(error);
         });
-    },
+    }
   );
 
   await Promise.all(updateInvoiceLicensePromises);
@@ -380,29 +380,35 @@ export const createRequestRefund = async (req: IUserRequest, res: Response) => {
   //Checking existed
   const refund = await RefundModel.findOne({
     invoiceId,
+    refundStatus: {
+      $in: [RefundStatusEnum.PENDING, RefundStatusEnum.RESOLVED],
+    },
   }).lean();
   if (refund) {
     throw new BadRequestError(ErrorMessage.ERROR_AUTHENTICATION_DUPLICATE);
   }
 
   //Checking if it free
-  const licenses = await LicenseModel.find({
-    _id: {$in: licenseIds},
-  }, {
-    boughtTime: 1,
-    productPrice: 1,
-  }).lean() as {
-    boughtTime: Date,
-    productPrice: number,
+  const licenses = (await LicenseModel.find(
+    {
+      _id: { $in: licenseIds },
+    },
+    {
+      boughtTime: 1,
+      productPrice: 1,
+    }
+  ).lean()) as {
+    boughtTime: Date;
+    productPrice: number;
   }[];
 
   //calculate refund amount
   let refundAmount: number = 0;
-  licenses.forEach(license => {
+  licenses.forEach((license) => {
     refundAmount += license.productPrice;
-  })
+  });
 
-  if(refundAmount === 0) {
+  if (refundAmount === 0) {
     throw new BadRequestError(ErrorMessage.ERROR_FREE_REFUND);
   }
 
@@ -435,8 +441,6 @@ export const createRequestRefund = async (req: IUserRequest, res: Response) => {
 
   res.status(StatusCodes.CREATED).json(request);
 };
-
-
 
 //=========================TESTING==============================
 //==============================================================
@@ -501,7 +505,7 @@ export const testPaypal = async (req: IUserRequest, res: Response) => {
       headers: {
         Authorization: `Bearer ${access_token}`,
       },
-    },
+    }
   );
 
   res.json(data);
@@ -517,7 +521,7 @@ export const testCapturePaypal = async (req: IUserRequest, res: Response) => {
         username: PAYPAL_API_CLIENT,
         password: PAYPAL_API_SECRET,
       },
-    },
+    }
   );
 
   res.json({ data });
@@ -543,7 +547,7 @@ export const refundPayment = async (req: IUserRequest, res: Response) => {
           Authorization: `Bearer ${access_token}`,
           Accept: `application/json`,
         },
-      },
+      }
     );
   } catch (err) {
     console.log(err);
