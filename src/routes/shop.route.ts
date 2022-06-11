@@ -21,7 +21,7 @@ const router = express.Router();
 
 //GET Method
 router.get("/product", compulsoryAuth, getAllProduct);
-router.get("/product/statistic", compulsoryAuth, getProductStatistic);
+router.get("/product/statistic", compulsoryAuth, getProductStatisticV2);
 router.get("/info/:shopId", optionalAuth, getShopById);
 router.get("/search/:shopName", getShopByName);
 router.get("/payment/history", compulsoryAuth, paymentHistory);
