@@ -19,24 +19,45 @@ import LicenseModel from "../models/License.model";
 //Error
 import UnauthenticatedErorr from "../errors/unauthenticated-error";
 import * as ErrorMessage from "../errors/error_message";
-import { BadRequestError, InternalServerError, NotFoundError } from "../errors";
+import {
+  BadRequestError,
+  CustomError,
+  InternalServerError,
+  NotFoundError,
+} from "../errors";
 
 //Ultis
 import {
   createOrder as createInvoice,
   paidInvoice,
+  preOrder as checkOrder,
 } from "./invoice.controller";
 import {
   shopTransaction,
   shopWithdrawTransaction,
   userTransaction,
+  refundTransaction,
 } from "../utils/currencyTransaction";
 import {
   Capture_PayPal,
   CreateOrder_PayPal,
   Payout_PayPal,
+  Refund_PayPal,
 } from "../utils/paypal";
 import { getSystemDocument } from "./admin/system.controller";
+import {
+  LicesneStatusEnum,
+  RefundStatusEnum,
+  TransactionActionEnum,
+  TransactionStatusEnum,
+} from "../types/enum";
+import ShopTransactionModel from "../models/ShopTransaction.model";
+import {
+  updateInvoiceAndLicensesAfterDeclineRefund,
+  updateInvoiceAndLicensesAfterRefund,
+  updateInvoiceAndLicensesBeforeRefund,
+  updateInvoiceAndLicensesAfterPayment_Transaction,
+} from "../utils/statusInvoice";
 
 interface IQuery {
   page?: string;
@@ -51,9 +72,7 @@ const getAccessToken = async () => {
   const params = new URLSearchParams();
   params.append("grant_type", "client_credentials");
 
-  const {
-    data: { access_token },
-  } = await axios.post(
+  const { data } = await axios.post(
     "https://api-m.sandbox.paypal.com/v1/oauth2/token",
     params,
     {
@@ -64,47 +83,83 @@ const getAccessToken = async () => {
         username: PAYPAL_API_CLIENT,
         password: PAYPAL_API_SECRET,
       },
-    },
+    }
   );
-  return access_token;
+  console.log(data);
+  return data.access_token;
+};
+
+export const getBuyerFee = async (req: IUserRequest, res: Response) => {
+  const buyerFee = (await getSystemDocument()).buyerFee;
+  return res.status(StatusCodes.OK).json({ buyerFee });
+};
+
+export const getSellerFee = async (req: IUserRequest, res: Response) => {
+  const sellerFee = (await getSystemDocument()).sellerFee;
+  return res.status(StatusCodes.OK).json({ sellerFee });
+};
+
+export const preOrder = async (req: IUserRequest, res: Response) => {
+  const { productList, invoiceTotal } = await checkOrder(req.body.productList);
+  const buyerFee = (await getSystemDocument()).buyerFee;
+
+  res
+    .status(StatusCodes.OK)
+    .json({ productList, invoiceTotal, buyerFee, isFree: invoiceTotal === 0 });
 };
 
 export const createOrder = async (req: IUserRequest, res: Response) => {
-  const invoice = (await createInvoice(req)) as Invoice;
-
-  const productList = invoice.productList as Array<Product>;
+  const { userId } = req.user!;
   const buyerFee = (await getSystemDocument()).buyerFee;
+  const invoice = (await createInvoice(
+    userId,
+    req.body.productList,
+    buyerFee,
+  )) as Invoice;
+  const productList = invoice.productList as Array<Product>;
+
+  if (invoice.invoiceTotal === 0) {
+    const session = await InvoiceModel.startSession();
+    try {
+      await updateInvoiceAndLicensesAfterPayment_Transaction(
+        invoice,
+        0,
+        0,
+        userId,
+        session
+      );
+      invoice.transactionPaypalId = "0";
+      await invoice.save({ session });
+
+      await session.commitTransaction();
+      await session.endSession();
+
+      return res.status(StatusCodes.OK).json({
+        invoiceId: invoice._id,
+        invoice: invoice,
+        isFree: true,
+      });
+    } catch (error) {
+      console.log(error);
+      await session.abortTransaction();
+      await session.endSession();
+
+      throw new InternalServerError(ErrorMessage.ERROR_FAILED);
+    }
+  }
+  
   try {
-    const response = await CreateOrder_PayPal(productList, invoice, buyerFee);
+    //const response = await CreateOrder_PayPal(productList, invoice, buyerFee);
+    const response = await CreateOrder_PayPal(invoice.invoiceTotal);
     res.json({
       paypal_link: response,
       invoiceId: invoice._id,
+      isFree: false,
     });
   } catch (error) {
     console.log(error);
     throw new InternalServerError(ErrorMessage.ERROR_FAILED);
   }
-};
-
-//Error
-export const refundPayment = async (req: IUserRequest, res: Response) => {
-  const { access_token } = await getAccessToken();
-  const { token } = req.body;
-  let response: any = {};
-  try {
-    response = await axios.post(
-      `${process.env.PAYPAL_API}/v2/payments/captures/${token}/refund`,
-      {},
-      {
-        headers: {
-          Authorization: `Bearer ${access_token}`,
-        },
-      },
-    );
-  } catch (err) {
-    console.log(err);
-  }
-  res.json(response.data);
 };
 
 export const cancelPayment = (req: IUserRequest, res: Response) => {
@@ -120,18 +175,17 @@ export const withdrawPayment = async (req: IUserRequest, res: Response) => {
   if (!shop) {
     throw new UnauthenticatedErorr(ErrorMessage.ERROR_INVALID_SHOP_ID);
   }
-  if (!shop.shopPayPal.paypalEmail) {
+  if (!shop.shopPayPal) {
     throw new UnauthenticatedErorr(ErrorMessage.ERROR_PAYPAL_INVALID);
   }
-  const receiver = shop.shopPayPal.paypalEmail;
+  const receiver = shop.shopPayPal;
 
   try {
     //update coin
     const response = await Payout_PayPal(amountValue, receiver);
     const transaction = await shopWithdrawTransaction(
       shop,
-      `Withdraw from system $${amountValue}`,
-      -amountValue, //minus value
+      -amountValue //minus value
     ).catch((err) => console.log(err));
 
     res.status(StatusCodes.OK).json({
@@ -146,11 +200,11 @@ export const withdrawPayment = async (req: IUserRequest, res: Response) => {
 
 export const returnAfterLoginPaypal = async (
   req: IUserRequest,
-  res: Response,
+  res: Response
 ) => {
   const query = req.query;
   const authorization_base64 = Buffer.from(
-    `${PAYPAL_API_CLIENT}:${PAYPAL_API_SECRET}`,
+    `${PAYPAL_API_CLIENT}:${PAYPAL_API_SECRET}`
   ).toString("base64");
 
   //GET ACCESS TOKEN
@@ -165,7 +219,7 @@ export const returnAfterLoginPaypal = async (
         "Content-Type": "application/x-www-form-urlencoded",
         Authorization: `Basic ${authorization_base64}`,
       },
-    },
+    }
   );
   const { access_token } = response.data;
 
@@ -176,7 +230,7 @@ export const returnAfterLoginPaypal = async (
         "Content-Type": "application/json",
         Authorization: `Bearer ${access_token}`,
       },
-    },
+    }
   );
 
   //store paypal info into db
@@ -200,7 +254,7 @@ export const returnAfterLoginPaypal = async (
 
 export const authorizationEndpoint = async (
   req: IUserRequest,
-  res: Response,
+  res: Response
 ) => {
   const user = req.user;
   const { shopId } = user!;
@@ -243,7 +297,7 @@ export const chargeCoin = async (req: IUserRequest, res: Response) => {
       headers: {
         Authorization: `Bearer ${access_token}`,
       },
-    },
+    }
   );
 
   res.json(response.data);
@@ -267,70 +321,32 @@ export const captureOrder = async (req: IUserRequest, res: Response) => {
     throw new BadRequestError(ErrorMessage.ERROR_INVALID_INVOICE_ID);
   }
 
-  try {
-    const response = await Capture_PayPal(token);
-    const buyerFee = (await getSystemDocument()).buyerFee;
-
-    const fee = (invoice.invoiceTotal * buyerFee) / 100;
-    const totalAmount = invoice.invoiceTotal + fee;
-    //Record user coin
-    const transaction = await userTransaction(
-      userId,
-      invoiceId,
-      -totalAmount, //minus number
-      `Pay for invoice: #${invoiceId}`,
-    );
-    //Update invoice status
-    await paidInvoice(invoice, transaction._id, userId);
-
-    res.status(StatusCodes.OK).json({
-      data: response?.data,
-      invoiceId,
-    });
-  } catch (error) {
-    console.log(error);
-    throw new InternalServerError(ErrorMessage.ERROR_FAILED);
-  }
-
+  const session = await InvoiceModel.startSession();
+  const buyerFee = (await getSystemDocument()).buyerFee;
   const sellerFee = (await getSystemDocument()).sellerFee;
-
-  const updateInvoiceLicensePromises = invoice.productList.map(
-    (product, index) => {
-      const netAmount = (product.productPrice * (100 - sellerFee)) / 100;
-
-      shopTransaction(
-        product.shop,
-        invoiceId,
-        `Payment from ${invoiceId}`,
-        netAmount,
-      ).catch((err) => {
-        console.log(err);
-      });
-      //Create license for user
-      const license = new LicenseModel({
+  try {
+    await session.withTransaction(async() => {
+      await updateInvoiceAndLicensesAfterPayment_Transaction(
+        invoice,
+        sellerFee,
+        buyerFee,
         userId,
-        invoice: invoiceId,
-        shop: product.shop,
-        product: product.product,
-        boughtTime: new Date(),
-        licenseFile: "a",
-        productPrice: product.productPrice,
-      });
-
-      return license
-        .save()
-        .then((savedLicense: any) => {
-          invoice.productList[index].license = savedLicense._id;
-        })
-        .catch((error: any) => {
-          console.error(error);
-        });
-    },
-  );
-
-  await Promise.all(updateInvoiceLicensePromises);
-  invoice.save().catch((error: any) => {
+        session
+      );
+      const { response, transactionPaypalId } = await Capture_PayPal(token);
+      invoice.transactionPaypalId = transactionPaypalId;
+      await invoice.save({ session: session });
+  
+    })
+  } catch (error) {
     console.error(error);
+  }
+  
+
+  await session.endSession();
+
+  res.status(StatusCodes.OK).json({
+    invoiceId,
   });
 };
 
@@ -368,26 +384,25 @@ export const paymentHistory = async (req: IUserRequest, res: Response) => {
 
 export const createRequestRefund = async (req: IUserRequest, res: Response) => {
   const { userId } = req.user!;
-  const { invoiceId, productId } = req.body;
-  if (!invoiceId || !productId) {
+  const { licenseIds, refundReason, refundEvidences, invoiceId } = req.body;
+  if (!licenseIds || !refundReason || !refundEvidences || !invoiceId) {
     throw new BadRequestError(ErrorMessage.ERROR_MISSING_BODY);
   }
+
+  if (licenseIds.length < 1) {
+    throw new BadRequestError(ErrorMessage.ERROR_MISSING_BODY);
+  }
+
   //Checking existed
   const refund = await RefundModel.findOne({
-    userId: userId,
-    invoiceId: invoiceId,
-    productId: productId,
+    invoiceId,
   }).lean();
   if (refund) {
     throw new BadRequestError(ErrorMessage.ERROR_AUTHENTICATION_DUPLICATE);
   }
 
   //Checking history
-  const history = await LicenseModel.findOne({
-    userId: userId,
-    invoice: invoiceId,
-    product: productId,
-  }).lean();
+  const history = await LicenseModel.findById(licenseIds[0]).lean();
   if (!history) {
     throw new NotFoundError(ErrorMessage.ERROR_INVALID_REQUEST_REFUND);
   }
@@ -404,9 +419,226 @@ export const createRequestRefund = async (req: IUserRequest, res: Response) => {
   //Create refund request
   const request = await RefundModel.create({
     userId: userId,
-    shopId: history.shop,
     ...req.body,
   });
+  updateInvoiceAndLicensesBeforeRefund(licenseIds, invoiceId);
 
   res.status(StatusCodes.CREATED).json(request);
+};
+
+export const refund = async (req: IUserRequest, res: Response) => {
+  enum RefundAction {
+    ACCEPT = "ACCEPT",
+    DENY = "DENY",
+  }
+
+  const refundId = req.body.refundId as string;
+  const action = req.body.action as RefundAction;
+
+  if (!refundId || !action) {
+    throw new BadRequestError(ErrorMessage.ERROR_MISSING_BODY);
+  }
+
+  const refundDoc = (await RefundModel.findById(refundId)
+    .populate({
+      path: "licenseIds",
+      select: "shop product productPrice",
+      populate: {
+        path: "product",
+        select: "productName",
+      },
+    })
+    .populate({ path: "invoiceId", select: "transactionPaypalId" })) as {
+    _id: string;
+    userId: string;
+    licenseIds: [
+      {
+        _id: string;
+        shop: string;
+        product: {
+          _id: string;
+          productName: string;
+        };
+        productPrice: number;
+      }
+    ];
+    invoiceId: {
+      _id: string;
+      transactionPaypalId: string;
+    };
+    refundReason: string;
+    refundEvidences: string[];
+    refundStatus: RefundStatusEnum;
+    save: () => Promise<any>;
+  };
+
+  if (!refundDoc) {
+    throw new BadRequestError(ErrorMessage.ERROR_INVALID_REQUEST_REFUND);
+  }
+
+  const transactionPaypalId = refundDoc.invoiceId.transactionPaypalId;
+  const licenseIds = refundDoc.licenseIds.map((license) => license._id);
+  const productIds = refundDoc.licenseIds.map((license) => license.product._id);
+
+  if (action === RefundAction.ACCEPT) {
+    let refundAmount = 0;
+    refundDoc.licenseIds.forEach((license) => {
+      refundAmount += license.productPrice;
+    });
+    const buyerFee = (await getSystemDocument()).buyerFee;
+    refundAmount = (refundAmount * (100 + buyerFee)) / 100;
+    refundAmount = Math.round(refundAmount * 100) / 100;
+
+    const response = await Refund_PayPal(
+      transactionPaypalId,
+      refundAmount,
+      refundDoc.invoiceId._id,
+      `Refund accepted from invoice: ${refundDoc.invoiceId._id}`
+    );
+
+    //Refund failed
+    if (response?.data.status != "COMPLETED") {
+      throw new InternalServerError(ErrorMessage.ERROR_FAILED);
+    }
+
+    refundTransaction(
+      refundDoc.userId,
+      refundDoc.invoiceId._id,
+      productIds,
+      refundAmount
+    ).catch((error) => {
+      console.error("Update refund transaction: FAILED!");
+      throw new InternalServerError(ErrorMessage.ERROR_FAILED);
+    });
+
+    updateInvoiceAndLicensesAfterRefund(licenseIds, refundDoc.invoiceId._id);
+
+    refundDoc.refundStatus = RefundStatusEnum.RESOLVED;
+    await refundDoc.save();
+  } else {
+    updateInvoiceAndLicensesAfterDeclineRefund(
+      licenseIds,
+      refundDoc.invoiceId._id
+    );
+
+    refundDoc.refundStatus = RefundStatusEnum.DECLINED;
+    await refundDoc.save();
+  }
+
+  res.status(StatusCodes.OK).json({
+    msg: "Refund successfully!",
+  });
+};
+
+//=========================TESTING==============================
+//==============================================================
+//==============================================================
+//==============================================================
+export const testPaypal = async (req: IUserRequest, res: Response) => {
+  const access_token = await getAccessToken();
+
+  const items_detail = [
+    {
+      name: "Hello",
+      unit_amount: {
+        currency_code: "USD",
+        value: 10,
+      },
+      quantity: "1",
+      description: "Deex Product",
+    },
+    {
+      name: "Hi",
+      unit_amount: {
+        currency_code: "USD",
+        value: 10,
+      },
+      quantity: "1",
+      description: "Deex Product",
+    },
+  ];
+
+  const order = {
+    intent: "CAPTURE",
+    purchase_units: [
+      {
+        description: "This is your product order",
+        amount: {
+          currency_code: "USD",
+          value: 20,
+          breakdown: {
+            item_total: {
+              currency_code: "USD",
+              value: 20,
+            },
+          },
+        },
+        items: items_detail,
+      },
+    ],
+    application_context: {
+      brand_name: "DeeX Market",
+      landing_page: "NO_PREFERENCE",
+      user_action: "PAY_NOW",
+      shipping_preference: "NO_SHIPPING",
+      return_url: `http:localhost:5000/api/v1/payment/test/capture`,
+      cancel_url: `http:localhost:5000`,
+    },
+  };
+
+  const { data } = await axios.post(
+    "https://api-m.sandbox.paypal.com/v2/checkout/orders",
+    order,
+    {
+      headers: {
+        Authorization: `Bearer ${access_token}`,
+      },
+    }
+  );
+
+  res.json(data);
+};
+
+export const testCapturePaypal = async (req: IUserRequest, res: Response) => {
+  const { token } = req.query;
+  const { data } = await axios.post(
+    `${process.env.PAYPAL_API}/v2/checkout/orders/${token}/capture`,
+    {},
+    {
+      auth: {
+        username: PAYPAL_API_CLIENT,
+        password: PAYPAL_API_SECRET,
+      },
+    }
+  );
+
+  res.json({ data });
+};
+
+export const refundPayment = async (req: IUserRequest, res: Response) => {
+  const access_token = await getAccessToken();
+  const { token } = req.body;
+  let response: any = {};
+  try {
+    response = await axios.post(
+      `${process.env.PAYPAL_API}/v2/payments/captures/${token}/refund`,
+      {
+        amount: {
+          value: 10,
+          currency_code: "USD",
+        },
+        invoice_id: "123",
+        note_to_payer: "Hello",
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${access_token}`,
+          Accept: `application/json`,
+        },
+      }
+    );
+  } catch (err) {
+    console.log(err);
+  }
+  res.json(response.data);
 };

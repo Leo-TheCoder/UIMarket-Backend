@@ -35,7 +35,7 @@ import reportRouter from "./routes/report.route";
 //Middleware
 import errorHandlerMiddleware from "./middlewares/handle-errors";
 import notFoundMiddleware from "./middlewares/not-found";
-import { compulsoryAuth } from "./middlewares/authentication";
+import { compulsoryAuth, optionalAuth } from "./middlewares/authentication";
 
 app.use(cors());
 app.use(express.json());
@@ -54,7 +54,7 @@ app.use("/api/v1/profile", profileRouter);
 app.use("/api/v1/file", compulsoryAuth, fileRouter);
 app.use("/api/v1/shop", shopRouter);
 app.use("/api/v1/admin", adminRouter);
-app.use("/api/v1/products", productRouter);
+app.use("/api/v1/products", optionalAuth, productRouter);
 app.use("/api/v1/verify", verifyRouter);
 app.use("/api/v1/payment", paymentRouter);
 app.use("/api/v1/category", productCategoryRouter);
@@ -65,11 +65,17 @@ app.use("/api/v1/licenses", licenseRouter);
 app.use("/api/v1/carts", compulsoryAuth, cartRouter);
 app.use("/api/v1/reports", compulsoryAuth, reportRouter);
 
+//tool
+import {resetTransaction} from "./controllers/dev.test";
+app.get("/resetTransaction", resetTransaction);
+
 app.use(notFoundMiddleware);
 app.use(errorHandlerMiddleware);
 
 //Scheduled Task
 import { resolveBounty } from "./scheduled/resolveBounty";
+import { resolveShopPayment } from "./scheduled/commitTransaction";
+import { clearInvoiceModel } from "./scheduled/clearPendingInvoices";
 
 const start = async () => {
   try {
@@ -83,6 +89,15 @@ const start = async () => {
     cron.schedule("1 * * * *", async () => {
       await resolveBounty();
     });
+
+    //Resolve shop payment run everyday at 00:01
+    cron.schedule("1 0 * * *", async () => {
+      await resolveShopPayment();
+    });
+
+    cron.schedule("1 0 * * *", async () => {
+      await clearInvoiceModel();
+    })
   } catch (error) {
     console.log(error);
   }

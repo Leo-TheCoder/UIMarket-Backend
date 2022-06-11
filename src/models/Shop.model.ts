@@ -1,5 +1,5 @@
-import mongoose from "mongoose";
-import { defaultMinLength } from "../constants";
+import mongoose from 'mongoose';
+import { defaultMinLength } from '../constants';
 
 const ShopSchema = new mongoose.Schema(
   {
@@ -15,13 +15,7 @@ const ShopSchema = new mongoose.Schema(
       // minlength: defaultMinLength / 2,
     },
     shopPayPal: {
-      required: false,
-      paypalEmail: {
-        type: String,
-      },
-      paypalId: {
-        type: String,
-      },
+      type: String,
     },
     shopDescription: {
       type: String,
@@ -58,4 +52,4 @@ const ShopSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
-export default mongoose.model("Shop", ShopSchema);
+export default mongoose.model('Shop', ShopSchema);

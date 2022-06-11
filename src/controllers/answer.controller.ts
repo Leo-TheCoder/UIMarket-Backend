@@ -39,7 +39,7 @@ const createAnswer = async (req: IUserRequest, res: Response) => {
 
     answer = await Answer.populate(answer, {
       path: "userId",
-      select: ["customerName", "customerEmail"],
+      select: ["customerName", "customerEmail", "customerAvatar"],
     });
 
     res.status(StatusCodes.CREATED).json(answer);
@@ -89,6 +89,7 @@ const getAnswer = async (req: IUserRequest, res: Response) => {
             $project: {
               customerName: 1,
               customerEmail: 1,
+              customerAvatar: 1,
             },
           },
         ],

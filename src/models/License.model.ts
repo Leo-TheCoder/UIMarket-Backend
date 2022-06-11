@@ -1,10 +1,11 @@
 import mongoose from "mongoose";
-import {} from "../constants";
+import { LicesneStatusEnum } from "../types/enum";
 
 const LicenseSchema = new mongoose.Schema(
   {
     userId: {
       type: mongoose.Types.ObjectId,
+      ref: "Customer",
       required: [true, "Please provide user ID"],
       immutable: true,
     },
@@ -33,11 +34,35 @@ const LicenseSchema = new mongoose.Schema(
     },
     productPrice: {
       type: Number,
-    }
+    },
+    licenseStatus: {
+      type: String,
+      enum: [
+        LicesneStatusEnum.ACTIVE,
+        LicesneStatusEnum.DEACTIVE,
+        LicesneStatusEnum.REFUNDING,
+      ],
+      default: LicesneStatusEnum.ACTIVE,
+    },
   },
-  { timestamps: true },
+  { timestamps: true }
 );
 
+LicenseSchema.statics.deactiveLicenses = function (licenseIds: string[]) {
+  return this.updateMany(
+    {
+      _id: { $in: licenseIds },
+    },
+    {
+      licenseStatus: LicesneStatusEnum.DEACTIVE,
+    }
+  );
+};
+
+LicenseSchema.methods.deactivate = async function () {
+  this.licenseStatus = LicesneStatusEnum.DEACTIVE;
+  await this.save();
+};
 LicenseSchema.index({ invoice: 1, product: 1 }, { unique: true });
 
 export default mongoose.model("License", LicenseSchema);

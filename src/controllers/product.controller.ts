@@ -8,6 +8,8 @@ import ShopModel from "../models/Shop.model";
 import * as ErrorMessage from "../errors/error_message";
 import { getShopById } from "./shop.controller";
 import { IUserRequest } from "../types/express";
+import LicenseModel from "../models/License.model";
+import { LicesneStatusEnum } from "../types/enum";
 
 enum SortTypes {
   MoneyAsc = "money-asc",
@@ -199,7 +201,9 @@ const findByCategory = async (req: Request, res: Response) => {
   });
 };
 
-const findById = async (req: Request, res: Response) => {
+const findById = async (req: IUserRequest, res: Response) => {
+  const userId = req.user?.userId;
+
   const product = await ProductModel.findByIdAndUpdate(
     {
       _id: req.params.productId,
@@ -207,8 +211,14 @@ const findById = async (req: Request, res: Response) => {
     },
     { $inc: { allTimeView: 1 } },
   )
+    .select("-productFile")
     .populate({ path: "shopId", select: "shopEmail" })
+    .populate({ path: "productCategory", select: "categoryName" })
     .lean();
+
+  if (!product) {
+    throw new NotFoundError(ErrorMessage.ERROR_INVALID_PRODUCT_ID);
+  }
 
   //Add customer email of shop
   const customerEmail = await ShopModel.findById(product.shopId._id)
@@ -219,11 +229,20 @@ const findById = async (req: Request, res: Response) => {
     });
   product.shopId.customerEmail = customerEmail.userId.customerEmail;
 
-  if (!product) {
-    throw new NotFoundError(ErrorMessage.ERROR_INVALID_PRODUCT_ID);
-  } else {
-    res.status(StatusCodes.OK).json({ product });
+  let isBought = false;
+  if (userId) {
+    const licenseCount = await LicenseModel.count({
+      product: product._id,
+      userId,
+      licenseStatus: {
+        $in: [LicesneStatusEnum.ACTIVE, LicesneStatusEnum.REFUNDING],
+      },
+    });
+
+    isBought = licenseCount > 0;
   }
+
+  return res.status(StatusCodes.OK).json({ product, isBought });
 };
 
 const findByName = async (req: Request, res: Response) => {
@@ -296,7 +315,7 @@ const findByName = async (req: Request, res: Response) => {
         localField: "shopId",
         foreignField: "_id",
         pipeline: [{ $project: { shopName: 1 } }],
-        as: "shop",
+        as: "shopId",
       },
     },
   ];
@@ -318,7 +337,7 @@ const findByName = async (req: Request, res: Response) => {
         : undefined;
     delete product.productPictures;
     product.productCategory = product.productCategory[0];
-    product.shop = product.shop[0];
+    product.shopId = product.shopId[0];
     return product;
   });
 
@@ -343,7 +362,7 @@ const getProductsByShop = async (req: Request, res: Response) => {
   const filterObj = filterObjMongoose(filter);
 
   //Check shop ID
-  const shop = await ShopModel.find({ _id: shopId, shopStatus: 1 }).lean();
+  const shop = await ShopModel.findOne({ _id: shopId, shopStatus: 1 }).lean();
   if (!shop) {
     throw new NotFoundError(ErrorMessage.ERROR_INVALID_SHOP_ID);
   }
@@ -379,12 +398,20 @@ const getProductsByShop = async (req: Request, res: Response) => {
     //get first item in array
     const productPictureList = product.productPictures;
     //get first picture
-    product.coverPicture =
+    const coverPicture =
       productPictureList && productPictureList.length > 0
         ? productPictureList[0]
         : undefined;
     delete product.productPictures;
-    return product;
+
+    return {
+      ...product,
+      shopId: {
+        _id: shop._id,
+        shopName: shop.shopName,
+      },
+      coverPicture,
+    };
   });
 
   return res.status(StatusCodes.OK).json({

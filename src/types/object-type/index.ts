@@ -1,4 +1,4 @@
-import { TransactionStatus } from "../enum";
+import { TransactionStatusEnum, TransactionActionEnum } from "../enum";
 
 export type Product = {
   shop: string;
@@ -13,14 +13,19 @@ export type Invoice = {
   productList: Array<Product>;
   userId: string;
   invoiceTotal: number;
+  transactionPaypalId?: string;
+  transactionId?: string;
   invoiceStatus: string;
   _id: string;
-  save: () => Promise<any>;
+  save: (option?: any ) => Promise<any>;
 };
 
 export type ShopTransaction = {
   _id: string;
-  reason: string;
+  productId: string;
+  action: TransactionActionEnum;
   changeAmount: number;
-  transactionStatus: TransactionStatus;
+  transactionStatus: TransactionStatusEnum;
+  updatedAt?: Date;
+  createdAt?: Date;
 }
