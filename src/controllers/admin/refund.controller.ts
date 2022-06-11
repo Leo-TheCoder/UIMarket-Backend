@@ -139,6 +139,8 @@ export const getRefundById = async (req: IUserRequest, res: Response) => {
     })
     .populate({ path: "userId", select: "customerName" });
 
+  
+  
   return res.status(StatusCodes.OK).json({
     refund,
   });
@@ -187,6 +189,7 @@ export const acceptRefund = async (req: IUserRequest, res: Response) => {
     refundReason: string;
     refundEvidences: string[];
     refundStatus: RefundStatusEnum;
+    refundAmount: number;
     save: (option?: any) => Promise<any>;
   };
 
@@ -198,13 +201,20 @@ export const acceptRefund = async (req: IUserRequest, res: Response) => {
   const licenseIds = refundDoc.licenseIds.map((license) => license._id);
   const productIds = refundDoc.licenseIds.map((license) => license.product._id);
 
-  let refundAmount = 0;
-  refundDoc.licenseIds.forEach((license) => {
-    refundAmount += license.productPrice;
-  });
-  const buyerFee = (await getSystemDocument()).buyerFee;
-  refundAmount = (refundAmount * (100 + buyerFee)) / 100;
-  refundAmount = Math.round(refundAmount * 100) / 100;
+  let refundAmount = refundDoc.refundAmount;
+  // let refundAmount = 0;
+  // refundDoc.licenseIds.forEach((license) => {
+  //   refundAmount += license.productPrice;
+  //   console.log(license._id, license.productPrice);
+  // });
+  
+  if(refundAmount === 0) {
+    throw new BadRequestError(ErrorMessage.ERROR_FREE_REFUND);
+  }
+
+  // const buyerFee = (await getSystemDocument()).buyerFee;
+  // refundAmount = (refundAmount * (100 + buyerFee)) / 100;
+  // refundAmount = Math.round(refundAmount * 100) / 100;
 
   const response = await Refund_PayPal(
     transactionPaypalId,

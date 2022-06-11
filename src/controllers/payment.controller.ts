@@ -385,8 +385,33 @@ export const createRequestRefund = async (req: IUserRequest, res: Response) => {
     throw new BadRequestError(ErrorMessage.ERROR_AUTHENTICATION_DUPLICATE);
   }
 
+  //Checking if it free
+  const licenses = await LicenseModel.find({
+    _id: {$in: licenseIds},
+  }, {
+    boughtTime: 1,
+    productPrice: 1,
+  }).lean() as {
+    boughtTime: Date,
+    productPrice: number,
+  }[];
+
+  //calculate refund amount
+  let refundAmount: number = 0;
+  licenses.forEach(license => {
+    refundAmount += license.productPrice;
+  })
+
+  if(refundAmount === 0) {
+    throw new BadRequestError(ErrorMessage.ERROR_FREE_REFUND);
+  }
+
+  const buyerFee = (await getSystemDocument()).buyerFee;
+  refundAmount = (refundAmount * (100 + buyerFee)) / 100;
+  refundAmount = Math.round(refundAmount * 100) / 100;
+
   //Checking history
-  const history = await LicenseModel.findById(licenseIds[0]).lean();
+  const history = licenses[0];
   if (!history) {
     throw new NotFoundError(ErrorMessage.ERROR_INVALID_REQUEST_REFUND);
   }
@@ -403,6 +428,7 @@ export const createRequestRefund = async (req: IUserRequest, res: Response) => {
   //Create refund request
   const request = await RefundModel.create({
     userId: userId,
+    refundAmount: refundAmount,
     ...req.body,
   });
   updateInvoiceAndLicensesBeforeRefund(licenseIds, invoiceId);

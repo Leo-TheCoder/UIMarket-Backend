@@ -44,6 +44,10 @@ const RefundSchema = new mongoose.Schema(
         RefundStatusEnum.DECLINED,
       ],
     },
+    refundAmount: {
+      type: Number,
+      required: [true, "Please provide refund amount"],
+    }
   },
   { timestamps: true }
 );
