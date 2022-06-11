@@ -263,23 +263,32 @@ export const refundTransaction = async (
   userId: string,
   invoiceId: string,
   productIds: string[],
-  amount: number
+  amount: number,
+  opt: { session: any }
 ) => {
-  const shopTransactionResult = await ShopTransactionModel.updateMany(
+  await ShopTransactionModel.updateMany(
     {
       invoiceId,
       productId: { $in: productIds },
     },
     {
       transactionStatus: TransactionStatusEnum.REFUNDED,
+    },
+    {
+      session: opt.session,
     }
   );
 
-  await UserTransactionModel.create({
-    userId: userId,
-    invoiceId: invoiceId,
-    reason: `Refund from DeeX`,
-    changeAmount: amount,
-    transactionStatus: TransactionStatusEnum.REFUNDED,
-  });
+  await UserTransactionModel.create(
+    [
+      {
+        userId: userId,
+        invoiceId: invoiceId,
+        reason: `Refund from DeeX`,
+        changeAmount: amount,
+        transactionStatus: TransactionStatusEnum.REFUNDED,
+      },
+    ],
+    { session: opt.session }
+  );
 };

@@ -12,7 +12,6 @@ import {
   createRequestRefund,
   testPaypal,
   testCapturePaypal,
-  refund,
   getBuyerFee,
   getSellerFee,
   preOrder
@@ -35,7 +34,6 @@ router.post("/check-order", compulsoryAuth, preOrder);
 router.post("/create-order/paypal", compulsoryAuth, createOrder);
 router.post("/withdraw", compulsoryAuth, withdrawPayment);
 router.post("/charge-coin", chargeCoin);
-router.post("/refund", refund);
 router.post("/request/refund", compulsoryAuth, createRequestRefund);
 
 router.get("/test/order", testPaypal);

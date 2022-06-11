@@ -28,4 +28,4 @@ export type ShopTransaction = {
   transactionStatus: TransactionStatusEnum;
   updatedAt?: Date;
   createdAt?: Date;
-}
+};

@@ -37,9 +37,13 @@ export const ERROR_INVALID_LICENSE_ID = "invalid-license-id";
 //Refund
 export const ERROR_INVALID_REQUEST_REFUND = "invalid-request-refund";
 export const ERROR_EXPIRED_REFUND_TIME = "expired-refund-time";
+export const ERROR_FREE_REFUND = "free-items";
 
 //Transaction
 export const ERROR_INVALID_AMOUNT = "invalid-amount";
 
 //License
 export const ERROR_LICENSE_EXISTED = "license-existed";
+
+//Report
+export const ERROR_INVALID_REPORT_ID = "invalid-report-id";

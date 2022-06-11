@@ -35,7 +35,11 @@ import reportRouter from "./routes/report.route";
 //Middleware
 import errorHandlerMiddleware from "./middlewares/handle-errors";
 import notFoundMiddleware from "./middlewares/not-found";
-import { compulsoryAuth, optionalAuth } from "./middlewares/authentication";
+import {
+  compulsoryAuth,
+  optionalAuth,
+  adminAuth,
+} from "./middlewares/authentication";
 
 app.use(cors());
 app.use(express.json());
@@ -53,7 +57,7 @@ app.use("/api/v1/comments", commentRouter);
 app.use("/api/v1/profile", profileRouter);
 app.use("/api/v1/file", compulsoryAuth, fileRouter);
 app.use("/api/v1/shop", shopRouter);
-app.use("/api/v1/admin", adminRouter);
+app.use("/api/v1/admin", compulsoryAuth, adminAuth ,adminRouter);
 app.use("/api/v1/products", optionalAuth, productRouter);
 app.use("/api/v1/verify", verifyRouter);
 app.use("/api/v1/payment", paymentRouter);
@@ -66,7 +70,7 @@ app.use("/api/v1/carts", compulsoryAuth, cartRouter);
 app.use("/api/v1/reports", compulsoryAuth, reportRouter);
 
 //tool
-import {resetTransaction} from "./controllers/dev.test";
+import { resetTransaction } from "./controllers/dev.test";
 app.get("/resetTransaction", resetTransaction);
 
 app.use(notFoundMiddleware);
@@ -97,7 +101,7 @@ const start = async () => {
 
     cron.schedule("1 0 * * *", async () => {
       await clearInvoiceModel();
-    })
+    });
   } catch (error) {
     console.log(error);
   }

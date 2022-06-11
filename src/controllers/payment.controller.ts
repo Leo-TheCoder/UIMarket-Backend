@@ -396,13 +396,44 @@ export const createRequestRefund = async (req: IUserRequest, res: Response) => {
   //Checking existed
   const refund = await RefundModel.findOne({
     invoiceId,
+    refundStatus: {
+      $in: [RefundStatusEnum.PENDING, RefundStatusEnum.RESOLVED],
+    },
   }).lean();
   if (refund) {
     throw new BadRequestError(ErrorMessage.ERROR_AUTHENTICATION_DUPLICATE);
   }
 
+  //Checking if it free
+  const licenses = (await LicenseModel.find(
+    {
+      _id: { $in: licenseIds },
+    },
+    {
+      boughtTime: 1,
+      productPrice: 1,
+    }
+  ).lean()) as {
+    boughtTime: Date;
+    productPrice: number;
+  }[];
+
+  //calculate refund amount
+  let refundAmount: number = 0;
+  licenses.forEach((license) => {
+    refundAmount += license.productPrice;
+  });
+
+  if (refundAmount === 0) {
+    throw new BadRequestError(ErrorMessage.ERROR_FREE_REFUND);
+  }
+
+  const buyerFee = (await getSystemDocument()).buyerFee;
+  refundAmount = (refundAmount * (100 + buyerFee)) / 100;
+  refundAmount = Math.round(refundAmount * 100) / 100;
+
   //Checking history
-  const history = await LicenseModel.findById(licenseIds[0]).lean();
+  const history = licenses[0];
   if (!history) {
     throw new NotFoundError(ErrorMessage.ERROR_INVALID_REQUEST_REFUND);
   }
@@ -419,115 +450,12 @@ export const createRequestRefund = async (req: IUserRequest, res: Response) => {
   //Create refund request
   const request = await RefundModel.create({
     userId: userId,
+    refundAmount: refundAmount,
     ...req.body,
   });
   updateInvoiceAndLicensesBeforeRefund(licenseIds, invoiceId);
 
   res.status(StatusCodes.CREATED).json(request);
-};
-
-export const refund = async (req: IUserRequest, res: Response) => {
-  enum RefundAction {
-    ACCEPT = "ACCEPT",
-    DENY = "DENY",
-  }
-
-  const refundId = req.body.refundId as string;
-  const action = req.body.action as RefundAction;
-
-  if (!refundId || !action) {
-    throw new BadRequestError(ErrorMessage.ERROR_MISSING_BODY);
-  }
-
-  const refundDoc = (await RefundModel.findById(refundId)
-    .populate({
-      path: "licenseIds",
-      select: "shop product productPrice",
-      populate: {
-        path: "product",
-        select: "productName",
-      },
-    })
-    .populate({ path: "invoiceId", select: "transactionPaypalId" })) as {
-    _id: string;
-    userId: string;
-    licenseIds: [
-      {
-        _id: string;
-        shop: string;
-        product: {
-          _id: string;
-          productName: string;
-        };
-        productPrice: number;
-      }
-    ];
-    invoiceId: {
-      _id: string;
-      transactionPaypalId: string;
-    };
-    refundReason: string;
-    refundEvidences: string[];
-    refundStatus: RefundStatusEnum;
-    save: () => Promise<any>;
-  };
-
-  if (!refundDoc) {
-    throw new BadRequestError(ErrorMessage.ERROR_INVALID_REQUEST_REFUND);
-  }
-
-  const transactionPaypalId = refundDoc.invoiceId.transactionPaypalId;
-  const licenseIds = refundDoc.licenseIds.map((license) => license._id);
-  const productIds = refundDoc.licenseIds.map((license) => license.product._id);
-
-  if (action === RefundAction.ACCEPT) {
-    let refundAmount = 0;
-    refundDoc.licenseIds.forEach((license) => {
-      refundAmount += license.productPrice;
-    });
-    const buyerFee = (await getSystemDocument()).buyerFee;
-    refundAmount = (refundAmount * (100 + buyerFee)) / 100;
-    refundAmount = Math.round(refundAmount * 100) / 100;
-
-    const response = await Refund_PayPal(
-      transactionPaypalId,
-      refundAmount,
-      refundDoc.invoiceId._id,
-      `Refund accepted from invoice: ${refundDoc.invoiceId._id}`
-    );
-
-    //Refund failed
-    if (response?.data.status != "COMPLETED") {
-      throw new InternalServerError(ErrorMessage.ERROR_FAILED);
-    }
-
-    refundTransaction(
-      refundDoc.userId,
-      refundDoc.invoiceId._id,
-      productIds,
-      refundAmount
-    ).catch((error) => {
-      console.error("Update refund transaction: FAILED!");
-      throw new InternalServerError(ErrorMessage.ERROR_FAILED);
-    });
-
-    updateInvoiceAndLicensesAfterRefund(licenseIds, refundDoc.invoiceId._id);
-
-    refundDoc.refundStatus = RefundStatusEnum.RESOLVED;
-    await refundDoc.save();
-  } else {
-    updateInvoiceAndLicensesAfterDeclineRefund(
-      licenseIds,
-      refundDoc.invoiceId._id
-    );
-
-    refundDoc.refundStatus = RefundStatusEnum.DECLINED;
-    await refundDoc.save();
-  }
-
-  res.status(StatusCodes.OK).json({
-    msg: "Refund successfully!",
-  });
 };
 
 //=========================TESTING==============================

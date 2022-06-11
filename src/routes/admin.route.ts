@@ -1,5 +1,5 @@
 import express from "express";
-import { compulsoryAuth } from "../middlewares/authentication";
+import { adminAuth, compulsoryAuth } from "../middlewares/authentication";
 import {
   createCategory,
   getAllCategory,
@@ -18,6 +18,20 @@ import {
   getAllShops,
 } from "../controllers/admin/shops.controller";
 import { changeSystemFee } from "../controllers/admin/system.controller";
+import {
+  acceptReport,
+  getReportDetail,
+  rejectReport,
+  reportListAll,
+  reportListEC,
+  reportListEdu,
+} from "../controllers/report.controller";
+import {
+  acceptRefund,
+  getAllRefund,
+  getRefundById,
+  rejectRefund,
+} from "../controllers/admin/refund.controller";
 
 const router = express.Router();
 
@@ -50,5 +64,24 @@ router.post("/category", createCategory);
 router.post("/system/fee", changeSystemFee);
 //PUT Method
 //DELETE Method
+
+//===================== Report =======================
+//GET Method
+router.get("/report/list/Edu", reportListEdu);
+router.get("/report/list/EC", reportListEC);
+router.get("/report/list/All", reportListAll);
+router.get("/report/detail/:objectId", getReportDetail);
+
+//PUT Method
+router.put("/report/reject/:reportId", rejectReport);
+router.put("/report/accept/:reportId", acceptReport);
+
+//===================== Refund ========================
+//GET Method
+router.get("/refund", getAllRefund);
+router.get("/refund/:refundId", getRefundById);
+//POST Method
+router.post("/refund/accept/:refundId", acceptRefund);
+router.post("/refund/reject/:refundId", rejectRefund);
 
 export default router;

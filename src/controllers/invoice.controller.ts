@@ -11,11 +11,11 @@ import ProductModel from "../models/Product.model";
 import InvoiceModel from "../models/Invoice.model";
 import CartModel from "../models/Cart.model";
 import LicenseModel from "../models/License.model";
+import ShopTransactionModel from "../models/ShopTransaction.model";
 
 //Error
 import { BadRequestError, NotFoundError } from "../errors";
 import * as ErrorMessage from "../errors/error_message";
-import ShopTransactionModel from "../models/ShopTransaction.model";
 
 interface IQuery {
   page?: string;
@@ -211,7 +211,7 @@ export const purchaseHistory = async (req: IUserRequest, res: Response) => {
 
 export const searchPurchaseHistory = async (
   req: IUserRequest,
-  res: Response
+  res: Response,
 ) => {
   const { userId } = req.user!;
   // const userId = "62693a28052feac047bce72f";
@@ -267,7 +267,7 @@ export const searchPurchaseHistory = async (
 
   const productsToSend = purchaseList.map((license) => {
     const productReviewIndex = license.invoice.productList.findIndex(
-      (x: any) => String(x.product) == String(license.product._id)
+      (x: any) => String(x.product) == String(license.product._id),
     );
 
     const resObj = {

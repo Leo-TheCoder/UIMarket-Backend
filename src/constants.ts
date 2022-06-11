@@ -19,5 +19,8 @@ export const upvoteAward = 2;
 //Refund
 export const acceptRefund = 3;
 
+//Report
+export const minReportQuantity = 3;
+
 //Invoice pending period
 export const invoicePendingPeriod = 3;
