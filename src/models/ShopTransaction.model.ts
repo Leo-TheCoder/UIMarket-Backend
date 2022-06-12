@@ -20,7 +20,11 @@ const ShopTransactionSchema = new mongoose.Schema(
     },
     action: {
       type: String,
-      enum: [TransactionActionEnum.RECEIVE, TransactionActionEnum.WITHDRAW],
+      enum: [
+        TransactionActionEnum.RECEIVE,
+        TransactionActionEnum.WITHDRAW,
+        TransactionActionEnum.REFUND,
+      ],
     },
     currentAmount: {
       type: Number,

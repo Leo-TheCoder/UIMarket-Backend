@@ -7,6 +7,7 @@ export enum TransactionStatusEnum {
 export enum TransactionActionEnum {
     RECEIVE = "RECEIVE",
     WITHDRAW = "WITHDRAW",
+    REFUND = "REFUND",
 }
 
 export enum RefundStatusEnum {

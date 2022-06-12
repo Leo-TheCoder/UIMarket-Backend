@@ -272,6 +272,7 @@ export const refundTransaction = async (
       productId: { $in: productIds },
     },
     {
+      action: TransactionActionEnum.REFUND,
       transactionStatus: TransactionStatusEnum.REFUNDED,
     },
     {
