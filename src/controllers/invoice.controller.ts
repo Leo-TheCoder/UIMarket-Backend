@@ -194,6 +194,7 @@ export const purchaseHistory = async (req: IUserRequest, res: Response) => {
       invoice: undefined,
       isReview: license.invoice.productList[isReview].isReview,
       invoiceId: license.invoice._id,
+      isInvoiceRefunded: license.invoice.isRefunded,
       product: {
         ...license.product,
         productPictures: picture,
