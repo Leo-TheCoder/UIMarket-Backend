@@ -443,11 +443,13 @@ const updateQuestion = async (req: IUserRequest, res: Response) => {
   const questionTitle = req.body.questionTitle || question.questionTitle;
   const questionContent = req.body.questionContent || question.questionContent;
   const questionBounty = req.body.questionBounty || question.questionBounty;
+  const questionDueDate = req.body.questionDueDate || question.questionDueDate;
 
   if (
     questionTitle === question.questionTitle &&
     questionContent === question.questionContent &&
-    questionBounty === question.questionBounty
+    questionBounty === question.questionBounty &&
+    questionDueDate === question.questionDueDate
   ) {
     res.status(StatusCodes.OK).send("Nothing updated");
   } else {
@@ -455,6 +457,7 @@ const updateQuestion = async (req: IUserRequest, res: Response) => {
     question.questionTitle = questionTitle;
     question.questionContent = questionContent;
     question.questionBounty = questionBounty;
+    question.questionDueDate = questionDueDate;
 
     const result = await question.save();
 
