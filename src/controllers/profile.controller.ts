@@ -154,6 +154,7 @@ const getProfileInfo = async (req: IUserRequest, res: Response) => {
 
   if (!(req.user && req.user.userId === userId)) {
     delete user.customerStatus;
+    delete user.isAdmin;
   }
   user.customerWallet.coin = undefined;
   res.status(StatusCodes.OK).json({ user: {
