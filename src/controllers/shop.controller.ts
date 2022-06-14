@@ -52,7 +52,7 @@ export const createShop = async (req: IUserRequest, res: Response) => {
     const user = await UserModel.findByIdAndUpdate(
       userId,
       { shopId: newShop._id },
-      { new: true },
+      { new: true }
     );
 
     const token = user.createJWT();
@@ -157,11 +157,16 @@ export const getAllProduct = async (req: IUserRequest, res: Response) => {
 
   const products = await ProductModel
     //
-    .find({ shopId: shopId })
+    .find({ shopId: shopId, deleteFlagged: 0 })
     .populate({ path: "productCategory", select: ["categoryName"] })
     .lean();
 
-  res.status(StatusCodes.OK).json({ products });
+  res.status(StatusCodes.OK).json({
+    products: {
+      ...products,
+      deleteFlagged: undefined,
+    },
+  });
 };
 
 export const updateShop = async (req: IUserRequest, res: Response) => {
@@ -202,7 +207,7 @@ export const getShopById = async (req: IUserRequest, res: Response) => {
     shopStatus: 1,
   })
     .select(selectOption)
-    .populate({path: "userId", select: "customerAvatar"})
+    .populate({ path: "userId", select: "customerAvatar" })
     .lean();
 
   if (!shop) {
@@ -341,7 +346,7 @@ const getRevenue = async (invoices: any, productId: any) => {
 
   for (let i = 0; i < invoices.length; i++) {
     const product = invoices[i].productList.find(
-      (x: any) => String(x.product) == String(productId),
+      (x: any) => String(x.product) == String(productId)
     );
     revenue += product.productPrice;
   }
@@ -375,7 +380,7 @@ export const getProductStatistic = async (req: IUserRequest, res: Response) => {
 
     // Get last 30 days sold and revenues
     let invoices_L30D = invoices.filter(
-      (x: any) => x.createdAt <= today && x.createdAt >= L30D,
+      (x: any) => x.createdAt <= today && x.createdAt >= L30D
     );
 
     last30Days.totalSold = invoices_L30D.length;
@@ -503,7 +508,7 @@ export const getProductsByName = async (req: IUserRequest, res: Response) => {
       });
 
       const licenses_L30D = licenses.filter(
-        (x: any) => x.createdAt <= today && x.createdAt >= L30D,
+        (x: any) => x.createdAt <= today && x.createdAt >= L30D
       );
 
       last30Days.totalSold = licenses_L30D.length;
@@ -532,7 +537,7 @@ export const getProductsByName = async (req: IUserRequest, res: Response) => {
 
 export const getProductStatisticV2 = async (
   req: IUserRequest,
-  res: Response,
+  res: Response
 ) => {
   const { shopId } = req.user!;
 
@@ -565,7 +570,7 @@ export const getProductStatisticV2 = async (
       });
 
       const licenses_L30D = licenses.filter(
-        (x: any) => x.createdAt <= today && x.createdAt >= L30D,
+        (x: any) => x.createdAt <= today && x.createdAt >= L30D
       );
 
       last30Days.totalSold = licenses_L30D.length;
