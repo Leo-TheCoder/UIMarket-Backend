@@ -120,7 +120,8 @@ export const createOrder = async (req: IUserRequest, res: Response) => {
 
   if (invoice.invoiceTotal === 0) {
     const session = await InvoiceModel.startSession();
-    try {
+
+    await session.withTransaction(async () => {
       await updateInvoiceAndLicensesAfterPayment_Transaction(
         invoice,
         0,
@@ -130,22 +131,13 @@ export const createOrder = async (req: IUserRequest, res: Response) => {
       );
       invoice.transactionPaypalId = "0";
       await invoice.save({ session });
-
-      await session.commitTransaction();
-      await session.endSession();
-
-      return res.status(StatusCodes.OK).json({
-        invoiceId: invoice._id,
-        invoice: invoice,
-        isFree: true,
-      });
-    } catch (error) {
-      console.log(error);
-      await session.abortTransaction();
-      await session.endSession();
-
-      throw new InternalServerError(ErrorMessage.ERROR_FAILED);
-    }
+    })
+    
+    return res.status(StatusCodes.OK).json({
+      invoiceId: invoice._id,
+      invoice: invoice,
+      isFree: true,
+    });
   }
   
   try {
