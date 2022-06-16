@@ -163,7 +163,7 @@ export const getAllProduct = async (req: IUserRequest, res: Response) => {
 
   const productsToSend = products.map((product) => {
     return {
-      ...products,
+      ...product,
       deleteFlagged: undefined,
     };
   });
