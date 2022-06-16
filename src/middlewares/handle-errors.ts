@@ -9,13 +9,14 @@ interface IError {
   code?: number;
   name?: string;
   kind?: string;
+  path?: string;
 }
 
 const errorHandlerMiddleware: ErrorRequestHandler = (
   err: IError,
   req,
   res,
-  next,
+  next
 ) => {
   const customError = {
     statusCode: err?.statusCode || StatusCodes.INTERNAL_SERVER_ERROR,
@@ -27,18 +28,22 @@ const errorHandlerMiddleware: ErrorRequestHandler = (
   }
 
   if (err.code === 11000) {
-    return res
-      .status(StatusCodes.BAD_REQUEST)
-      .json({
-        msg: ErrorMessage.ERROR_AUTHENTICATION_DUPLICATE,
-        mongooseMsg: err.message,
-      });
+    return res.status(StatusCodes.BAD_REQUEST).json({
+      msg: ErrorMessage.ERROR_AUTHENTICATION_DUPLICATE,
+      mongooseMsg: err.message,
+    });
   }
 
-  if (err.name === "ValidationError" || err.kind === "ObjectId") {
+  if (err.name === "ValidationError") {
     return res
       .status(StatusCodes.BAD_REQUEST)
       .json({ msg: ErrorMessage.ERROR_VALIDATION, mongooseMsg: err.message });
+  }
+
+  if (err.kind === "ObjectId" || err.path === "_id") {
+    return res
+      .status(StatusCodes.NOT_FOUND)
+      .json({ msg: ErrorMessage.ERROR_VALIDATION });
   }
 
   return res.status(customError.statusCode).json({ msg: customError.msg });

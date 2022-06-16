@@ -3,6 +3,7 @@ export const ERROR_MISSING_BODY = "missing-req-body";
 
 //Mongoose error
 export const ERROR_VALIDATION = "validation-failed";
+export const ERROR_NOT_EXIST = "not-exist";
 
 //Authentication
 export const ERROR_AUTHENTICATION_INVALID = "invalid-authentication";
