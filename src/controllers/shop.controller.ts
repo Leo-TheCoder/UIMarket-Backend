@@ -208,7 +208,6 @@ export const getShopById = async (req: IUserRequest, res: Response) => {
 
   const shop = await ShopModel.findOne({
     _id: req.params.shopId,
-    shopStatus: 1,
   })
     .select(selectOption)
     .populate({ path: "userId", select: "customerAvatar" })
@@ -216,9 +215,10 @@ export const getShopById = async (req: IUserRequest, res: Response) => {
 
   if (!shop) {
     throw new NotFoundError(ErrorMessage.ERROR_INVALID_SHOP_ID);
-  } else {
-    res.status(StatusCodes.OK).json({ shop });
+  } else if(shop.shopStatus === 0) {
+    throw new NotFoundError(ErrorMessage.ERROR_SHOP_DEACTIVATED);
   }
+  res.status(StatusCodes.OK).json({ shop });
 };
 
 export const getShopByName = async (req: IUserRequest, res: Response) => {
