@@ -161,11 +161,15 @@ export const getAllProduct = async (req: IUserRequest, res: Response) => {
     .populate({ path: "productCategory", select: ["categoryName"] })
     .lean();
 
-  res.status(StatusCodes.OK).json({
-    products: {
+  const productsToSend = products.map((product) => {
+    return {
       ...products,
       deleteFlagged: undefined,
-    },
+    };
+  });
+
+  res.status(StatusCodes.OK).json({
+    products: productsToSend,
   });
 };
 
