@@ -52,10 +52,16 @@ const login = async (req: Request, res: Response) => {
     throw new UnauthenticatedError(ErrorMessage.ERROR_AUTHENTICATION_INVALID);
   }
 
-  if (user.customerStatus !== 1) {
+  if (user.customerStatus === 0) {
     return res.status(StatusCodes.UNAUTHORIZED).json({
       userId: user._id,
       msg: ErrorMessage.ERROR_ACCOUNT_INACTIVED,
+    });
+  }
+  else if(user.customerStatus === -1) {
+    return res.status(StatusCodes.FORBIDDEN).json({
+      userId: user._id,
+      msg: ErrorMessage.ERROR_ACCOUNT_BANNED,
     });
   }
 
