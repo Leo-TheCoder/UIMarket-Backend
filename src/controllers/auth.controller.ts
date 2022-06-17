@@ -126,7 +126,7 @@ const resendVerifyEmail = async (req: Request, res: Response) => {
     throw new UnauthenticatedError(ErrorMessage.ERROR_AUTHENTICATION_INVALID);
   }
 
-  if (user.customerStatus === 1) {
+  if (user.customerStatus !== 0) {
     return res.status(StatusCodes.OK).json({
       msg: "Account has already verified!",
     });
