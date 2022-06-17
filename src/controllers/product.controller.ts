@@ -18,6 +18,8 @@ enum SortTypes {
   NameDes = "name-des",
   SoldAsc = "sold-asc",
   SoldDes = "sold-des",
+  ViewAsc = "view-asc",
+  ViewDes = "view-des",
 }
 
 enum FilterTypes {
@@ -54,7 +56,15 @@ const sortObjMongoose = (sort?: SortTypes): any => {
   if (sort === SortTypes.SoldDes) {
     return { totalSold: -1 };
   }
-  return {};
+  if(sort === SortTypes.ViewAsc) {
+    return { allTimeView: 1};
+  }
+  if(sort === SortTypes.ViewDes) {
+    return { allTimeView: -1};
+  }
+  return {
+    allTimeView: -1
+  };
 };
 
 const filterObjMongoose = (filter?: FilterTypes) => {
