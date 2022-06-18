@@ -66,9 +66,7 @@ const createQuestion = async (req: IUserRequest, res: Response) => {
       req.body.questionBounty < Constants.minBounty ||
       req.body.questionBounty > Constants.maxBounty
     ) {
-      throw new BadRequestError(
-        `Bounty must in range ${Constants.minBounty} - ${Constants.maxBounty}`,
-      );
+      throw new BadRequestError(ErrorMessage.ERROR_INVALID_BOUNTY);
     }
 
     //Check bounty due date
@@ -85,9 +83,7 @@ const createQuestion = async (req: IUserRequest, res: Response) => {
       diffDays < Constants.minBountyDueDate ||
       diffDays > Constants.maxBountyDueDate
     ) {
-      throw new BadRequestError(
-        ` Due date at least ${Constants.minBountyDueDate} day(s) and maximum ${Constants.maxBountyDueDate} days`,
-      );
+      throw new BadRequestError(ErrorMessage.ERROR_INVALID_BOUNTY_DUE_DATE);
     }
 
     const awardDueDate = new Date(dueDate.getTime());
@@ -278,7 +274,10 @@ const getQuestionByID = async (req: IUserRequest, res: Response) => {
     //
     .findByIdAndUpdate(req.params.id, { $inc: { totalView: 1 } })
     .populate("questionTag", "tagName")
-    .populate({ path: "userId", select: ["customerName", "customerEmail", "customerAvatar"] });
+    .populate({
+      path: "userId",
+      select: ["customerName", "customerEmail", "customerAvatar"],
+    });
 
   //Checking whether there was a question or not
   if (question) {
@@ -443,102 +442,131 @@ const updateQuestion = async (req: IUserRequest, res: Response) => {
   const questionTitle = req.body.questionTitle || question.questionTitle;
   const questionContent = req.body.questionContent || question.questionContent;
   const questionBounty = req.body.questionBounty || question.questionBounty;
-  const questionDueDate = req.body.questionDueDate || question.questionDueDate;
+  const bountyDueDate =
+    new Date(req.body.bountyDueDate) || question.bountyDueDate;
+  let questionAwardDueDate = question.awardDueDate;
 
-  if (
-    questionTitle === question.questionTitle &&
-    questionContent === question.questionContent &&
-    questionBounty === question.questionBounty &&
-    questionDueDate === question.questionDueDate
-  ) {
-    res.status(StatusCodes.OK).send("Nothing updated");
-  } else {
-    question.updateAt = new Date();
-    question.questionTitle = questionTitle;
-    question.questionContent = questionContent;
-    question.questionBounty = questionBounty;
-    question.questionDueDate = questionDueDate;
-
-    const result = await question.save();
-
-    res.status(StatusCodes.OK).json(result);
-  }
-};
-
-const rebountyQuestion = async (req: IUserRequest, res: Response) => {
-  //Checking whether this user is owner of this post
-  const { userId } = req.user!;
-  const question = await Question.findOne({
-    _id: req.params.questionId,
-    questionStatus: 1,
-    bountyActive: 1,
-  });
-
-  if (!question) {
-    throw new NotFoundError(ErrorMessage.ERROR_INVALID_QUESTION_ID);
-  } else if (userId != question.userId) {
-    throw new ForbiddenError(ErrorMessage.ERROR_FORBIDDEN);
-  } else if (question.questionBounty < 0) {
-    throw new BadRequestError("This question cannot rebounty");
-  }
-
-  //Checking whether rebounty value is greater than old value
-  const newBounty = req.body.newBounty;
-  if (!newBounty) {
-    throw new BadRequestError(ErrorMessage.ERROR_MISSING_BODY);
-  } else if (newBounty <= question.questionBounty) {
-    throw new BadRequestError("New bounty value must greater than old value");
-  } else if (
-    newBounty < Constants.minBounty ||
-    newBounty > Constants.maxBounty
-  ) {
-    throw new BadRequestError(
-      `Bounty must in range ${Constants.minBounty} - ${Constants.maxBounty}`,
-    );
+  //Checking new bounty
+  if (questionBounty != question.questionBounty) {
+    if (question.bountyActive != 1) {
+      throw new ForbiddenError(ErrorMessage.ERROR_FAILED);
+    }
+    if (
+      question.questionBounty < 0 ||
+      questionBounty < question.questionBounty
+    ) {
+      throw new BadRequestError(ErrorMessage.ERROR_INVALID_BOUNTY);
+    } else {
+      const transaction = await pointTransaction(
+        userId,
+        questionBounty * -1,
+        "Rebounty for question",
+      );
+      if (!transaction) {
+        throw new InternalServerError(ErrorMessage.ERROR_FAILED);
+      }
+    }
   }
 
   //Checking new bounty due date
-  const newDueDate = new Date(req.body.newDueDate);
-  if (!newDueDate) {
-    throw new BadRequestError(ErrorMessage.ERROR_MISSING_BODY);
-  } else if (newDueDate <= question.bountyDueDate) {
-    throw new BadRequestError("New due date must larger than old one");
-  }
-
-  let diff = Math.abs(newDueDate.getTime() - new Date().getTime());
-  let diffDays = Math.ceil(diff / (1000 * 3600 * 24));
-
-  if (
-    diffDays < Constants.minBountyDueDate ||
-    diffDays > Constants.maxBountyDueDate
-  ) {
-    throw new BadRequestError(
-      `Due date at least ${Constants.minBountyDueDate} day(s) and maximum ${Constants.maxBountyDueDate} days from today`,
-    );
-  }
-
-  const awardDueDate = new Date(newDueDate.getTime());
-  question.questionBounty = newBounty;
-  question.bountyDueDate = newDueDate;
-  question.awardDueDate = awardDueDate.setDate(awardDueDate.getDate() + 14);
-  question.updateAt = new Date();
-
-  const transaction = await pointTransaction(
-    userId,
-    newBounty * -1,
-    "Rebounty for question",
-  );
-  if (!transaction) {
-    throw new InternalServerError(ErrorMessage.ERROR_FAILED);
-  } else {
-    const result = await question.save();
-    if (result) {
-      res.status(StatusCodes.OK).json(result);
+  // console.log(typeof bountyDueDate);
+  // console.log(question.bountyDueDate);
+  if (bountyDueDate != question.bountyDueDate) {
+    if (question.bountyActive != 1) {
+      throw new ForbiddenError(ErrorMessage.ERROR_FAILED);
+    }
+    if (bountyDueDate < question.bountyDueDate) {
+      throw new BadRequestError(ErrorMessage.ERROR_INVALID_BOUNTY_DUE_DATE);
     } else {
-      throw new InternalServerError(ErrorMessage.ERROR_FAILED);
+      let diff = Math.abs(bountyDueDate.getTime() - new Date().getTime());
+      let diffDays = Math.ceil(diff / (1000 * 3600 * 24));
+      if (
+        diffDays < Constants.minBountyDueDate ||
+        diffDays > Constants.maxBountyDueDate
+      ) {
+        throw new BadRequestError(ErrorMessage.ERROR_INVALID_BOUNTY_DUE_DATE);
+      }
+      const awardDueDate = new Date(bountyDueDate.getTime());
+      questionAwardDueDate = awardDueDate.setDate(awardDueDate.getDate() + 14);
     }
   }
+
+  question.questionTitle = questionTitle;
+  question.questionContent = questionContent;
+  question.questionBounty = questionBounty;
+  question.bountyDueDate = bountyDueDate;
+  question.awardDueDate = questionAwardDueDate;
+
+  const result = await question.save();
+
+  res.status(StatusCodes.OK).json(result);
 };
+
+// const validateBounty = async (_newBounty: number, _newDueDate: Date) => {
+//   // const question = await Question.findOne({
+//   //   _id: req.params.questionId,
+//   //   questionStatus: 1,
+//   //   bountyActive: 1,
+//   // });
+
+//   // if (!question) {
+//   //   throw new NotFoundError(ErrorMessage.ERROR_INVALID_QUESTION_ID);
+//   // } else if (userId != question.userId) {
+//   //   throw new ForbiddenError(ErrorMessage.ERROR_FORBIDDEN);
+//   // } else if (question.questionBounty < 0) {
+//   //   throw new BadRequestError("This question cannot rebounty");
+//   // }
+
+//   //Checking whether rebounty value is greater than old value
+//   // const newBounty = req.body.newBounty;
+//   // if (!newBounty) {
+//   //   throw new BadRequestError(ErrorMessage.ERROR_MISSING_BODY);
+//   // } else if (newBounty <= question.questionBounty) {
+//   //   throw new BadRequestError("New bounty value must greater than old value");
+//   // } else
+//   if (_newBounty < Constants.minBounty || _newBounty > Constants.maxBounty) {
+//     throw new BadRequestError(ErrorMessage.ERROR_INVALID_BOUNTY);
+//   }
+
+//   // Checking new bounty due date
+//   const newDueDate = new Date(_newDueDate);
+//   // if (!newDueDate) {
+//   //   throw new BadRequestError(ErrorMessage.ERROR_MISSING_BODY);
+//   // } else if (newDueDate <= question.bountyDueDate) {
+//   //   throw new BadRequestError("New due date must larger than old one");
+//   // }
+
+//   let diff = Math.abs(newDueDate.getTime() - new Date().getTime());
+//   let diffDays = Math.ceil(diff / (1000 * 3600 * 24));
+
+//   if (
+//     diffDays < Constants.minBountyDueDate ||
+//     diffDays > Constants.maxBountyDueDate
+//   ) {
+//     throw new BadRequestError(ErrorMessage.ERROR_INVALID_BOUNTY_DUE_DATE);
+//   }
+
+//   const awardDueDate = new Date(newDueDate.getTime());
+//   // question.questionBounty = newBounty;
+//   // question.bountyDueDate = newDueDate;
+//   const _newAwardDueDate = awardDueDate.setDate(awardDueDate.getDate() + 14);
+
+//   const transaction = await pointTransaction(
+//     userId,
+//     newBounty * -1,
+//     "Rebounty for question",
+//   );
+//   if (!transaction) {
+//     throw new InternalServerError(ErrorMessage.ERROR_FAILED);
+//   } else {
+//     const result = await question.save();
+//     if (result) {
+//       res.status(StatusCodes.OK).json(result);
+//     } else {
+//       throw new InternalServerError(ErrorMessage.ERROR_FAILED);
+//     }
+//   }
+// };
 
 export {
   createQuestion,
@@ -547,5 +575,4 @@ export {
   chooseBestAnswer,
   deleteQuestion,
   updateQuestion,
-  rebountyQuestion,
 };

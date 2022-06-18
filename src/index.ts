@@ -57,7 +57,7 @@ app.use("/api/v1/comments", commentRouter);
 app.use("/api/v1/profile", profileRouter);
 app.use("/api/v1/file", compulsoryAuth, fileRouter);
 app.use("/api/v1/shop", shopRouter);
-app.use("/api/v1/admin", compulsoryAuth, adminAuth ,adminRouter);
+app.use("/api/v1/admin", compulsoryAuth, adminAuth, adminRouter);
 app.use("/api/v1/products", optionalAuth, productRouter);
 app.use("/api/v1/verify", verifyRouter);
 app.use("/api/v1/payment", paymentRouter);

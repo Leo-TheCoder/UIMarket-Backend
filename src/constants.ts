@@ -7,7 +7,7 @@ export const defaultMinLength = 20;
 export const defaultLimitComments = 5;
 
 //Bounty constant
-export const minBountyDueDate = 1;
+export const minBountyDueDate = 0;
 export const maxBountyDueDate = 30;
 export const minBounty = 150;
 export const maxBounty = 5000;

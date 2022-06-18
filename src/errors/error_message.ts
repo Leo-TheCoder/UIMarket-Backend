@@ -27,6 +27,8 @@ export const ERROR_INVALID_TAG_ID = "invalid-tag-id";
 export const ERROR_FORBIDDEN = "invalid-credentials";
 export const ERROR_FAILED = "failed";
 export const ERROR_GONE = "already-gone";
+export const ERROR_INVALID_BOUNTY = "invalid-bounty";
+export const ERROR_INVALID_BOUNTY_DUE_DATE = "invalid-bounty_due_date";
 
 //EC side
 export const ERROR_INVALID_CATEGORY_ID = "invalid-category-id";
