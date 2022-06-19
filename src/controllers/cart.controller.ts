@@ -79,7 +79,7 @@ export const viewCart = async (req: IUserRequest, res: Response) => {
     .limit(limit)
     .populate({
       path: "product",
-      select: ["productName", "productPrice", "productPictures", "shopId"],
+      select: ["productName", "productPrice", "productPictures", "shopId", "productStatus"],
     })
     .lean();
 
