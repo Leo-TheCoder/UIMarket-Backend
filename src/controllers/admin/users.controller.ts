@@ -61,6 +61,7 @@ const projectionUserList = {
   customerPassword: 0,
   customerBio: 0,
   refreshToken: 0,
+  customerWallet: 0,
 };
 
 export const getAllUsers = async (req: IUserRequest, res: Response) => {
@@ -76,6 +77,7 @@ export const getAllUsers = async (req: IUserRequest, res: Response) => {
 
   const total = await UserModel.countDocuments({
     ...filterObj,
+    isAdmin: false,
   }).lean();
 
   const totalPages =
@@ -87,8 +89,9 @@ export const getAllUsers = async (req: IUserRequest, res: Response) => {
   const users = await UserModel.find(
     {
       ...filterObj,
+      isAdmin: false,
     },
-    projectionUserList
+    projectionUserList,
   )
     .sort(sortObj)
     .skip((page - 1) * limit)
