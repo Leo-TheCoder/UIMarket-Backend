@@ -52,7 +52,7 @@ export const createShop = async (req: IUserRequest, res: Response) => {
     const user = await UserModel.findByIdAndUpdate(
       userId,
       { shopId: newShop._id },
-      { new: true }
+      { new: true },
     );
 
     const token = user.createJWT();
@@ -106,9 +106,17 @@ export const deleteProduct = async (req: IUserRequest, res: Response) => {
 
   product.productStatus = 0;
   product.deleteFlagged = 1;
-  product.updatedAt = new Date();
 
   const result = await product.save();
+
+  //Decrease total product by 1
+  await CategoryModel.findByIdAndUpdate(
+    product.productCategory,
+    {
+      $inc: { totalProduct: -1 },
+    },
+    { new: true },
+  );
 
   if (result) {
     res.status(StatusCodes.OK).json({ result });
@@ -132,13 +140,41 @@ export const updateProduct = async (req: IUserRequest, res: Response) => {
     throw new ForbiddenError(ErrorMessage.ERROR_FORBIDDEN);
   }
 
+  //Validate category
+  if (
+    req.body.productCategory &&
+    req.body.productCategory != product.productCategory
+  ) {
+    const oldCategory = product.productCategory;
+    const category = await CategoryModel.findOneAndUpdate(
+      {
+        _id: req.body.productCategory,
+        categoryStatus: 1,
+      },
+      { $inc: { totalProduct: 1 } },
+      { new: true },
+    );
+    if (!category) {
+      throw new BadRequestError(ErrorMessage.ERROR_INVALID_CATEGORY_ID);
+    }
+
+    //Decrease total product by 1
+    await CategoryModel.findByIdAndUpdate(
+      oldCategory,
+      {
+        $inc: { totalProduct: -1 },
+      },
+      { new: true },
+    );
+    product.productCategory = req.body.productCategory;
+  }
+
   product.productName = req.body.productName || product.productName;
   product.productPrice = req.body.productPrice || product.productPrice;
   product.productDescription =
     req.body.productDescription || product.productDescription;
   product.productPictures = req.body.productPictures || product.productPictures;
   product.productFile = req.body.productFile || product.productFile;
-  product.updatedAt = new Date();
 
   const updatedProduct = await product.save();
   if (updatedProduct) {
@@ -215,7 +251,7 @@ export const getShopById = async (req: IUserRequest, res: Response) => {
 
   if (!shop) {
     throw new NotFoundError(ErrorMessage.ERROR_INVALID_SHOP_ID);
-  } else if(shop.shopStatus === 0) {
+  } else if (shop.shopStatus === 0) {
     throw new NotFoundError(ErrorMessage.ERROR_SHOP_DEACTIVATED);
   }
   res.status(StatusCodes.OK).json({ shop });
@@ -350,7 +386,7 @@ const getRevenue = async (invoices: any, productId: any) => {
 
   for (let i = 0; i < invoices.length; i++) {
     const product = invoices[i].productList.find(
-      (x: any) => String(x.product) == String(productId)
+      (x: any) => String(x.product) == String(productId),
     );
     revenue += product.productPrice;
   }
@@ -384,7 +420,7 @@ export const getProductStatistic = async (req: IUserRequest, res: Response) => {
 
     // Get last 30 days sold and revenues
     let invoices_L30D = invoices.filter(
-      (x: any) => x.createdAt <= today && x.createdAt >= L30D
+      (x: any) => x.createdAt <= today && x.createdAt >= L30D,
     );
 
     last30Days.totalSold = invoices_L30D.length;
@@ -512,7 +548,7 @@ export const getProductsByName = async (req: IUserRequest, res: Response) => {
       });
 
       const licenses_L30D = licenses.filter(
-        (x: any) => x.createdAt <= today && x.createdAt >= L30D
+        (x: any) => x.createdAt <= today && x.createdAt >= L30D,
       );
 
       last30Days.totalSold = licenses_L30D.length;
@@ -541,7 +577,7 @@ export const getProductsByName = async (req: IUserRequest, res: Response) => {
 
 export const getProductStatisticV2 = async (
   req: IUserRequest,
-  res: Response
+  res: Response,
 ) => {
   const { shopId } = req.user!;
 
@@ -574,7 +610,7 @@ export const getProductStatisticV2 = async (
       });
 
       const licenses_L30D = licenses.filter(
-        (x: any) => x.createdAt <= today && x.createdAt >= L30D
+        (x: any) => x.createdAt <= today && x.createdAt >= L30D,
       );
 
       last30Days.totalSold = licenses_L30D.length;
