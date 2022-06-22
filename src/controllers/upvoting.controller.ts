@@ -1,5 +1,9 @@
 import { StatusCodes } from "http-status-codes";
-import { BadRequestError, UnauthenticatedError } from "../errors";
+import {
+  BadRequestError,
+  ForbiddenError,
+  UnauthenticatedError,
+} from "../errors";
 import { Request, Response } from "express";
 import { IUserRequest } from "../types/express";
 import QuestionModel from "../models/Question.model";
@@ -14,7 +18,6 @@ const upvote = async (req: IUserRequest, res: Response) => {
   const { type, questionId, objectId } = req.body;
   const userId = req.user?.userId!;
 
-  //Trigger solution
   const validType: Array<string> = ["Question", "Comment", "Answer"];
   if (!type) {
     throw new BadRequestError(ErrorMessage.ERROR_MISSING_BODY);
@@ -28,35 +31,45 @@ const upvote = async (req: IUserRequest, res: Response) => {
     throw new BadRequestError(ErrorMessage.ERROR_INVALID_QUESTION_ID);
   }
 
+  let ownerId;
+
   //Checking objectId
   switch (type) {
     case "Question":
       if (questionId != objectId) {
         throw new BadRequestError(ErrorMessage.ERROR_INVALID_QUESTION_ID);
       }
+      ownerId = question.userId;
       break;
 
     case "Answer":
-      const answer = await AnswerModel.find({
+      const answer = await AnswerModel.findOne({
         _id: objectId,
         questionId: questionId,
         answerStatus: 1,
       });
-      if (answer.length === 0) {
+      if (!answer) {
         throw new BadRequestError(ErrorMessage.ERROR_INVALID_ANSWER_ID);
       }
+      ownerId = answer.userId;
       break;
 
     case "Comment":
-      const comment = await CommentModel.find({
+      const comment = await CommentModel.findOne({
         _id: objectId,
         questionId: questionId,
         commentStatus: 1,
       });
-      if (comment.length === 0) {
+      if (!comment) {
         throw new BadRequestError(ErrorMessage.ERROR_INVALID_COMMENT_ID);
       }
+      ownerId = comment.userId;
       break;
+  }
+
+  //Cannot voting for yourself
+  if (userId == ownerId) {
+    throw new ForbiddenError(ErrorMessage.ERROR_FORBIDDEN);
   }
 
   const result = await upvoteObject(userId, questionId, objectId, type);

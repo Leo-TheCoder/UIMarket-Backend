@@ -39,31 +39,32 @@ interface IQuery {
 
 const sortObjMongoose = (sort?: SortTypes): any => {
   if (sort === SortTypes.MoneyAsc) {
-    return { productPrice: 1 };
+    return { score: -1, productPrice: 1 };
   }
   if (sort === SortTypes.MoneyDes) {
-    return { productPrice: -1 };
+    return { score: -1, productPrice: -1 };
   }
   if (sort === SortTypes.NameAsc) {
-    return { productName: 1 };
+    return { score: -1, productName: 1 };
   }
   if (sort === SortTypes.NameDes) {
-    return { productName: -1 };
+    return { score: -1, productName: -1 };
   }
   if (sort === SortTypes.SoldAsc) {
-    return { totalSold: 1 };
+    return { score: -1, totalSold: 1 };
   }
   if (sort === SortTypes.SoldDes) {
-    return { totalSold: -1 };
+    return { score: -1, totalSold: -1 };
   }
-  if(sort === SortTypes.ViewAsc) {
-    return { allTimeView: 1};
+  if (sort === SortTypes.ViewAsc) {
+    return { score: -1, allTimeView: 1 };
   }
-  if(sort === SortTypes.ViewDes) {
-    return { allTimeView: -1};
+  if (sort === SortTypes.ViewDes) {
+    return { score: -1, allTimeView: -1 };
   }
   return {
-    allTimeView: -1
+    score: -1,
+    allTimeView: -1,
   };
 };
 
@@ -273,6 +274,7 @@ const findByName = async (req: Request, res: Response) => {
         text: {
           path: "productName",
           query: decodeURIComponent(req.params.productName),
+          fuzzy: {},
         },
       },
     },
@@ -302,11 +304,13 @@ const findByName = async (req: Request, res: Response) => {
         text: {
           path: "productName",
           query: decodeURIComponent(req.params.productName),
+          fuzzy: {},
         },
       },
     },
     { $match: { productStatus: 1, ...filterObj } },
     { $addFields: { score: { $meta: "searchScore" } } },
+    { $sort: { score: -1 } },
     { $skip: (page - 1) * limit },
     { $limit: limit },
     { $project: projectionProductList },

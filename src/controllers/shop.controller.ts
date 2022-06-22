@@ -276,6 +276,7 @@ export const getShopByName = async (req: IUserRequest, res: Response) => {
         text: {
           path: "shopName",
           query: decodeURIComponent(req.params.shopName),
+          fuzzy: {},
         },
       },
     },
@@ -305,11 +306,13 @@ export const getShopByName = async (req: IUserRequest, res: Response) => {
         text: {
           path: "shopName",
           query: decodeURIComponent(req.params.shopName),
+          fuzzy: {},
         },
       },
     },
     { $match: { shopStatus: 1 } },
     { $addFields: { score: { $meta: "searchScore" } } },
+    { $sort: { score: -1 } },
     { $skip: (page - 1) * limit },
     { $limit: limit },
     { $project: selectOption },

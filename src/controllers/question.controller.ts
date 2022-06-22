@@ -141,6 +141,7 @@ const searchWithTitle = async (
         text: {
           path: "questionTitle",
           query: decodeURIComponent(title),
+          fuzzy: {},
         },
       },
     },
@@ -168,11 +169,13 @@ const searchWithTitle = async (
         text: {
           path: "questionTitle",
           query: decodeURIComponent(title),
+          fuzzy: {},
         },
       },
     },
     { $match: queryString },
     { $addFields: { score: { $meta: "searchScore" } } },
+    { $sort: { score: -1 } },
     { $skip: (page - 1) * limit },
     { $limit: limit },
     { $project: selectOption },
