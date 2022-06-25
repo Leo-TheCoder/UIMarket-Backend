@@ -49,7 +49,7 @@ export const createReport = async (req: IUserRequest, res: Response) => {
         ...req.body,
       });
       const status = await ReportStatusModel.findOneAndUpdate(
-        { reportObject: report.reportObject },
+        { reportObject: report.reportObject, resolveFlag: 0 },
         { $inc: { reportQuantity: 1 }, objectType: req.body.objectType },
         { opts, new: true, upsert: true },
       );
