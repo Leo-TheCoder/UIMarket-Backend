@@ -37,8 +37,8 @@ const createTagList = async (tagList: [String]) => {
       QuestionTagModel.findOneAndUpdate(
         { tagName: tag },
         { $inc: { totalQuestion: +1 } },
-        { new: true, upsert: true },
-      ),
+        { new: true, upsert: true }
+      )
     );
   }
   const tagObjects = await Promise.all(promises);
@@ -93,7 +93,7 @@ const createQuestion = async (req: IUserRequest, res: Response) => {
     const transaction = await pointTransaction(
       userId,
       changeAmount,
-      "Create bounty question",
+      "Create bounty question"
     );
     if (transaction) {
       req.body.bountyActive = 1;
@@ -130,7 +130,7 @@ const searchWithTitle = async (
   limit: number,
   title: string,
   queryString: any,
-  projection: any,
+  projection: any
 ) => {
   const selectOption = projection;
 
@@ -227,7 +227,7 @@ const getQuestions = async (req: Request, res: Response) => {
       limit,
       title,
       queryString,
-      projection,
+      projection
     );
 
     return res.status(StatusCodes.OK).json({
@@ -327,7 +327,7 @@ const chooseBestAnswer = async (req: IUserRequest, res: Response) => {
     //Can't change best answer if this is bounty question
     if (question.questionBounty > 0) {
       throw new BadRequestError(
-        "Can't change best answer of bountied question",
+        "Can't change best answer of bountied question"
       );
     }
 
@@ -381,7 +381,7 @@ const chooseBestAnswer = async (req: IUserRequest, res: Response) => {
     const transaction = await pointTransaction(
       answerOwner,
       pointReward,
-      "Best answer for question",
+      "Best answer for question"
     );
     question.bestAnswer = answer._id;
     const resultQuestion = await question.save();
@@ -412,7 +412,7 @@ const deleteQuestion = async (req: IUserRequest, res: Response) => {
   question.questionTag.map(async (tag: string) => {
     let tags = await QuestionTagModel.updateOne(
       { _id: tag },
-      { $inc: { totalQuestion: -1 } },
+      { $inc: { totalQuestion: -1 } }
     );
 
     if (!tags) {
@@ -445,8 +445,9 @@ const updateQuestion = async (req: IUserRequest, res: Response) => {
   const questionTitle = req.body.questionTitle || question.questionTitle;
   const questionContent = req.body.questionContent || question.questionContent;
   const questionBounty = req.body.questionBounty || question.questionBounty;
-  const bountyDueDate =
-    new Date(req.body.bountyDueDate) || question.bountyDueDate;
+  const bountyDueDate = req.body.bountyDueDate
+    ? new Date(req.body.bountyDueDate)
+    : question.bountyDueDate;
   let questionAwardDueDate = question.awardDueDate;
 
   //Checking new bounty
@@ -463,7 +464,7 @@ const updateQuestion = async (req: IUserRequest, res: Response) => {
       const transaction = await pointTransaction(
         userId,
         questionBounty * -1,
-        "Rebounty for question",
+        "Rebounty for question"
       );
       if (!transaction) {
         throw new InternalServerError(ErrorMessage.ERROR_FAILED);
