@@ -32,36 +32,36 @@ export const createReport = async (req: IUserRequest, res: Response) => {
     throw new BadRequestError(ErrorMessage.ERROR_MISSING_BODY);
   } else if (!validType.includes(req.body.objectType)) {
     throw new BadRequestError(
-      "Valid types are Question, Answer, Comment or Product",
+      "Valid types are Question, Answer, Comment or Product"
     );
   }
 
   //Two phase commit
-  const db = await connectDB(process.env.MONGO_URI!);
-  const session = db.startSession();
-  (await session).startTransaction();
-  {
-    try {
-      const opts = { session, returnOriginal: false };
+  try {
 
-      const report = await ReportModel.create({
-        userId: userId,
-        ...req.body,
-      });
-      const status = await ReportStatusModel.findOneAndUpdate(
+    const session = await ReportModel.startSession();
+    await session.withTransaction(async () => {
+      const reports = await ReportModel.create(
+        [
+          {
+            userId: userId,
+            ...req.body,
+          },
+        ],
+        {
+          session,
+        }
+      );
+      const report = reports[0];
+      await ReportStatusModel.findOneAndUpdate(
         { reportObject: report.reportObject },
         { $inc: { reportQuantity: 1 }, objectType: req.body.objectType },
-        { opts, new: true, upsert: true },
+        { session, returnOriginal: false, new: true, upsert: true }
       );
-
-      res.status(StatusCodes.CREATED).json(report);
-      await (await session).commitTransaction();
-      (await session).endSession();
-    } catch (error) {
-      await (await session).abortTransaction();
-      (await session).endSession();
-      throw new InternalServerError("Error");
-    }
+      return res.status(StatusCodes.CREATED).json(report);
+    });
+  } catch(error) {
+    throw new InternalServerError("Error");
   }
 };
 
@@ -202,7 +202,7 @@ export const acceptReport = async (req: Request, res: Response) => {
       const question = await QuestionModel.findByIdAndUpdate(
         report.reportObject,
         { questionStatus: 0 },
-        { new: true },
+        { new: true }
       );
       solvedReport = question;
       break;
@@ -210,7 +210,7 @@ export const acceptReport = async (req: Request, res: Response) => {
       const answer = await AnswerModel.findByIdAndUpdate(
         report.reportObject,
         { answerStatus: 0 },
-        { new: true },
+        { new: true }
       );
       solvedReport = answer;
       break;
@@ -218,7 +218,7 @@ export const acceptReport = async (req: Request, res: Response) => {
       const comment = await CommentModel.findByIdAndUpdate(
         report.reportObject,
         { commentStatus: 0 },
-        { new: true },
+        { new: true }
       );
       solvedReport = comment;
       break;
@@ -226,7 +226,7 @@ export const acceptReport = async (req: Request, res: Response) => {
       const product = await ProductModel.findByIdAndUpdate(
         report.reportObject,
         { productStatus: 0 },
-        { new: true },
+        { new: true }
       );
       solvedReport = product;
       break;
@@ -234,7 +234,7 @@ export const acceptReport = async (req: Request, res: Response) => {
       const shop = await ShopModel.findByIdAndUpdate(
         report.reportObject,
         { shopStatus: 0 },
-        { new: true },
+        { new: true }
       );
       solvedReport = shop;
       break;
