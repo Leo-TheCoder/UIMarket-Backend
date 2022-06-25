@@ -12,5 +12,3 @@ export const clearInvoiceModel = async () => {
     updatedAt: { $lt: daysAgo },
   });
 };
-
-clearInvoiceModel();
