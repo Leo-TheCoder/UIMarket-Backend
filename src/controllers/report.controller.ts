@@ -37,31 +37,30 @@ export const createReport = async (req: IUserRequest, res: Response) => {
   }
 
   //Two phase commit
-  const db = await connectDB(process.env.MONGO_URI!);
-  const session = db.startSession();
-  (await session).startTransaction();
-  {
-    try {
-      const opts = { session, returnOriginal: false };
-
-      const report = await ReportModel.create({
-        userId: userId,
-        ...req.body,
-      });
-      const status = await ReportStatusModel.findOneAndUpdate(
+  try {
+    const session = await ReportModel.startSession();
+    await session.withTransaction(async () => {
+      const reports = await ReportModel.create(
+        [
+          {
+            userId: userId,
+            ...req.body,
+          },
+        ],
+        {
+          session,
+        },
+      );
+      const report = reports[0];
+      await ReportStatusModel.findOneAndUpdate(
         { reportObject: report.reportObject, resolveFlag: 0 },
         { $inc: { reportQuantity: 1 }, objectType: req.body.objectType },
-        { opts, new: true, upsert: true },
+        { session, returnOriginal: false, new: true, upsert: true },
       );
-
-      res.status(StatusCodes.CREATED).json(report);
-      await (await session).commitTransaction();
-      (await session).endSession();
-    } catch (error) {
-      await (await session).abortTransaction();
-      (await session).endSession();
-      throw new InternalServerError("Error");
-    }
+      return res.status(StatusCodes.CREATED).json(report);
+    });
+  } catch (error) {
+    throw new InternalServerError("Error");
   }
 };
 

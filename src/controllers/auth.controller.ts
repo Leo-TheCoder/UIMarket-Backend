@@ -57,8 +57,7 @@ const login = async (req: Request, res: Response) => {
       userId: user._id,
       msg: ErrorMessage.ERROR_ACCOUNT_INACTIVED,
     });
-  }
-  else if(user.customerStatus === -1) {
+  } else if (user.customerStatus === -1) {
     return res.status(StatusCodes.FORBIDDEN).json({
       userId: user._id,
       msg: ErrorMessage.ERROR_ACCOUNT_BANNED,
@@ -83,7 +82,7 @@ const loginWithToken = async (req: IUserRequest, res: Response) => {
 
   const user = await User.find(
     { _id: userId },
-    { customerPassword: 0, authenToken: 0 },
+    { customerPassword: 0, authenToken: 0 }
   );
 
   if (!user) {
@@ -231,9 +230,16 @@ export const googleLogin = async (req: Request, res: Response) => {
       customerName,
       googleId,
       customerEmail,
-      customerAvatar,
+      customerAvatar
     );
   } else {
+    if (user.customerStatus === -1) {
+      return res.status(StatusCodes.FORBIDDEN).json({
+        userId: user._id,
+        msg: ErrorMessage.ERROR_ACCOUNT_BANNED,
+      });
+    }
+
     if (user.doesAccountCreatedWithGoogle()) {
       //Compare this googleId with googleId in db
       if (!user.verifyGoogleID(googleId)) {

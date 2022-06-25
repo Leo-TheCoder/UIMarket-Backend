@@ -17,7 +17,6 @@ const ReportSchema = new mongoose.Schema(
     reason: {
       type: String,
       required: [true, "Please provide reason"],
-      minlength: defaultMinLength,
     },
     objectType: {
       type: String,
