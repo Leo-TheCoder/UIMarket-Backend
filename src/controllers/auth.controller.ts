@@ -23,7 +23,7 @@ const register = async (req: Request, res: Response) => {
   await user.save();
 
   //send email for verification - need to differentiate google auth and email auth
-  sendVerifyEmail(req.body.customerEmail, user._id, user.refreshToken);
+  sendVerifyEmail(req.body.customerEmail, user._id, user.customerName, user.refreshToken);
 
   res.status(StatusCodes.CREATED).json({
     userId: user._id,
@@ -134,7 +134,7 @@ const resendVerifyEmail = async (req: Request, res: Response) => {
   await user.createRefreshToken();
   await user.save();
 
-  sendVerifyEmail(user.customerEmail, user._id, user.refreshToken);
+  sendVerifyEmail(user.customerEmail, user._id, user.customerName, user.refreshToken);
   res.status(StatusCodes.OK).json({
     msg: "Verify email sent!",
   });

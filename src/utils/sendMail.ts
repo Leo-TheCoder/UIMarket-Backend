@@ -2,7 +2,7 @@ import nodemailer from "nodemailer";
 import { v4 as uuidv4 } from "uuid";
 import { readFile } from "fs/promises";
 import path from "path";
-import Handlebars from "handlebars"
+import Handlebars from "handlebars";
 
 const transporter = nodemailer.createTransport({
   service: "Gmail",
@@ -13,35 +13,45 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-const sendVerifyEmail = (to: string, userId: string, verifyCode: string) => {
+const sendVerifyEmail = async (
+  to: string,
+  userId: string,
+  name: string,
+  verifyCode: string
+) => {
   const url = `${process.env.FE_DOMAIN_NAME}/verify?userId=${userId}&verifyCode=${verifyCode}`;
+
+  const htmlFile = await readFile(
+    path.join(__dirname, "../public/Confirmation.html"),
+    "utf-8"
+  );
+
+  const data = {
+    title: `Thanks for signing up, ${name}!`,
+    content: `Please verify your email address to get access to more features`,
+    btnTitle: `Verify Email Now`,
+    url,
+  };
+
+  const template = Handlebars.compile(htmlFile);
+  const htmlToSend = template(data);
+
+  const imageFiles = ["logo-big.png"];
   transporter.sendMail(
     {
       messageId: uuidv4(),
+      sender: "Deex UI Market",
       from: "<no-reply> deex.uimarket@gmail.com",
       to: to,
       subject: `Verify Account`,
-      html: `Click <a href = '${url}'>here</a> to confirm your email.`,
-    },
-    (err) => {
-      if (err) console.log(err?.message);
-    }
-  );
-};
-
-const sendForgetPasswordEmail = (
-  to: string,
-  userId: string,
-  verifyCode: string
-) => {
-  const url = `${process.env.FE_DOMAIN_NAME}/resetforgetpassword?userId=${userId}&verifyCode=${verifyCode}`;
-  transporter.sendMail(
-    {
-      messageId: uuidv4(),
-      from: "<no-reply> deex.uimarket@gmail.com",
-      to: to,
-      subject: `Forget Password`,
-      html: `Click <a href = '${url}'>here</a> to reset your password`,
+      html: htmlToSend,
+      attachments: imageFiles.map((image) => {
+        return {
+          filename: image,
+          path: `./src/public/${image}`,
+          cid: image,
+        };
+      }),
     },
     (err) => {
       if (err) console.log(err.message);
@@ -49,7 +59,52 @@ const sendForgetPasswordEmail = (
   );
 };
 
-const sendResetPasswordConfirmEmail = (to: string) => {
+const sendForgetPasswordEmail = async(
+  to: string,
+  userId: string,
+  verifyCode: string
+) => {
+  const url = `${process.env.FE_DOMAIN_NAME}/resetforgetpassword?userId=${userId}&verifyCode=${verifyCode}`;
+
+  const htmlFile = await readFile(
+    path.join(__dirname, "../public/Confirmation.html"),
+    "utf-8"
+  );
+
+  const data = {
+    title: `Reset password!`,
+    content: `Please reset your password to get full access to your account`,
+    btnTitle: `Reset Password Now`,
+    url,
+  };
+
+  const template = Handlebars.compile(htmlFile);
+  const htmlToSend = template(data);
+
+  const imageFiles = ["logo-big.png"];
+  transporter.sendMail(
+    {
+      messageId: uuidv4(),
+      sender: "Deex UI Market",
+      from: "<no-reply> deex.uimarket@gmail.com",
+      to: to,
+      subject: `Reset Forgot Password`,
+      html: htmlToSend,
+      attachments: imageFiles.map((image) => {
+        return {
+          filename: image,
+          path: `./src/public/${image}`,
+          cid: image,
+        };
+      }),
+    },
+    (err) => {
+      if (err) console.log(err.message);
+    }
+  );
+};
+
+const sendResetPasswordConfirmEmail = async (to: string) => {
   transporter.sendMail(
     {
       messageId: uuidv4(),
@@ -62,29 +117,55 @@ const sendResetPasswordConfirmEmail = (to: string) => {
       if (err) console.log(err.message);
     }
   );
+
+  const htmlFile = await readFile(
+    path.join(__dirname, "../public/Confirmation.html"),
+    "utf-8"
+  );
+
+  const data = {
+    title: `Your password has been changed!`,
+    content: `This mail notify that your password has been changed! Please contact us if there is something wrong`,
+    btnTitle: `Contact Now`,
+    url: `${process.env.FE_DOMAIN_NAME}/contact`,
+  };
+
+  const template = Handlebars.compile(htmlFile);
+  const htmlToSend = template(data);
+
+  const imageFiles = ["logo-big.png"];
+  transporter.sendMail(
+    {
+      messageId: uuidv4(),
+      sender: "Deex UI Market",
+      from: "<no-reply> deex.uimarket@gmail.com",
+      to: to,
+      subject: `Your Password Changed`,
+      html: htmlToSend,
+      attachments: imageFiles.map((image) => {
+        return {
+          filename: image,
+          path: `./src/public/${image}`,
+          cid: image,
+        };
+      }),
+    },
+    (err) => {
+      if (err) console.log(err.message);
+    }
+  );
 };
 
 export const sendMailTest = async (to: string, content: string) => {
   const htmlFile = await readFile(
-    path.join(__dirname, "../public/index.html"),
-    'utf-8',
+    path.join(__dirname, "../public/Confirmation.html"),
+    "utf-8"
   );
 
   const template = Handlebars.compile(htmlFile);
-  const htmlToSend = template({content});
+  const htmlToSend = template({ content });
 
-  const imageFiles = [
-    "image-1.png",
-    "image-2.png",
-    "image-3.png",
-    "image-4.png",
-    "image-5.png",
-    "image-6.png",
-    "image-7.png",
-    "image-8.png",
-    "image-9.png",
-    "image-10.jpeg",
-  ];
+  const imageFiles = ["logo-big.png"];
   transporter.sendMail(
     {
       messageId: uuidv4(),
@@ -96,7 +177,7 @@ export const sendMailTest = async (to: string, content: string) => {
       attachments: imageFiles.map((image) => {
         return {
           filename: image,
-          path: `./src/public/images/${image}`,
+          path: `./src/public/${image}`,
           cid: image,
         };
       }),
