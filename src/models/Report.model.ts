@@ -23,6 +23,11 @@ const ReportSchema = new mongoose.Schema(
       required: [true, "Please provide type"],
       enum: ["Question", "Answer", "Comment", "Product", "Shop"],
     },
+    reportStatus: {
+      type: Number,
+      default: 1,
+      enum: [0, 1],
+    },
   },
   { timestamps: true },
 );

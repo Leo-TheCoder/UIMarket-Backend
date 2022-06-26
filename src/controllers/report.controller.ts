@@ -5,7 +5,6 @@ import { IUserRequest } from "../types/express";
 import * as Constants from "../constants";
 
 //Model
-import connectDB from "../db/connect";
 import ProductModel from "../models/Product.model";
 import ReportModel from "../models/Report.model";
 import ReportStatusModel from "../models/ReportStatus.model";
@@ -82,6 +81,12 @@ export const rejectReport = async (req: Request, res: Response) => {
   report.reportSolution = reportSolution;
   report.resolveFlag = -1;
   const result = await report.save();
+
+  const reportDetail = await ReportModel.updateMany(
+    { reportObject: req.params.reportId, reportStatus: 1 },
+    { reportStatus: 0 },
+  );
+
   res.status(StatusCodes.OK).json(result);
 };
 
@@ -241,6 +246,12 @@ export const acceptReport = async (req: Request, res: Response) => {
   report.reportSolution = "Hide object";
   report.resolveFlag = 1;
   await report.save();
+
+  const reportDetail = await ReportModel.updateMany(
+    { reportObject: req.params.reportId, reportStatus: 1 },
+    { reportStatus: 0 },
+  );
+
   res.status(StatusCodes.OK).json(solvedReport);
 };
 
@@ -251,6 +262,7 @@ export const getReportDetail = async (req: Request, res: Response) => {
 
   const total = await ReportModel.countDocuments({
     reportObject: req.params.objectId,
+    reportStatus: 1,
   });
 
   const totalPages =
@@ -260,6 +272,7 @@ export const getReportDetail = async (req: Request, res: Response) => {
 
   const reports = await ReportModel.find({
     reportObject: req.params.objectId,
+    reportStatus: 1,
   })
     .skip((page - 1) * limit)
     .limit(limit)
