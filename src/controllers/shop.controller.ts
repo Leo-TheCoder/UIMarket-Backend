@@ -331,6 +331,7 @@ export const deactiveProduct = async (req: IUserRequest, res: Response) => {
   const product = await ProductModel.findOne({
     _id: req.params.productId,
     deleteFlagged: 0,
+    isBanned: 0,
   });
 
   if (!shopId) {
@@ -360,6 +361,7 @@ export const activeProduct = async (req: IUserRequest, res: Response) => {
   const product = await ProductModel.findOne({
     _id: req.params.productId,
     deleteFlagged: 0,
+    isBanned: 0,
   });
 
   if (!shopId) {

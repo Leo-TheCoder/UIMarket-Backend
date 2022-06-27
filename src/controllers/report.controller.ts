@@ -229,7 +229,7 @@ export const acceptReport = async (req: Request, res: Response) => {
     case "Product":
       const product = await ProductModel.findByIdAndUpdate(
         report.reportObject,
-        { productStatus: 0 },
+        { productStatus: 0, isBanned: 1 },
         { new: true },
       );
       solvedReport = product;

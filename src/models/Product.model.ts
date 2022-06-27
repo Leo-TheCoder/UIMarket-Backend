@@ -65,6 +65,11 @@ const ProductSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    isBanned: {
+      type: Number,
+      default: 0,
+      enum: [0, 1],
+    },
   },
   { timestamps: true },
 );
