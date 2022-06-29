@@ -37,12 +37,27 @@ const createTagList = async (tagList: [String]) => {
       QuestionTagModel.findOneAndUpdate(
         { tagName: tag },
         { $inc: { totalQuestion: +1 } },
-        { new: true, upsert: true }
-      )
+        { new: true, upsert: true },
+      ),
     );
   }
   const tagObjects = await Promise.all(promises);
   return tagObjects.map((obj) => obj._id);
+};
+
+export const updateTagList = async (tagList: [String]) => {
+  const promises = [];
+  for (const tag of tagList) {
+    promises.push(
+      QuestionTagModel.findByIdAndUpdate(
+        tag,
+        { $inc: { totalQuestion: -1 } },
+        { new: true },
+      ),
+    );
+  }
+  const tagObjects = await Promise.all(promises);
+  // return tagObjects.map((obj) => obj._id);
 };
 
 //create question endpoint
@@ -93,7 +108,7 @@ const createQuestion = async (req: IUserRequest, res: Response) => {
     const transaction = await pointTransaction(
       userId,
       changeAmount,
-      "Create bounty question"
+      "Create bounty question",
     );
     if (transaction) {
       req.body.bountyActive = 1;
@@ -130,7 +145,7 @@ const searchWithTitle = async (
   limit: number,
   title: string,
   queryString: any,
-  projection: any
+  projection: any,
 ) => {
   const selectOption = projection;
 
@@ -227,7 +242,7 @@ const getQuestions = async (req: Request, res: Response) => {
       limit,
       title,
       queryString,
-      projection
+      projection,
     );
 
     return res.status(StatusCodes.OK).json({
@@ -327,7 +342,7 @@ const chooseBestAnswer = async (req: IUserRequest, res: Response) => {
     //Can't change best answer if this is bounty question
     if (question.questionBounty > 0) {
       throw new BadRequestError(
-        "Can't change best answer of bountied question"
+        "Can't change best answer of bountied question",
       );
     }
 
@@ -381,7 +396,7 @@ const chooseBestAnswer = async (req: IUserRequest, res: Response) => {
     const transaction = await pointTransaction(
       answerOwner,
       pointReward,
-      "Best answer for question"
+      "Best answer for question",
     );
     question.bestAnswer = answer._id;
     const resultQuestion = await question.save();
@@ -412,7 +427,7 @@ const deleteQuestion = async (req: IUserRequest, res: Response) => {
   question.questionTag.map(async (tag: string) => {
     let tags = await QuestionTagModel.updateOne(
       { _id: tag },
-      { $inc: { totalQuestion: -1 } }
+      { $inc: { totalQuestion: -1 } },
     );
 
     if (!tags) {
@@ -441,7 +456,6 @@ const updateQuestion = async (req: IUserRequest, res: Response) => {
   } else if (userId != question.userId) {
     throw new ForbiddenError(ErrorMessage.ERROR_FORBIDDEN);
   }
-
   const questionTitle = req.body.questionTitle || question.questionTitle;
   const questionContent = req.body.questionContent || question.questionContent;
   const questionBounty = req.body.questionBounty || question.questionBounty;
@@ -464,7 +478,7 @@ const updateQuestion = async (req: IUserRequest, res: Response) => {
       const transaction = await pointTransaction(
         userId,
         questionBounty * -1,
-        "Rebounty for question"
+        "Rebounty for question",
       );
       if (!transaction) {
         throw new InternalServerError(ErrorMessage.ERROR_FAILED);
@@ -473,8 +487,6 @@ const updateQuestion = async (req: IUserRequest, res: Response) => {
   }
 
   //Checking new bounty due date
-  // console.log(typeof bountyDueDate);
-  // console.log(question.bountyDueDate);
   if (bountyDueDate != question.bountyDueDate) {
     if (question.bountyActive != 1) {
       throw new ForbiddenError(ErrorMessage.ERROR_FAILED);
@@ -501,76 +513,15 @@ const updateQuestion = async (req: IUserRequest, res: Response) => {
   question.bountyDueDate = bountyDueDate;
   question.awardDueDate = questionAwardDueDate;
 
+  //Update tag list
+  await updateTagList(question.questionTag);
+  const list = await createTagList(req.body.questionTag);
+  question.questionTag = list;
+
   const result = await question.save();
 
   res.status(StatusCodes.OK).json(result);
 };
-
-// const validateBounty = async (_newBounty: number, _newDueDate: Date) => {
-//   // const question = await Question.findOne({
-//   //   _id: req.params.questionId,
-//   //   questionStatus: 1,
-//   //   bountyActive: 1,
-//   // });
-
-//   // if (!question) {
-//   //   throw new NotFoundError(ErrorMessage.ERROR_INVALID_QUESTION_ID);
-//   // } else if (userId != question.userId) {
-//   //   throw new ForbiddenError(ErrorMessage.ERROR_FORBIDDEN);
-//   // } else if (question.questionBounty < 0) {
-//   //   throw new BadRequestError("This question cannot rebounty");
-//   // }
-
-//   //Checking whether rebounty value is greater than old value
-//   // const newBounty = req.body.newBounty;
-//   // if (!newBounty) {
-//   //   throw new BadRequestError(ErrorMessage.ERROR_MISSING_BODY);
-//   // } else if (newBounty <= question.questionBounty) {
-//   //   throw new BadRequestError("New bounty value must greater than old value");
-//   // } else
-//   if (_newBounty < Constants.minBounty || _newBounty > Constants.maxBounty) {
-//     throw new BadRequestError(ErrorMessage.ERROR_INVALID_BOUNTY);
-//   }
-
-//   // Checking new bounty due date
-//   const newDueDate = new Date(_newDueDate);
-//   // if (!newDueDate) {
-//   //   throw new BadRequestError(ErrorMessage.ERROR_MISSING_BODY);
-//   // } else if (newDueDate <= question.bountyDueDate) {
-//   //   throw new BadRequestError("New due date must larger than old one");
-//   // }
-
-//   let diff = Math.abs(newDueDate.getTime() - new Date().getTime());
-//   let diffDays = Math.ceil(diff / (1000 * 3600 * 24));
-
-//   if (
-//     diffDays < Constants.minBountyDueDate ||
-//     diffDays > Constants.maxBountyDueDate
-//   ) {
-//     throw new BadRequestError(ErrorMessage.ERROR_INVALID_BOUNTY_DUE_DATE);
-//   }
-
-//   const awardDueDate = new Date(newDueDate.getTime());
-//   // question.questionBounty = newBounty;
-//   // question.bountyDueDate = newDueDate;
-//   const _newAwardDueDate = awardDueDate.setDate(awardDueDate.getDate() + 14);
-
-//   const transaction = await pointTransaction(
-//     userId,
-//     newBounty * -1,
-//     "Rebounty for question",
-//   );
-//   if (!transaction) {
-//     throw new InternalServerError(ErrorMessage.ERROR_FAILED);
-//   } else {
-//     const result = await question.save();
-//     if (result) {
-//       res.status(StatusCodes.OK).json(result);
-//     } else {
-//       throw new InternalServerError(ErrorMessage.ERROR_FAILED);
-//     }
-//   }
-// };
 
 export {
   createQuestion,

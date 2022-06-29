@@ -328,6 +328,7 @@ export const getShopByName = async (req: IUserRequest, res: Response) => {
 
 export const deactiveProduct = async (req: IUserRequest, res: Response) => {
   const { shopId } = req.user!;
+
   const product = await ProductModel.findOne({
     _id: req.params.productId,
     deleteFlagged: 0,

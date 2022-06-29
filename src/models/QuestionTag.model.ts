@@ -12,7 +12,7 @@ const QuestionTagSchema = new mongoose.Schema(
     },
     totalQuestion: {
       type: Number,
-      default: 0,
+      default: 1,
     },
   },
   {

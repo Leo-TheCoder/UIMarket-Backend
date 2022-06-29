@@ -16,6 +16,7 @@ import ShopModel from "../models/Shop.model";
 //Error
 import * as ErrorMessage from "../errors/error_message";
 import { BadRequestError, InternalServerError, NotFoundError } from "../errors";
+import { updateTagList } from "./question.controller";
 
 interface IQuery {
   page?: string;
@@ -209,6 +210,7 @@ export const acceptReport = async (req: Request, res: Response) => {
         { new: true },
       );
       solvedReport = question;
+      await updateTagList(question.questionTag);
       break;
     case "Answer":
       const answer = await AnswerModel.findByIdAndUpdate(

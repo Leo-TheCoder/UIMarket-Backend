@@ -4,6 +4,8 @@ import { Request, Response } from "express";
 
 interface IQuery {
   tagName?: string;
+  page?: string;
+  limit?: string;
 }
 
 const getTags = async (req: Request, res: Response) => {
@@ -21,7 +23,7 @@ const getTags = async (req: Request, res: Response) => {
   const regexp = new RegExp("^" + tagName);
   const tagsDoc = await QuestionTagModel.find(
     { tagName: regexp },
-    { _id: 1, tagName: 1, totalQuestion: 1 }
+    { _id: 1, tagName: 1, totalQuestion: 1 },
   ).lean();
 
   res.status(StatusCodes.OK).json(tagsDoc);
