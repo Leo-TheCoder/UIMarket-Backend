@@ -3,9 +3,17 @@ import * as Constants from "../../constants";
 import { StatusCodes } from "http-status-codes";
 import UserModel from "../../models/User.model";
 import { IUserRequest } from "../../types/express";
-import { BadRequestError } from "../../errors";
+import { BadRequestError, NotFoundError } from "../../errors";
 import * as ErrorMessage from "../../errors/error_message";
 import { sendMailTest } from "../../utils/sendMail";
+import ShopModel from "../../models/Shop.model";
+import LicenseModel from "../../models/License.model";
+import { LicesneStatusEnum, TransactionStatusEnum } from "../../types/enum";
+import ProductModel from "../../models/Product.model";
+import InvoiceModel from "../../models/Invoice.model";
+import ShopTransactionModel from "../../models/ShopTransaction.model";
+import ReportModel from "../../models/Report.model";
+import {ShopTransaction} from "../../types/object-type";
 
 interface IQuery {
   page?: string;
@@ -179,5 +187,176 @@ export const sendMailForTest = async (req: IUserRequest, res: Response) => {
   sendMailTest(email, email);
   res.status(StatusCodes.OK).json({
     msg: "Email has sent",
+  });
+};
+
+export const profileDetail = async (req: IUserRequest, res: Response) => {
+  const {userId} = req.params;
+  
+  const user = await UserModel.findById(userId, {
+    customerPassword: 0,
+    authenToken: 0,
+    refreshToken: 0,
+  });
+
+  if(!user) {
+    throw new NotFoundError(ErrorMessage.ERROR_INVALID_USER_ID);
+  }
+
+  let shop = {};
+  if(user.shopId) {
+    const shopDetail = await ShopModel.findById(user.shopId, {
+      userId: 0,
+      shopDescription: 0,
+    });
+
+    const productCount = await ProductModel.count({
+      shopId: user.shopId,
+      deleteFlagged: 0,
+      isBanned: 0,
+    });
+
+    const orderCount = await LicenseModel.count({
+      shopId: user.shopId,
+    })
+    
+    shop = {
+      shopDetail,
+      productCount,
+      orderCount,
+    }
+  }
+
+  const productBought = await LicenseModel.count({
+    userId: userId,
+    licenseStatus: LicesneStatusEnum.ACTIVE,
+  });
+
+  const reportCount = await ReportModel.count({
+    userId: userId,
+  });
+  const reportVerifiedCount = await ReportModel.count({
+    userId: userId,
+    reportStatus: 1,
+  })
+
+  res.status(StatusCodes.OK).json({
+    user: user.toObject(),
+    shop,
+    productBought,
+    report: {
+      reportCount,
+      reportVerifiedCount,
+    }
+  })
+}
+
+interface IShopTransactionQuery {
+  page?: string;
+  limit?: string;
+  sort?: SortShopTransasctionTypes;
+  filter?: FilterShopTransactionTypes;
+}
+
+enum FilterShopTransactionTypes {
+  COMPLETED = "completed",
+  PENDING = "pending",
+  REFUNDED = "refunded",
+}
+enum SortShopTransasctionTypes {
+  NEWEST = "newest",
+  OLDEST = "oldest",
+}
+const filterShopTransactionObjMongoose = (filter?: FilterShopTransactionTypes) => {
+  switch (filter) {
+    case FilterShopTransactionTypes.COMPLETED:
+      return { transactionStatus: TransactionStatusEnum.COMPLETED };
+    case FilterShopTransactionTypes.PENDING:
+      return { transactionStatus: TransactionStatusEnum.PENDING };
+    case FilterShopTransactionTypes.REFUNDED:
+      return { transactionStatus: TransactionStatusEnum.REFUNDED };
+    default:
+      return {};
+  }
+};
+const sortShopTransactionObjMongoose = (sort?: SortShopTransasctionTypes) => {
+  switch (sort) {
+    case SortShopTransasctionTypes.OLDEST:
+      return { createdAt: 1 };
+    case SortShopTransasctionTypes.NEWEST:
+      return { createdAt: -1 };
+    default:
+      return { createdAt: -1 };
+  }
+};
+
+export const getShopTransaction = async (req: IUserRequest, res: Response) => {
+  const { shopId } = req.user!;
+
+  const query = req.query as IShopTransactionQuery;
+  const page = parseInt(query.page!) || Constants.defaultPageNumber;
+  const limit = parseInt(query.limit!) || Constants.defaultLimit;
+
+  const filter = query.filter;
+  const filterObj = filterShopTransactionObjMongoose(filter);
+  const sort = query.sort;
+  const sortObj = sortShopTransactionObjMongoose(sort);
+
+  const filterObject = {
+    shopId,
+    ...filterObj,
+  };
+  const projectionObject = {
+    _id: 1,
+    productId: 1,
+    action: 1,
+    changeAmount: 1,
+    transactionStatus: 1,
+    updatedAt: 1,
+    createdAt: 1,
+  };
+
+  const total = await ShopTransactionModel.count(filterObject);
+
+  const totalPages =
+    total % limit === 0
+      ? Math.floor(total / limit)
+      : Math.floor(total / limit) + 1;
+
+  const transactions = (await ShopTransactionModel.find(filterObject)
+    .sort(sortObj)
+    .skip((page - 1) * limit)
+    .limit(limit)
+    .select(projectionObject)
+    .lean()) as ShopTransaction[];
+
+  const transactionsToSend = transactions.map((transaction) => {
+    let status: string;
+    switch (transaction.transactionStatus) {
+      case TransactionStatusEnum.COMPLETED:
+        status = "COMPLETED";
+        break;
+      case TransactionStatusEnum.PENDING:
+        status = "PENDING";
+        break;
+      case TransactionStatusEnum.REFUNDED:
+        status = "REFUNDED";
+        break;
+      default:
+        status = "COMPLETED";
+        break;
+    }
+
+    return {
+      ...transaction,
+      transactionStatus: status,
+    };
+  });
+
+  return res.status(StatusCodes.OK).json({
+    totalPages,
+    page,
+    limit,
+    transactions: transactionsToSend,
   });
 };
