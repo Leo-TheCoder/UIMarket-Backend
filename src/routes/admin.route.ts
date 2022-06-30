@@ -11,6 +11,8 @@ import {
   activeUser,
   unverifyUser,
   sendMailForTest,
+  profileDetail,
+  getShopTransaction,
 } from "../controllers/admin/users.controller";
 import {
   activeShop,
@@ -38,7 +40,7 @@ const router = express.Router();
 //===================== User =====================
 //GET Method
 router.get("/users", getAllUsers);
-
+router.get("/users/:userId", profileDetail);
 //POST Method
 router.post("/email", sendMailForTest);
 
@@ -50,6 +52,7 @@ router.put("/users/:userId/unverify", unverifyUser);
 //===================== Shop =====================
 //GET Method
 router.get("/shops", getAllShops);
+router.get("/shops/:shopId/payment-history", getShopTransaction);
 
 //PUT Method
 router.put("/shops/:shopId/deactive", deactiveShop);
