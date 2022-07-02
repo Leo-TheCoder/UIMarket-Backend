@@ -361,7 +361,7 @@ export const getShopTransaction = async (req: IUserRequest, res: Response) => {
   });
 };
 
-const purchaseHistory = async (req: IUserRequest, res: Response) => {
+export const purchaseHistory = async (req: IUserRequest, res: Response) => {
   const { userId } = req.params;
   const query = req.query as IQuery;
   const page = parseInt(query.page!) || Constants.defaultPageNumber;
