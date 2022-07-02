@@ -291,7 +291,7 @@ const sortShopTransactionObjMongoose = (sort?: SortShopTransasctionTypes) => {
 };
 
 export const getShopTransaction = async (req: IUserRequest, res: Response) => {
-  const { shopId } = req.user!;
+  const { shopId } = req.params;
 
   const query = req.query as IShopTransactionQuery;
   const page = parseInt(query.page!) || Constants.defaultPageNumber;
@@ -360,3 +360,61 @@ export const getShopTransaction = async (req: IUserRequest, res: Response) => {
     transactions: transactionsToSend,
   });
 };
+
+const purchaseHistory = async (req: IUserRequest, res: Response) => {
+  const { userId } = req.params;
+  const query = req.query as IQuery;
+  const page = parseInt(query.page!) || Constants.defaultPageNumber;
+  const limit = parseInt(query.limit!) || Constants.defaultLimit;
+
+  const filterObj = {
+    userId,
+    licenseStatus: {$in: [LicesneStatusEnum.ACTIVE, LicesneStatusEnum.REFUNDING] }
+  };
+
+  const total = await LicenseModel.find(filterObj).count();
+
+  const totalPages =
+    total % limit === 0
+      ? Math.floor(total / limit)
+      : Math.floor(total / limit) + 1;
+
+  //Get product list
+  const licenses = await LicenseModel.find(filterObj)
+    .select("-licenseFile")
+    .skip((page - 1) * limit)
+    .limit(limit)
+    .populate({
+      path: "product",
+      select: "productPictures productFile productName",
+    })
+    .populate({ path: "shop", select: "shopName" })
+    .populate({ path: "invoice", select: "productList isRefunded" });
+
+  const productsToResponse = licenses.map((_license) => {
+    const license = _license.toObject();
+    const isReview = license.invoice.productList.findIndex(
+      (x: any) => String(x.product) == String(license.product._id)
+    );
+
+    const picture = license.product.productPictures[0];
+    return {
+      ...license,
+      invoice: undefined,
+      isReview: license.invoice.productList[isReview].isReview,
+      invoiceId: license.invoice._id,
+      isInvoiceRefunded: license.invoice.isRefunded,
+      product: {
+        ...license.product,
+        productPictures: picture,
+      },
+    };
+  });
+
+  res.status(StatusCodes.OK).json({
+    totalPages,
+    page,
+    limit,
+    products: productsToResponse,
+  });
+}

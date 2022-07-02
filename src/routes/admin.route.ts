@@ -13,6 +13,7 @@ import {
   sendMailForTest,
   profileDetail,
   getShopTransaction,
+  purchaseHistory,
 } from "../controllers/admin/users.controller";
 import {
   activeShop,
@@ -41,6 +42,7 @@ const router = express.Router();
 //GET Method
 router.get("/users", getAllUsers);
 router.get("/users/:userId", profileDetail);
+router.get("/users/:userId/purchase-history", purchaseHistory);
 //POST Method
 router.post("/email", sendMailForTest);
 
