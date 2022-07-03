@@ -11,6 +11,7 @@ import InvoiceModel from "../models/Invoice.model";
 //Error
 import * as ErrorMessage from "../errors/error_message";
 import { BadRequestError, InternalServerError, NotFoundError } from "../errors";
+import { LicesneStatusEnum } from "../types/enum";
 
 interface IQuery {
   page?: string;
@@ -91,15 +92,16 @@ export const getLicenseById = async (req: IUserRequest, res: Response) => {
   const license = await LicenseModel.findOne({
     _id: req.params.licenseId,
     userId,
+    licenseStatus: LicesneStatusEnum.ACTIVE,
   })
     .populate({ path: "product", select: "productName" })
     .populate({ path: "userId", select: "customerName customerEmail" })
-    .populate({ path: "shop", select: "shopName"})
+    .populate({ path: "shop", select: "shopName" })
     .lean();
 
-  if(!license) {
+  if (!license) {
     throw new NotFoundError(ErrorMessage.ERROR_INVALID_LICENSE_ID);
   }
-  
+
   res.status(StatusCodes.OK).json(license);
 };
