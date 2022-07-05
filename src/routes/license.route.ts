@@ -4,13 +4,13 @@ import {
   getLicenseById,
   getLicenseList,
 } from "../controllers/license.controller";
-import { compulsoryAuth } from "../middlewares/authentication";
+import { compulsoryAuth, optionalAuth } from "../middlewares/authentication";
 
 const router = express.Router();
 
 //GET Method
 router.get("/list", compulsoryAuth, getLicenseList);
-router.get("/detail/:licenseId", compulsoryAuth, getLicenseById);
+router.get("/detail/:licenseId", optionalAuth, getLicenseById);
 
 //POST Method
 router.post("/", createLicense);

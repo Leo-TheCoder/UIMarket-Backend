@@ -88,16 +88,30 @@ export const getLicenseList = async (req: IUserRequest, res: Response) => {
 };
 
 export const getLicenseById = async (req: IUserRequest, res: Response) => {
-  const { userId } = req.user!;
-  const license = await LicenseModel.findOne({
-    _id: req.params.licenseId,
-    userId,
-    licenseStatus: LicesneStatusEnum.ACTIVE,
-  })
-    .populate({ path: "product", select: "productName" })
-    .populate({ path: "userId", select: "customerName customerEmail" })
-    .populate({ path: "shop", select: "shopName" })
-    .lean();
+  let userId = "";
+  let license: any;
+  if(req.user) {
+    userId = req.user.userId;
+    license = await LicenseModel.findOne({
+      _id: req.params.licenseId,
+      userId,
+      licenseStatus: LicesneStatusEnum.ACTIVE,
+    })
+      .populate({ path: "product", select: "productName" })
+      .populate({ path: "userId", select: "customerName customerEmail" })
+      .populate({ path: "shop", select: "shopName" })
+      .lean();
+  }
+  else {
+    license = await LicenseModel.findOne({
+      _id: req.params.licenseId,
+      licenseStatus: LicesneStatusEnum.ACTIVE,
+    })
+      .populate({ path: "product", select: "productName" })
+      .populate({ path: "userId", select: "customerName customerEmail" })
+      .populate({ path: "shop", select: "shopName" })
+      .lean();
+  }
 
   if (!license) {
     throw new NotFoundError(ErrorMessage.ERROR_INVALID_LICENSE_ID);
