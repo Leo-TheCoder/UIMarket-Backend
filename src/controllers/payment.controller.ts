@@ -167,10 +167,10 @@ export const withdrawPayment = async (req: IUserRequest, res: Response) => {
   if (!shop) {
     throw new UnauthenticatedErorr(ErrorMessage.ERROR_INVALID_SHOP_ID);
   }
-  if (!shop.shopPayPal) {
+  if (!shop.shopEmail) {
     throw new UnauthenticatedErorr(ErrorMessage.ERROR_PAYPAL_INVALID);
   }
-  const receiver = shop.shopPayPal;
+  const receiver = shop.shopEmail;
 
   try {
     //update coin
