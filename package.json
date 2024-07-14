@@ -30,7 +30,7 @@
     "@types/randomstring": "^1.1.8",
     "@types/uuid": "^8.3.4",
     "aws-sdk": "^2.1099.0",
-    "axios": "^0.26.1",
+    "axios": "^0.28.0",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "crypto": "^1.0.1",
